@@ -14,9 +14,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         MasterData::class,
         QuotationTemplate::class,
         Quotation::class,
-        QuotationItem::class
+        QuotationItem::class,
+        Client::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -27,6 +28,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun quotationTemplateDao(): QuotationTemplateDao
     abstract fun quotationDao(): QuotationDao
     abstract fun quotationItemDao(): QuotationItemDao
+    abstract fun clientDao(): ClientDao
 
     companion object {
         @Volatile

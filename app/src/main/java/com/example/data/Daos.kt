@@ -159,3 +159,31 @@ interface MasterDao {
     @Query("UPDATE masters SET isDeleted = 1, modifiedDate = :timestamp WHERE id = :id")
     suspend fun softDeleteMaster(id: Long, timestamp: Long = System.currentTimeMillis())
 }
+
+@Dao
+interface ClientDao {
+    @Query("SELECT * FROM client ORDER BY createdDate DESC")
+    fun getAllClients(): Flow<List<Client>>
+
+    @Query("SELECT * FROM client WHERE isActive = 1 ORDER BY clientName ASC")
+    fun getActiveClients(): Flow<List<Client>>
+
+    @Query("SELECT * FROM client WHERE clientId = :id LIMIT 1")
+    suspend fun getClientById(id: Long): Client?
+
+    @Query("SELECT * FROM client WHERE mobileNumber = :mobile LIMIT 1")
+    suspend fun getClientByMobile(mobile: String): Client?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertClient(client: Client): Long
+
+    @Update
+    suspend fun updateClient(client: Client)
+
+    @Delete
+    suspend fun deleteClient(client: Client)
+
+    @Query("UPDATE client SET isActive = :isActive, modifiedDate = :timestamp WHERE clientId = :id")
+    suspend fun updateClientStatus(id: Long, isActive: Boolean, timestamp: Long = System.currentTimeMillis())
+}
+

@@ -120,6 +120,34 @@ object BackupManager {
         }
         root.put("customers", custArr)
 
+        // 2.1 Clients
+        val clients = db.clientDao().getAllClients().first()
+        val clientArr = JSONArray()
+        clients.forEach { client ->
+            val clObj = JSONObject()
+            clObj.put("clientId", client.clientId)
+            clObj.put("clientName", client.clientName)
+            clObj.put("companyName", client.companyName)
+            clObj.put("contactPerson", client.contactPerson)
+            clObj.put("mobileNumber", client.mobileNumber)
+            clObj.put("whatsappNumber", client.whatsappNumber)
+            clObj.put("email", client.email)
+            clObj.put("address", client.address)
+            clObj.put("siteLocation", client.siteLocation)
+            clObj.put("city", client.city)
+            clObj.put("district", client.district)
+            clObj.put("state", client.state)
+            clObj.put("pincode", client.pincode)
+            clObj.put("country", client.country)
+            clObj.put("gstin", client.gstin)
+            clObj.put("notes", client.notes)
+            clObj.put("isActive", client.isActive)
+            clObj.put("createdDate", client.createdDate)
+            clObj.put("modifiedDate", client.modifiedDate)
+            clientArr.put(clObj)
+        }
+        root.put("clients", clientArr)
+
         // 3. Master Data
         val masterDataList = repository.allMasterData.first()
         val mastArr = JSONArray()
@@ -311,6 +339,36 @@ object BackupManager {
                                 isActive = cObj.optBoolean("isActive", true)
                             )
                         )
+                    }
+                }
+
+                // 2.1 Restore Clients
+                if (root.has("clients")) {
+                    val clientArr = root.getJSONArray("clients")
+                    for (i in 0 until clientArr.length()) {
+                        val clObj = clientArr.getJSONObject(i)
+                        val c = Client(
+                            clientId = clObj.optLong("clientId", 0),
+                            clientName = clObj.optString("clientName", ""),
+                            companyName = clObj.optString("companyName", ""),
+                            contactPerson = clObj.optString("contactPerson", ""),
+                            mobileNumber = clObj.optString("mobileNumber", ""),
+                            whatsappNumber = clObj.optString("whatsappNumber", ""),
+                            email = clObj.optString("email", ""),
+                            address = clObj.optString("address", ""),
+                            siteLocation = clObj.optString("siteLocation", ""),
+                            city = clObj.optString("city", ""),
+                            district = clObj.optString("district", ""),
+                            state = clObj.optString("state", ""),
+                            pincode = clObj.optString("pincode", ""),
+                            country = clObj.optString("country", "India"),
+                            gstin = clObj.optString("gstin", ""),
+                            notes = clObj.optString("notes", ""),
+                            isActive = clObj.optBoolean("isActive", true),
+                            createdDate = clObj.optLong("createdDate", System.currentTimeMillis()),
+                            modifiedDate = clObj.optLong("modifiedDate", System.currentTimeMillis())
+                        )
+                        db.clientDao().insertClient(c)
                     }
                 }
 

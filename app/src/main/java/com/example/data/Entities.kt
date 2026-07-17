@@ -191,3 +191,34 @@ data class TemplateItem(
     val unit: String,
     val rate: Double
 )
+
+@Entity(
+    tableName = "client",
+    indices = [
+        Index("clientName"),
+        Index("mobileNumber"),
+        Index("email")
+    ]
+)
+data class Client(
+    @PrimaryKey(autoGenerate = true) val clientId: Long = 0,
+    val clientName: String = "",
+    val companyName: String = "",
+    val contactPerson: String = "",
+    val mobileNumber: String = "",
+    val whatsappNumber: String = "",
+    val email: String = "",
+    val address: String = "",
+    val siteLocation: String = "",
+    val city: String = "",
+    val district: String = "",
+    val state: String = "",
+    val pincode: String = "",
+    val country: String = "India",
+    val gstin: String = "",
+    val notes: String = "",
+    val isActive: Boolean = true,
+    val createdDate: Long = System.currentTimeMillis(),
+    val modifiedDate: Long = System.currentTimeMillis()
+)
+

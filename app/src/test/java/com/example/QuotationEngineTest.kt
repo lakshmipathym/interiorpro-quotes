@@ -57,7 +57,7 @@ class QuotationEngineTest {
             val context = ApplicationProvider.getApplicationContext<Context>()
             val app = context as Application
             val repository = QuotesRepository(database)
-            val viewModel = QuotationViewModel(app, repository)
+            val viewModel = QuotationViewModel(app, repository, FakeSyncManager())
 
             // Start background collection of StateFlows to activate SharingStarted.WhileSubscribed
             val subtotalJob = launch { viewModel.newQuoteSubtotal.collect {} }
@@ -197,7 +197,7 @@ class QuotationEngineTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val app = context as Application
         val repository = QuotesRepository(database)
-        val quotationViewModel = QuotationViewModel(app, repository)
+        val quotationViewModel = QuotationViewModel(app, repository, FakeSyncManager())
         val historyViewModel = com.example.ui.history.HistoryViewModel(app, repository)
 
         val subtotalJob = launch { quotationViewModel.newQuoteSubtotal.collect {} }
@@ -292,5 +292,16 @@ class QuotationEngineTest {
         subtotalJob.cancel()
         gstJob.cancel()
         grandTotalJob.cancel()
+    }
+
+    private class FakeSyncManager : com.example.core.sync.SyncManager {
+        override val syncState = kotlinx.coroutines.flow.MutableStateFlow<com.example.core.sync.SyncState>(com.example.core.sync.SyncState.Idle)
+        override suspend fun triggerSync(): com.example.core.sync.SyncResult = com.example.core.sync.SyncResult.Success(0)
+        override suspend fun resolveConflicts(preferCloud: Boolean): com.example.core.sync.SyncResult = com.example.core.sync.SyncResult.Success(0)
+        override suspend fun clearSyncState() {}
+        override fun onQuotationSaved() {}
+        override suspend fun checkForNewerBackup(): com.example.core.backup.BackupMetadata? = null
+        override fun getAutoBackupPolicy(): String = "MANUAL"
+        override fun setAutoBackupPolicy(policy: String) {}
     }
 }

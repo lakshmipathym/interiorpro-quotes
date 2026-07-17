@@ -12,7 +12,11 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 
-class QuotationViewModel(application: Application, val repository: QuotesRepository) : AndroidViewModel(application) {
+class QuotationViewModel(
+    application: Application,
+    val repository: QuotesRepository,
+    private val syncManager: com.example.core.sync.SyncManager
+) : AndroidViewModel(application) {
 
     init {
         viewModelScope.launch {
@@ -341,6 +345,7 @@ class QuotationViewModel(application: Application, val repository: QuotesReposit
                 status = _editingQuotationStatus.value
             )
             val qId = repository.saveQuotationWithItems(quote, _newQuoteItems.value)
+            syncManager.onQuotationSaved()
             onComplete(qId)
         }
     }
@@ -381,11 +386,15 @@ class QuotationViewModel(application: Application, val repository: QuotesReposit
     }
 }
 
-class QuotationViewModelFactory(private val application: Application, private val repository: QuotesRepository) : ViewModelProvider.Factory {
+class QuotationViewModelFactory(
+    private val application: Application,
+    private val repository: QuotesRepository,
+    private val syncManager: com.example.core.sync.SyncManager
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(QuotationViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return QuotationViewModel(application, repository) as T
+            return QuotationViewModel(application, repository, syncManager) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

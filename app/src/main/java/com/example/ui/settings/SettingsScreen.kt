@@ -117,6 +117,32 @@ fun SettingsScreen(
     var isConfirmRestoreDialogOpen by remember { mutableStateOf(false) }
     var pendingRestoreJson by remember { mutableStateOf("") }
 
+    // Sprint 3 State tracking
+    val syncState by settingsViewModel.syncState.collectAsState()
+    val isUserSignedIn by settingsViewModel.isUserSignedIn.collectAsState()
+    val currentUserEmail by settingsViewModel.currentUserEmail.collectAsState()
+    val currentUserDisplayName by settingsViewModel.currentUserDisplayName.collectAsState()
+
+    var cloudBackupsList by remember { mutableStateOf<List<com.example.core.drive.DriveFileInfo>>(emptyList()) }
+    var isRefreshingCloudList by remember { mutableStateOf(false) }
+
+    var workspacePreviewState by remember { mutableStateOf<com.example.core.backup.WorkspacePreview?>(null) }
+    var isConfirmWorkspaceImportDialogOpen by remember { mutableStateOf(false) }
+
+    var isConfirmSpecificRestoreDialogOpen by remember { mutableStateOf(false) }
+    var specificRestoreFileId by remember { mutableStateOf("") }
+    var specificRestoreFileName by remember { mutableStateOf("") }
+
+    LaunchedEffect(isUserSignedIn) {
+        if (isUserSignedIn) {
+            try {
+                cloudBackupsList = settingsViewModel.listCloudBackups()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     // Backup & Restore activity result launchers
     val createBackupLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -162,6 +188,59 @@ fun SettingsScreen(
                     }
                 } catch (e: Exception) {
                     Toast.makeText(context, "Error reading backup: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    val createWorkspaceLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri: Uri? ->
+        uri?.let {
+            scope.launch {
+                val tempFile = File(context.cacheDir, "temp_export.ipro")
+                settingsViewModel.exportWorkspaceBundle(tempFile) { file ->
+                    if (file != null && file.exists()) {
+                        try {
+                            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                                outputStream.write(file.readBytes())
+                            }
+                            tempFile.delete()
+                            Toast.makeText(context, "Workspace exported successfully!", Toast.LENGTH_LONG).show()
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Export writing failed: ${e.message}", Toast.LENGTH_LONG).show()
+                        }
+                    } else {
+                        Toast.makeText(context, "Workspace packaging failed.", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+    }
+
+    val importWorkspaceLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let {
+            scope.launch {
+                try {
+                    val tempFile = File(context.cacheDir, "temp_import.ipro")
+                    context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                        tempFile.outputStream().use { outputStream ->
+                            inputStream.copyTo(outputStream)
+                        }
+                    }
+                    settingsViewModel.verifyAndPreviewWorkspaceBundle(tempFile) { preview ->
+                        tempFile.delete()
+                        if (preview.isValid) {
+                            workspacePreviewState = preview
+                            isConfirmWorkspaceImportDialogOpen = true
+                        } else {
+                            Toast.makeText(context, "Verification failed: ${preview.errorReason}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Failed to read file: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -1051,30 +1130,32 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Backup & Restore Card
+        // --- SPRINT 3: ENTERPRISE SMART SYNC DASHBOARD & BACKUP CONSOLE ---
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-            shape = RoundedCornerShape(16.dp)
+                .padding(vertical = 6.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(20.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(18.dp)) {
+                // Dashboard Header
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Backup,
+                        imageVector = Icons.Filled.CloudSync,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(26.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "Data Backup & Restore",
+                        text = "Cloud Sync & Auto Backup",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
+                        fontSize = 18.sp,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -1082,80 +1163,471 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(6.dp))
                 
                 Text(
-                    text = "InteriorPro Quotes operates 100% offline. Create secure JSON-based backups to safeguard your data or migrate to another Android device.",
-                    fontSize = 11.sp,
+                    text = "Enterprise-grade secure synchronization with your private Google Drive folder. Sync quotations, clients, and assets automatically.",
+                    fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 
-                Spacer(modifier = Modifier.height(12.dp))
-                
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Connection and Account Status Row
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isUserSignedIn) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = if (isUserSignedIn) Icons.Filled.CloudDone else Icons.Filled.CloudOff,
+                                contentDescription = null,
+                                tint = if (isUserSignedIn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = if (isUserSignedIn) "Google Account Connected" else "Account Disconnected",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = if (isUserSignedIn) (currentUserEmail ?: "Connected") else "Sync is disabled until connected",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        
+                        Button(
+                            onClick = {
+                                if (isUserSignedIn) {
+                                    settingsViewModel.signOut {
+                                        Toast.makeText(context, "Account disconnected.", Toast.LENGTH_SHORT).show()
+                                    }
+                                } else {
+                                    settingsViewModel.signIn { success ->
+                                        if (success) {
+                                            Toast.makeText(context, "Successfully connected!", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, "Connection failed or cancelled.", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isUserSignedIn) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Text(
+                                text = if (isUserSignedIn) "Disconnect" else "Connect",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Live Sync Status block
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f))
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f))
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val (statusText, statusColor, showProgress) = when (syncState) {
+                            is com.example.core.sync.SyncState.Idle -> Triple("Idle (Up to date)", MaterialTheme.colorScheme.outline, false)
+                            is com.example.core.sync.SyncState.Syncing,
+                            is com.example.core.sync.SyncState.Uploading,
+                            is com.example.core.sync.SyncState.Downloading -> Triple("Syncing with cloud...", MaterialTheme.colorScheme.primary, true)
+                            is com.example.core.sync.SyncState.Success -> Triple("Sync Completed", MaterialTheme.colorScheme.primary, false)
+                            is com.example.core.sync.SyncState.Failed -> Triple("Sync Failed", MaterialTheme.colorScheme.error, false)
+                            is com.example.core.sync.SyncState.Conflict -> Triple("Conflict Detected", MaterialTheme.colorScheme.error, false)
+                            is com.example.core.sync.SyncState.WaitingForInternet -> Triple("Waiting for Internet", MaterialTheme.colorScheme.tertiary, false)
+                            is com.example.core.sync.SyncState.NotConnected -> Triple("Not Connected", MaterialTheme.colorScheme.outline, false)
+                            else -> Triple("Offline Mode", MaterialTheme.colorScheme.outline, false)
+                        }
+                        
+                        if (showProgress) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = statusColor)
+                        } else {
+                            Icon(
+                                imageVector = if (syncState is com.example.core.sync.SyncState.Failed) Icons.Filled.ErrorOutline else Icons.Filled.Info,
+                                contentDescription = null,
+                                tint = statusColor,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Sync Status: $statusText",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = statusColor
+                        )
+                    }
+
                     Text(
-                        text = "Last Backup: ",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = lastBackupDate ?: "Never",
-                        fontSize = 12.sp,
-                        color = if (lastBackupDate != null && lastBackupDate != "Never") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                        text = "v${settingsViewModel.deviceManager.getAppVersion()} (${settingsViewModel.deviceManager.getDatabaseVersion()})",
+                        fontSize = 10.sp,
+                        color = Color.Gray,
+                        fontWeight = FontWeight.Bold
                     )
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Auto-Backup Policy Segment
+                Text(
+                    text = "Automatic Backup Policy:",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+
+                var activePolicy by remember { mutableStateOf(settingsViewModel.getAutoBackupPolicy()) }
                 
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    val policies = listOf(
+                        "MANUAL" to "Manual",
+                        "ON_SAVE" to "On Save",
+                        "DAILY" to "Daily",
+                        "WEEKLY" to "Weekly"
+                    )
+                    policies.forEach { (key, label) ->
+                        val isSelected = activePolicy == key
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable {
+                                    activePolicy = key
+                                    settingsViewModel.setAutoBackupPolicy(key)
+                                    Toast.makeText(context, "Auto backup scheduled: $label", Toast.LENGTH_SHORT).show()
+                                }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = label,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Dynamic Metadata block
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Device ID", fontSize = 11.sp, color = Color.Gray)
+                            Text(settingsViewModel.deviceManager.getDeviceName(), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Last Sync", fontSize = 11.sp, color = Color.Gray)
+                            Text(
+                                text = if (settingsViewModel.deviceManager.getLastSyncTime() > 0) {
+                                    java.text.SimpleDateFormat("dd MMM, hh:mm a", java.util.Locale.getDefault()).format(java.util.Date(settingsViewModel.deviceManager.getLastSyncTime()))
+                                } else "Never",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Stored Backups", fontSize = 11.sp, color = Color.Gray)
+                            Text("${cloudBackupsList.size} snapshot(s)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // Sync controls button row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Button(
                         onClick = {
-                            createBackupLauncher.launch("InteriorProQuotes_Backup.json")
+                            if (!isUserSignedIn) {
+                                Toast.makeText(context, "Please connect Google Account first", Toast.LENGTH_SHORT).show()
+                            } else {
+                                settingsViewModel.triggerSync { result ->
+                                    if (result is com.example.core.sync.SyncResult.Success) {
+                                        Toast.makeText(context, "Sync completed successfully!", Toast.LENGTH_SHORT).show()
+                                        scope.launch {
+                                            cloudBackupsList = settingsViewModel.listCloudBackups()
+                                        }
+                                    } else if (result is com.example.core.sync.SyncResult.Failure) {
+                                        Toast.makeText(context, "Sync failed: ${result.reason}", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }
                         },
                         modifier = Modifier
-                            .weight(1f)
-                            .height(44.dp),
-                        shape = RoundedCornerShape(12.dp)
+                            .weight(1.2f)
+                            .height(42.dp),
+                        shape = RoundedCornerShape(10.dp)
                     ) {
-                        Icon(Icons.Filled.Save, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Backup", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Filled.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Sync Now", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
 
-                    Button(
+                    OutlinedButton(
                         onClick = {
-                            restoreBackupLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+                            if (!isUserSignedIn) {
+                                Toast.makeText(context, "Please connect Google Account first", Toast.LENGTH_SHORT).show()
+                            } else {
+                                scope.launch {
+                                    isRefreshingCloudList = true
+                                    cloudBackupsList = settingsViewModel.listCloudBackups()
+                                    isRefreshingCloudList = false
+                                    Toast.makeText(context, "Backup list refreshed!", Toast.LENGTH_SHORT).show()
+                                }
+                            }
                         },
                         modifier = Modifier
                             .weight(1f)
-                            .height(44.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                        shape = RoundedCornerShape(12.dp)
+                            .height(42.dp),
+                        shape = RoundedCornerShape(10.dp)
                     ) {
-                        Icon(Icons.Filled.FileUpload, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Restore", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        if (isRefreshingCloudList) {
+                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Refresh List", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Divider
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // --- BACKUP SNAPSHOT HISTORY LIST ---
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.History, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.secondary)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Stored Cloud Backups", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (!isUserSignedIn) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f), RoundedCornerShape(8.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Connect Google Account to view history list", fontSize = 11.sp, color = Color.Gray)
+                    }
+                } else if (cloudBackupsList.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f), RoundedCornerShape(8.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (isRefreshingCloudList) "Loading backups..." else "No stored cloud backups found.",
+                            fontSize = 11.sp,
+                            color = Color.Gray
+                        )
+                    }
+                } else {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        cloudBackupsList.take(5).forEach { file ->
+                            val formattedDate = try {
+                                val sdf = java.text.SimpleDateFormat("dd MMM yyyy, hh:mm a", java.util.Locale.getDefault())
+                                sdf.format(java.util.Date(file.modifiedTime))
+                            } catch (e: Exception) {
+                                "Unknown Date"
+                            }
+                            
+                            val sizeInKb = file.sizeBytes / 1024
+                            val fileDeviceName = file.metadata["deviceName"] ?: "Unknown Device"
+                            val fileAppVersion = file.metadata["appVersion"] ?: "1.5"
+                            val fileDbVersion = file.metadata["databaseVersion"] ?: "6"
+                            val isCurrentDevice = fileDeviceName == settingsViewModel.deviceManager.getDeviceName()
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f))
+                                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = formattedDate,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        if (isCurrentDevice) {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Box(
+                                                modifier = Modifier
+                                                    .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(4.dp))
+                                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                                            ) {
+                                                Text("This Device", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                            }
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "$fileDeviceName • v$fileAppVersion • Schema v$fileDbVersion ($sizeInKb KB)",
+                                        fontSize = 10.sp,
+                                        color = Color.Gray
+                                    )
+                                }
+                                
+                                TextButton(
+                                    onClick = {
+                                        specificRestoreFileId = file.id
+                                        specificRestoreFileName = formattedDate
+                                        isConfirmSpecificRestoreDialogOpen = true
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                    modifier = Modifier.height(30.dp)
+                                ) {
+                                    Icon(Icons.Filled.CloudDownload, contentDescription = null, modifier = Modifier.size(12.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Restore", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Divider
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // --- WORKSPACE EXPORT & IMPORT (OFFLINE ZIP CLOUD/SECURE EXCHANGES) ---
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.BusinessCenter,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Workspace Bundle (.ipro)",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                Text(
+                    text = "A Workspace Bundle packages your entire offline database, company logos, and designer signatures into a single AES-256 encrypted file. Essential for full offline migrations.",
+                    fontSize = 11.sp,
+                    color = Color.Gray
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            createWorkspaceLauncher.launch("InteriorPro_Workspace.ipro")
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(42.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Export Workspace", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            importWorkspaceLauncher.launch(arrayOf("*/*"))
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(42.dp),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(Icons.Filled.Upload, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Import Workspace", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(20.dp))
     }
 
     // --- CONFIRM RESTORE BACKUP DIALOG ---
@@ -1221,6 +1693,161 @@ fun SettingsScreen(
                     onClick = {
                         isConfirmRestoreDialogOpen = false
                         pendingRestoreJson = ""
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // --- CONFIRM WORKSPACE IMPORT PREVIEW DIALOG ---
+    if (isConfirmWorkspaceImportDialogOpen && workspacePreviewState != null) {
+        val preview = workspacePreviewState!!
+        AlertDialog(
+            onDismissRequest = { 
+                isConfirmWorkspaceImportDialogOpen = false
+                workspacePreviewState = null
+            },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Confirm Workspace Import", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "WARNING: Importing this workspace will completely overwrite and replace all current local data (Quotations, Customers, Clients, Masters, Profiles, and physical assets such as logos and signatures)!",
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text("Workspace Summary:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Business Name: ${preview.companyName}", fontSize = 12.sp)
+                            Text("Quotations count: ${preview.quotationCount}", fontSize = 12.sp)
+                            Text("Customers count: ${preview.customerCount}", fontSize = 12.sp)
+                            Text("Clients count: ${preview.clientCount}", fontSize = 12.sp)
+                            Text("Logo asset: ${if (preview.hasLogo) "Included" else "None"}", fontSize = 12.sp)
+                            Text("Signature asset: ${if (preview.hasSignature) "Included" else "None"}", fontSize = 12.sp)
+                            Text("Company Seal asset: ${if (preview.hasSeal) "Included" else "None"}", fontSize = 12.sp)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "This operation is irreversible. All current data will be deleted. Do you want to proceed?",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val rawJson = preview.rawJsonText
+                        isConfirmWorkspaceImportDialogOpen = false
+                        workspacePreviewState = null
+                        
+                        settingsViewModel.importWorkspaceBundle(rawJson) { success ->
+                                                            if (success) {
+                                                                Toast.makeText(context, "Workspace successfully restored!", Toast.LENGTH_LONG).show()
+                                                            } else {
+                                                                Toast.makeText(context, "Workspace import failed.", Toast.LENGTH_LONG).show()
+                                                            }
+                                                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Overwrite & Import")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        isConfirmWorkspaceImportDialogOpen = false
+                        workspacePreviewState = null
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // --- CONFIRM SPECIFIC RESTORE FROM HISTORY DIALOG ---
+    if (isConfirmSpecificRestoreDialogOpen) {
+        AlertDialog(
+            onDismissRequest = { 
+                isConfirmSpecificRestoreDialogOpen = false
+                specificRestoreFileId = ""
+                specificRestoreFileName = ""
+            },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Restore History Point", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Are you sure you want to restore the backup: $specificRestoreFileName?",
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "This will overwrite your current local database and images with this historic snapshot. This cannot be undone.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val fileId = specificRestoreFileId
+                        isConfirmSpecificRestoreDialogOpen = false
+                        specificRestoreFileId = ""
+                        specificRestoreFileName = ""
+                        
+                        settingsViewModel.restoreSpecificBackup(fileId) { success ->
+                                                            if (success) {
+                                                                Toast.makeText(context, "Successfully restored selected snapshot!", Toast.LENGTH_LONG).show()
+                                                            } else {
+                                                                Toast.makeText(context, "Failed to restore chosen snapshot.", Toast.LENGTH_LONG).show()
+                                                            }
+                                                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Restore Snapshot")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        isConfirmSpecificRestoreDialogOpen = false
+                        specificRestoreFileId = ""
+                        specificRestoreFileName = ""
                     }
                 ) {
                     Text("Cancel")
