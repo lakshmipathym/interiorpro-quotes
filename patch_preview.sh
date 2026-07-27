@@ -1,0 +1,2 @@
+sed -i -e '/\/\/ Image Attachment/i\
+            if (designPath.isNotEmpty() && java.io.File(designPath).exists()) {\n                coil.compose.AsyncImage(\n                    model = java.io.File(designPath),\n                    contentDescription = "Design Preview",\n                    modifier = Modifier.fillMaxWidth().height(150.dp).padding(vertical = 8.dp),\n                    contentScale = androidx.compose.ui.layout.ContentScale.Fit\n                )\n            }\n' app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt

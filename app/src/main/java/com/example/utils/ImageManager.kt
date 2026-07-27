@@ -17,9 +17,9 @@ object ImageManager {
             
             options.inSampleSize = calculateInSampleSize(options, reqWidth.toInt(), reqHeight.toInt())
             options.inJustDecodeBounds = false
+            options.inPreferredConfig = Bitmap.Config.ARGB_8888
             BitmapFactory.decodeFile(path, options)
         } catch (e: Exception) {
-            e.printStackTrace()
             null
         }
     }

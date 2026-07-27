@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -89,6 +90,7 @@ fun CustomersScreen(
                         )
                     )
                 )
+                .animateContentSize()
         ) {
             // --- HEADER ---
             Column(
@@ -118,30 +120,15 @@ fun CustomersScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Search Row
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { customerViewModel.searchQuery.value = it },
-                    placeholder = { Text("Search by name, mobile, site location...") },
-                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { customerViewModel.searchQuery.value = "" }) {
-                                Icon(Icons.Filled.Close, contentDescription = "Clear search")
-                            }
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("customer_search_input"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    singleLine = true
-                )
+                com.example.ui.components.PremiumOutlinedTextField(
+    value = searchQuery,
+    onValueChange = {customerViewModel.searchQuery.value = it},
+    label = "",
+    placeholder = "Search by name, mobile, site location...",
+    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
 
                 // Sort & Filters Row
                 FlowRow(
@@ -217,15 +204,16 @@ fun CustomersScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         items(recentCustomers) { customer ->
-                            Card(
+                            ElevatedCard(
                                 onClick = { viewDetailsCustomer = customer },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                                ),
                                 modifier = Modifier
+                                    .animateItem()
                                     .width(130.dp)
-                                    .height(90.dp)
+                                    .height(90.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.elevatedCardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                )
                             ) {
                                 Column(
                                     modifier = Modifier
@@ -251,7 +239,7 @@ fun CustomersScreen(
                                     ) {
                                         Text(
                                             text = initials,
-                                            color = Color.White,
+                                            color = MaterialTheme.colorScheme.onPrimary,
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold
                                         )
@@ -290,34 +278,74 @@ fun CustomersScreen(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .padding(24.dp),
+                        .padding(horizontal = 16.dp, vertical = 24.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = if (searchQuery.isEmpty()) Icons.Filled.PersonAdd else Icons.Filled.SearchOff,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                            modifier = Modifier.size(72.dp)
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = if (searchQuery.isEmpty()) "No Customers Yet" else "No Results Match Your Search",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = if (searchQuery.isEmpty()) "No customers yet. Tap + Add Customer to get started." else "Try adjusting your search criteria or toggling 'Show Inactive'.",
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.width(280.dp)
-                        )
+) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 40.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                        shape = RoundedCornerShape(24.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (searchQuery.isEmpty()) Icons.Filled.PersonAdd else Icons.Filled.SearchOff,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                    modifier = Modifier.size(40.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Text(
+                                text = if (searchQuery.isEmpty()) "No Customers Yet" else "No Results Match Your Search",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = if (searchQuery.isEmpty()) {
+                                    "Your customer directory is currently empty. Tap the '+' button below to register your first customer."
+                                } else {
+                                    "Try adjusting your search criteria or toggling 'Show Inactive'."
+                                },
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.width(280.dp),
+                                lineHeight = 20.sp
+                            )
+                            if (searchQuery.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(24.dp))
+                                Button(
+                                    onClick = { customerViewModel.searchQuery.value = "" },
+                                    shape = RoundedCornerShape(50),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary
+                                    )
+                                ) {
+                                    Icon(Icons.Filled.Refresh, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Reset Search")
+                                }
+                            }
+                        }
                     }
                 }
             } else {
@@ -329,7 +357,7 @@ fun CustomersScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(customers, key = { it.customerId }) { customer ->
-                        Card(
+                        ElevatedCard(
                             onClick = {
                                 if (onSelect != null) {
                                     onSelect(customer)
@@ -338,17 +366,18 @@ fun CustomersScreen(
                                 }
                             },
                             modifier = Modifier
+                                .animateItem()
                                 .fillMaxWidth()
                                 .testTag("customer_card_${customer.customerId}"),
                             shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(
+                            colors = CardDefaults.elevatedCardColors(
                                 containerColor = if (customer.isActive) {
                                     MaterialTheme.colorScheme.surface
                                 } else {
                                     MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                                 }
                             ),
-                            elevation = CardDefaults.cardElevation(
+                            elevation = CardDefaults.elevatedCardElevation(
                                 defaultElevation = if (customer.isActive) 2.dp else 0.dp
                             )
                         ) {
@@ -548,19 +577,19 @@ fun CustomersScreen(
     // --- VIEW DETAILS DIALOG ---
     viewDetailsCustomer?.let { customer ->
         Dialog(onDismissRequest = { viewDetailsCustomer = null }) {
-            Card(
+            ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 16.dp),
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(24.dp)
                         .verticalScroll(rememberScrollState())
-                ) {
+) {
                     // Header
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -597,7 +626,7 @@ fun CustomersScreen(
                                 .background(MaterialTheme.colorScheme.primary),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(initials, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text(initials, color = MaterialTheme.colorScheme.onPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
@@ -651,8 +680,8 @@ fun CustomersScreen(
                     // Notes & Activity Log
                     if (customer.notes.isNotEmpty()) {
                         DetailHeading(title = "Client & Project Notes")
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                        ElevatedCard(
+                            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp),
@@ -749,176 +778,215 @@ fun CustomersScreen(
 
         LaunchedEffect(customer) {
             kotlinx.coroutines.delay(150)
-            focusRequester.requestFocus()
+            try {
+                focusRequester.requestFocus()
+            } catch (e: Exception) {
+                // Ignore if not attached
+            }
         }
 
         // Duplicate Check Warning Sheet trigger
         var checkingDuplicateByMobile by remember { mutableStateOf(false) }
 
-        Dialog(onDismissRequest = { isFormOpen = null }) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    Text(
-                        text = if (customer.customerId == 0L) "Add Client Profile" else "Edit Client Profile",
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 20.sp,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
+                com.example.ui.components.PremiumDialog(
+            onDismissRequest = { isFormOpen = null },
+            title = if (customer.customerId == 0L) "Add Client Profile" else "Edit Client Profile",
+            actions = {
+                com.example.ui.components.PremiumTextButton(onClick = { isFormOpen = null }) { Text("Cancel") }
+                Spacer(modifier = Modifier.width(8.dp))
+                com.example.ui.components.PremiumPrimaryButton(
+                    onClick = {
+                        val trimmedName = name.trim()
+                        val trimmedMobile = mobile.trim()
+                        val trimmedEmail = email.trim()
+                        
+                        val hasNameError = trimmedName.isEmpty()
+                        val hasMobileError = trimmedMobile.isEmpty() || !com.example.utils.ValidationManager.isValidPhone(trimmedMobile)
+                        val hasEmailError = trimmedEmail.isNotEmpty() && !com.example.utils.ValidationManager.isValidEmail(trimmedEmail)
 
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { 
-                            name = it 
+                        nameError = if (trimmedName.isEmpty()) "Customer Name is required." else null
+                        mobileError = if (trimmedMobile.isEmpty()) {
+                            "Mobile Number is required."
+                        } else if (!com.example.utils.ValidationManager.isValidPhone(trimmedMobile)) {
+                            "Please enter a valid 10-15 digit Mobile Number."
+                        } else null
+                        emailError = if (trimmedEmail.isNotEmpty() && !com.example.utils.ValidationManager.isValidEmail(trimmedEmail)) {
+                            "Please enter a valid Email Address."
+                        } else null
+
+                        if (!hasNameError && !hasMobileError && !hasEmailError) {
+                            scope.launch {
+                                val existing = customerViewModel.getCustomerByMobile(trimmedMobile)
+                                val savedCustomer = CustomerEntity(
+                                    customerId = customer.customerId,
+                                    customerName = trimmedName,
+                                    mobileNumber = trimmedMobile,
+                                    whatsappNumber = whatsapp.trim(),
+                                    email = trimmedEmail,
+                                    address = address.trim(),
+                                    siteLocation = siteLoc.trim(),
+                                    city = city.trim(),
+                                    district = district.trim(),
+                                    state = state.trim(),
+                                    pincode = pincode.trim(),
+                                    notes = notes.trim(),
+                                    createdDate = if (customer.customerId == 0L) System.currentTimeMillis() else customer.createdDate,
+                                    modifiedDate = System.currentTimeMillis(),
+                                    isActive = isActive,
+                                    companyName = companyName.trim(),
+                                    contactPerson = contactPerson.trim(),
+                                    gstin = gstin.trim().uppercase(),
+                                    siteAddress = siteAddress.trim(),
+                                    country = country.trim()
+                                )
+                                // If existing customer found, and we are either:
+                                // 1. In Add Mode (customerId == 0)
+                                // 2. Editing (but different customer ID)
+                                if (existing != null && (customer.customerId == 0L || existing.customerId != customer.customerId)) {
+                                    showDuplicateWarning = existing
+                                    pendingSaveCustomer = savedCustomer
+                                } else {
+                                    // Save directly, no duplicates
+                                    if (customer.customerId == 0L) {
+                                        customerViewModel.saveCustomer(savedCustomer)
+                                    } else {
+                                        customerViewModel.updateCustomer(savedCustomer)
+                                    }
+                                    isFormOpen = null
+                                    Toast.makeText(context, "Client registered successfully.", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    },
+                    modifier = Modifier.testTag("form_save_button")
+                ) { Text("Save") }
+            }
+        ) {
+
+                    com.example.ui.components.PremiumOutlinedTextField(
+    value = name,
+    onValueChange = {name = it 
                             if (it.trim().isNotEmpty()) {
                                 nameError = null
-                            }
-                        },
-                        label = { Text("Customer Name *") },
-                        leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(focusRequester)
-                            .testTag("form_name_field"),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true,
-                        isError = nameError != null,
-                        supportingText = nameError?.let { { Text(it) } }
-                    )
+                            }},
+    label = "Customer Name *",
+    leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
+    isError = nameError != null,
+    errorMessage = nameError,
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    OutlinedTextField(
-                        value = contactPerson,
-                        onValueChange = { contactPerson = it },
-                        label = { Text("Contact Person (Optional)") },
-                        leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
+                    com.example.ui.components.PremiumOutlinedTextField(
+    value = contactPerson,
+    onValueChange = {contactPerson = it},
+    label = "Contact Person (Optional)",
+    leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null) },
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    OutlinedTextField(
-                        value = mobile,
-                        onValueChange = { 
-                            mobile = it 
+                    com.example.ui.components.PremiumOutlinedTextField(
+    value = mobile,
+    onValueChange = {mobile = it 
                             if (it.trim().isNotEmpty()) {
                                 mobileError = null
-                            }
-                        },
-                        label = { Text("Mobile Number *") },
-                        leadingIcon = { Icon(Icons.Filled.Phone, contentDescription = null) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        modifier = Modifier.fillMaxWidth().testTag("form_mobile_field"),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true,
-                        isError = mobileError != null,
-                        supportingText = mobileError?.let { { Text(it) } }
-                    )
+                            }},
+    label = "Mobile Number *",
+    leadingIcon = { Icon(Icons.Filled.Phone, contentDescription = null) },
+    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+    isError = mobileError != null,
+    errorMessage = mobileError,
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    OutlinedTextField(
-                        value = whatsapp,
-                        onValueChange = { whatsapp = it },
-                        label = { Text("WhatsApp Number") },
-                        leadingIcon = { Icon(Icons.Filled.Share, contentDescription = null) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
+                    com.example.ui.components.PremiumOutlinedTextField(
+    value = whatsapp,
+    onValueChange = {whatsapp = it},
+    label = "WhatsApp Number",
+    leadingIcon = { Icon(Icons.Filled.Share, contentDescription = null) },
+    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { 
-                            email = it 
-                            emailError = null
-                        },
-                        label = { Text("Email Address") },
-                        leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true,
-                        isError = emailError != null,
-                        supportingText = emailError?.let { { Text(it) } }
-                    )
+                    com.example.ui.components.PremiumOutlinedTextField(
+    value = email,
+    onValueChange = {email = it 
+                            emailError = null},
+    label = "Email Address",
+    leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null) },
+    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+    isError = emailError != null,
+    errorMessage = emailError,
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    OutlinedTextField(
-                        value = companyName,
-                        onValueChange = { companyName = it },
-                        label = { Text("Company Name (Optional)") },
-                        leadingIcon = { Icon(Icons.Default.Business, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
+                    com.example.ui.components.PremiumOutlinedTextField(
+    value = companyName,
+    onValueChange = {companyName = it},
+    label = "Company Name (Optional)",
+    leadingIcon = { Icon(Icons.Default.Business, contentDescription = null) },
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    OutlinedTextField(
-                        value = gstin,
-                        onValueChange = { gstin = it },
-                        label = { Text("Client GSTIN (Optional)") },
-                        leadingIcon = { Icon(Icons.Default.Receipt, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
+                    com.example.ui.components.PremiumOutlinedTextField(
+    value = gstin,
+    onValueChange = {gstin = it},
+    label = "Client GSTIN (Optional)",
+    leadingIcon = { Icon(Icons.Default.Receipt, contentDescription = null) },
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    OutlinedTextField(
-                        value = siteLoc,
-                        onValueChange = { siteLoc = it },
-                        label = { Text("Project Site Location") },
-                        leadingIcon = { Icon(Icons.Filled.LocationOn, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
+                    com.example.ui.components.PremiumOutlinedTextField(
+    value = siteLoc,
+    onValueChange = {siteLoc = it},
+    label = "Project Site Location",
+    leadingIcon = { Icon(Icons.Filled.LocationOn, contentDescription = null) },
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    OutlinedTextField(
-                        value = address,
-                        onValueChange = { address = it },
-                        label = { Text("Billing Address") },
-                        leadingIcon = { Icon(Icons.Filled.Home, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
+                    com.example.ui.components.PremiumOutlinedTextField(
+    value = address,
+    onValueChange = {address = it},
+    label = "Billing Address",
+    leadingIcon = { Icon(Icons.Filled.Home, contentDescription = null) },
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    OutlinedTextField(
-                        value = siteAddress,
-                        onValueChange = { siteAddress = it },
-                        label = { Text("Site Address (Optional)") },
-                        leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
+                    com.example.ui.components.PremiumOutlinedTextField(
+    value = siteAddress,
+    onValueChange = {siteAddress = it},
+    label = "Site Address (Optional)",
+    leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    OutlinedTextField(
-                        value = country,
-                        onValueChange = { country = it },
-                        label = { Text("Country") },
-                        leadingIcon = { Icon(Icons.Default.Public, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
+                    com.example.ui.components.PremiumOutlinedTextField(
+    value = country,
+    onValueChange = {country = it},
+    label = "Country",
+    leadingIcon = { Icon(Icons.Default.Public, contentDescription = null) },
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
                     Spacer(modifier = Modifier.height(10.dp))
 
                     // City / District Row
@@ -926,22 +994,20 @@ fun CustomersScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        OutlinedTextField(
-                            value = city,
-                            onValueChange = { city = it },
-                            label = { Text("City") },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = district,
-                            onValueChange = { district = it },
-                            label = { Text("District") },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true
-                        )
+                        com.example.ui.components.PremiumOutlinedTextField(
+    value = city,
+    onValueChange = {city = it},
+    label = "City",
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
+                        com.example.ui.components.PremiumOutlinedTextField(
+    value = district,
+    onValueChange = {district = it},
+    label = "District",
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
                     }
                     Spacer(modifier = Modifier.height(10.dp))
 
@@ -950,34 +1016,30 @@ fun CustomersScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        OutlinedTextField(
-                            value = state,
-                            onValueChange = { state = it },
-                            label = { Text("State") },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = pincode,
-                            onValueChange = { pincode = it },
-                            label = { Text("Pincode") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true
-                        )
+                        com.example.ui.components.PremiumOutlinedTextField(
+    value = state,
+    onValueChange = {state = it},
+    label = "State",
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
+                        com.example.ui.components.PremiumOutlinedTextField(
+    value = pincode,
+    onValueChange = {pincode = it},
+    label = "Pincode",
+    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
                     }
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    OutlinedTextField(
-                        value = notes,
-                        onValueChange = { notes = it },
-                        label = { Text("Notes / Requirements") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        maxLines = 4
-                    )
+                    com.example.ui.components.PremiumOutlinedTextField(
+    value = notes,
+    onValueChange = {notes = it},
+    label = "Notes / Requirements",
+    modifier = Modifier.fillMaxWidth()
+)
                     
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -1012,121 +1074,20 @@ fun CustomersScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Buttons
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        TextButton(onClick = { isFormOpen = null }) { Text("Cancel") }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                // Form Validations
-                                val trimmedName = name.trim()
-                                val trimmedMobile = mobile.trim()
-                                val trimmedEmail = email.trim()
-
-                                val mobileRegex = Regex("^\\+?\\d{10,15}$")
-                                val emailRegex = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\$")
-
-                                val hasNameError = trimmedName.isEmpty()
-                                val hasMobileError = trimmedMobile.isEmpty() || !com.example.utils.ValidationManager.isValidPhone(trimmedMobile)
-                                val hasEmailError = trimmedEmail.isNotEmpty() && !com.example.utils.ValidationManager.isValidEmail(trimmedEmail)
-
-                                nameError = if (trimmedName.isEmpty()) "Customer Name is required." else null
-                                mobileError = if (trimmedMobile.isEmpty()) {
-                                    "Mobile Number is required."
-                                } else if (!com.example.utils.ValidationManager.isValidPhone(trimmedMobile)) {
-                                    "Please enter a valid 10-15 digit Mobile Number."
-                                } else null
-                                emailError = if (trimmedEmail.isNotEmpty() && !com.example.utils.ValidationManager.isValidEmail(trimmedEmail)) {
-                                    "Please enter a valid Email Address."
-                                } else null
-
-                                if (!hasNameError && !hasMobileError && !hasEmailError) {
-                                    // Form fields are valid, proceed to Duplicate Check!
-                                    scope.launch {
-                                        val existing = customerViewModel.getCustomerByMobile(trimmedMobile)
-                                        val savedCustomer = CustomerEntity(
-                                            customerId = customer.customerId,
-                                            customerName = trimmedName,
-                                            mobileNumber = trimmedMobile,
-                                            whatsappNumber = whatsapp.trim(),
-                                            email = trimmedEmail,
-                                            address = address.trim(),
-                                            siteLocation = siteLoc.trim(),
-                                            city = city.trim(),
-                                            district = district.trim(),
-                                            state = state.trim(),
-                                            pincode = pincode.trim(),
-                                            notes = notes.trim(),
-                                            createdDate = if (customer.customerId == 0L) System.currentTimeMillis() else customer.createdDate,
-                                            modifiedDate = System.currentTimeMillis(),
-                                            isActive = isActive,
-                                            companyName = companyName.trim(),
-                                            contactPerson = contactPerson.trim(),
-                                            gstin = gstin.trim().uppercase(),
-                                            siteAddress = siteAddress.trim(),
-                                            country = country.trim()
-                                        )
-                                        // If existing customer found, and we are either:
-                                        // 1. In Add Mode (customerId == 0)
-                                        // 2. Editing (but different customer ID)
-                                        if (existing != null && (customer.customerId == 0L || existing.customerId != customer.customerId)) {
-                                            showDuplicateWarning = existing
-                                            pendingSaveCustomer = savedCustomer
-                                        } else {
-                                            // Save directly, no duplicates
-                                            if (customer.customerId == 0L) {
-                                                customerViewModel.saveCustomer(savedCustomer)
-                                            } else {
-                                                customerViewModel.updateCustomer(savedCustomer)
-                                            }
-                                            isFormOpen = null
-                                            Toast.makeText(context, "Client registered successfully.", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                }
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.testTag("form_save_button")
-                        ) {
-                            Text("Save")
-                        }
-                    }
-                }
-            }
-        }
     }
+    }
+
 
     // --- DUPLICATE WARNING MODAL ---
     showDuplicateWarning?.let { existingCustomer ->
-        AlertDialog(
+        com.example.ui.components.PremiumDialog(
             onDismissRequest = { 
                 showDuplicateWarning = null
                 pendingSaveCustomer = null
             },
-            icon = { Icon(Icons.Filled.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(40.dp)) },
-            title = { Text("Duplicate Client Detected") },
-            text = {
-                Text(
-                    text = "A client named '${existingCustomer.customerName}' is already registered with mobile number ${existingCustomer.mobileNumber}.\n\nWould you like to open the existing profile to view/edit instead of saving a duplicate record?"
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        // Open Existing Customer in Form!
-                        isFormOpen = existingCustomer
-                        showDuplicateWarning = null
-                        pendingSaveCustomer = null
-                    }
-                ) {
-                    Text("Open Existing")
-                }
-            },
-            dismissButton = {
-                TextButton(
+            title = "Duplicate Client Detected",
+            actions = {
+                com.example.ui.components.PremiumTextButton(
                     onClick = {
                         // Overwrite and save anyway
                         pendingSaveCustomer?.let { toSave ->
@@ -1144,37 +1105,48 @@ fun CustomersScreen(
                 ) {
                     Text("Proceed Anyway")
                 }
+                Spacer(modifier = Modifier.width(8.dp))
+                com.example.ui.components.PremiumPrimaryButton(
+                    onClick = {
+                        // Open Existing Customer in Form!
+                        isFormOpen = existingCustomer
+                        showDuplicateWarning = null
+                        pendingSaveCustomer = null
+                    }
+                ) {
+                    Text("Open Existing")
+                }
             }
-        )
+        ) {
+            Text(
+                text = "A client named '${existingCustomer.customerName}' is already registered with mobile number ${existingCustomer.mobileNumber}.\n\nWould you like to open the existing profile to view/edit instead of saving a duplicate record?"
+            )
+        }
     }
 
     // --- SOFT DELETE CONFIRMATION DIALOG ---
     showDeleteConfirm?.let { customer ->
-        AlertDialog(
+        com.example.ui.components.PremiumDialog(
             onDismissRequest = { showDeleteConfirm = null },
-            icon = { Icon(Icons.Filled.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-            title = { Text("Deactivate Client?") },
-            text = {
-                Text("Are you sure you want to soft delete / deactivate '${customer.customerName}'?\n\nThis will hide them from active selections. Past quotations referencing this client will remain completely intact.")
-            },
-            confirmButton = {
-                TextButton(
+            title = "Deactivate Client?",
+            actions = {
+                com.example.ui.components.PremiumTextButton(onClick = { showDeleteConfirm = null }) {
+                    Text("Cancel")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                com.example.ui.components.PremiumPrimaryButton(
                     onClick = {
                         customerViewModel.deleteCustomer(customer)
                         showDeleteConfirm = null
                         Toast.makeText(context, "Client profile deactivated.", Toast.LENGTH_SHORT).show()
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    }
                 ) {
                     Text("Deactivate")
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = null }) {
-                    Text("Cancel")
-                }
             }
-        )
+        ) {
+            Text("Are you sure you want to soft delete / deactivate '${customer.customerName}'?\n\nThis will hide them from active selections. Past quotations referencing this client will remain completely intact.")
+        }
     }
 }
 
@@ -1227,94 +1199,79 @@ fun QuickAddCustomerDialog(
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
+    var siteName by remember { mutableStateOf("") }
     val context = LocalContext.current
 
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Text(
-                    text = "Quick Add Client",
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 18.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
+    com.example.ui.components.PremiumDialog(
+        onDismissRequest = onDismiss,
+        title = "Quick Add Client",
+        actions = {
+            com.example.ui.components.PremiumTextButton(onClick = onDismiss) { Text("Cancel") }
+            Spacer(modifier = Modifier.width(8.dp))
+            com.example.ui.components.PremiumPrimaryButton(
+                onClick = {
+                    val trimmedName = name.trim()
+                    val trimmedPhone = phone.trim()
+                    
+                    if (trimmedName.isEmpty()) {
+                        Toast.makeText(context, "Client Name is required", Toast.LENGTH_SHORT).show()
+                    } else if (trimmedPhone.isEmpty()) {
+                        Toast.makeText(context, "Phone Number is required", Toast.LENGTH_SHORT).show()
+                    } else if (!com.example.utils.ValidationManager.isValidPhone(trimmedPhone)) {
+                        Toast.makeText(context, "Please enter a valid 10-15 digit phone number.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        onSave(
+                            CustomerEntity(
+                                customerName = trimmedName,
+                                mobileNumber = trimmedPhone,
+                                siteLocation = siteName.trim(),
+                                address = address.trim(),
+                                isActive = true
+                            )
+                        )
+                    }
+                }
+            ) { Text("Save & Select") }
+        }
+    ) {
                 
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Client Name *") },
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
+                com.example.ui.components.PremiumOutlinedTextField(
+    value = name,
+    onValueChange = {name = it},
+    label = "Client Name *",
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
                 Spacer(modifier = Modifier.height(10.dp))
 
-                OutlinedTextField(
-                    value = phone,
-                    onValueChange = { phone = it },
-                    label = { Text("Phone Number *") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
+                com.example.ui.components.PremiumOutlinedTextField(
+    value = phone,
+    onValueChange = {phone = it},
+    label = "Phone Number *",
+    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
                 Spacer(modifier = Modifier.height(10.dp))
 
-                var siteName by remember { mutableStateOf("") }
-                OutlinedTextField(
-                    value = siteName,
-                    onValueChange = { siteName = it },
-                    label = { Text("Site Name (e.g., Block B, Apt 402)") },
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
+                com.example.ui.components.PremiumOutlinedTextField(
+    value = siteName,
+    onValueChange = {siteName = it},
+    label = "Site Name (e.g., Block B, Apt 402)",
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
                 Spacer(modifier = Modifier.height(10.dp))
 
-                OutlinedTextField(
-                    value = address,
-                    onValueChange = { address = it },
-                    label = { Text("Site / Billing Address") },
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
+                com.example.ui.components.PremiumOutlinedTextField(
+    value = address,
+    onValueChange = {address = it},
+    label = "Site / Billing Address",
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            val trimmedName = name.trim()
-                            val trimmedPhone = phone.trim()
-                            
-                            if (trimmedName.isEmpty()) {
-                                Toast.makeText(context, "Client Name is required", Toast.LENGTH_SHORT).show()
-                            } else if (trimmedPhone.isEmpty()) {
-                                Toast.makeText(context, "Phone Number is required", Toast.LENGTH_SHORT).show()
-                            } else if (!com.example.utils.ValidationManager.isValidPhone(trimmedPhone)) {
-                                Toast.makeText(context, "Please enter a valid 10-15 digit phone number.", Toast.LENGTH_SHORT).show()
-                            } else {
-                                onSave(
-                                    CustomerEntity(
-                                        customerName = trimmedName,
-                                        mobileNumber = trimmedPhone,
-                                        siteLocation = siteName.trim(),
-                                        address = address.trim(),
-                                        isActive = true
-                                    )
-                                )
-                            }
-                        },
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("Save & Select")
-                    }
-                }
-            }
-        }
     }
 }

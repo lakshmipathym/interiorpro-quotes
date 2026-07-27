@@ -15,5 +15,12 @@ data class BackupMetadata(
     val isEncrypted: Boolean,
     val isCompressed: Boolean,
     val recordCount: Int,
+    // Future-Ready Security Architecture
+    val hasDigitalSignature: Boolean = false,
+    val digitalSignature: String? = null,
+    val requiresTrustedDevice: Boolean = false,
+    val trustedDeviceIds: List<String> = emptyList(),
+    val requiresEnterpriseLicense: Boolean = false,
+    val enterpriseLicenseId: String? = null,
     val extraMetadata: Map<String, String> = emptyMap()
 )

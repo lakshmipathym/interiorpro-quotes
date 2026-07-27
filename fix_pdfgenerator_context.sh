@@ -1,0 +1,2 @@
+perl -0777 -pi -e 's/private fun drawReferenceImages\(engine: PdfEngine, items: List<QuotationItem>\)/private fun drawReferenceImages\(context: Context, engine: PdfEngine, items: List<QuotationItem>\)/' app/src/main/java/com/example/pdf/PdfGenerator.kt
+perl -0777 -pi -e 's/drawReferenceImages\(engine, items\)/drawReferenceImages\(context, engine, items\)/' app/src/main/java/com/example/pdf/PdfGenerator.kt

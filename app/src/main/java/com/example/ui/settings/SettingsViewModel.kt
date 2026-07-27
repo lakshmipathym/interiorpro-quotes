@@ -107,32 +107,30 @@ class SettingsViewModel(
             val driveService = com.example.core.drive.GoogleDriveServiceImpl(getApplication(), signInManager)
             driveService.listAppDataFiles()
         } catch (e: Exception) {
-            e.printStackTrace()
             emptyList()
         }
     }
 
     fun restoreSpecificBackup(fileId: String, onComplete: (Boolean) -> Unit) {
         viewModelScope.launch {
+            val cacheDir = File(getApplication<Application>().cacheDir, "staging")
+            if (!cacheDir.exists()) cacheDir.mkdirs()
+            val tempFile = File(cacheDir, "historic_backup_temp.bin")
             try {
                 val driveService = com.example.core.drive.GoogleDriveServiceImpl(getApplication(), signInManager)
-                val cacheDir = File(getApplication<Application>().cacheDir, "staging")
-                if (!cacheDir.exists()) cacheDir.mkdirs()
-                val tempFile = File(cacheDir, "historic_backup_temp.bin")
                 val success = driveService.downloadFromAppData(fileId, tempFile)
                 if (success) {
-                    val db = AppDatabase.getDatabase(getApplication())
-                    val backupText = tempFile.readBytes()
-                    // Restore can use workspaceManager or standard restoreManager. Since they are raw backups, restoreManager is ideal
                     val restoreResult = workspaceManager.restoreWorkspace(tempFile)
-                    tempFile.delete()
                     onComplete(restoreResult)
                 } else {
                     onComplete(false)
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
                 onComplete(false)
+            } finally {
+                if (tempFile.exists()) {
+                    tempFile.delete()
+                }
             }
         }
     }
@@ -164,7 +162,6 @@ class SettingsViewModel(
                 val file = workspaceManager.exportWorkspace(destinationFile)
                 onComplete(file)
             } catch (e: Exception) {
-                e.printStackTrace()
                 onComplete(null)
             }
         }

@@ -37,30 +37,6 @@ interface CustomerDao {
 }
 
 @Dao
-interface MasterDataDao {
-    @Query("SELECT * FROM master_data ORDER BY value ASC")
-    fun getAllMasterData(): Flow<List<MasterData>>
-
-    @Query("SELECT * FROM master_data WHERE type = :type ORDER BY value ASC")
-    fun getMasterDataByType(type: String): Flow<List<MasterData>>
-
-    @Query("SELECT * FROM master_data WHERE type = :type ORDER BY value ASC")
-    suspend fun getMasterDataByTypeDirect(type: String): List<MasterData>
-
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertMasterData(master: MasterData): Long
-
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertAll(masters: List<MasterData>)
-
-    @Delete
-    suspend fun deleteMasterData(master: MasterData)
-
-    @Query("DELETE FROM master_data WHERE id = :id")
-    suspend fun deleteById(id: Int)
-}
-
-@Dao
 interface QuotationTemplateDao {
     @Query("SELECT * FROM quotation_template ORDER BY name ASC")
     fun getAllTemplates(): Flow<List<QuotationTemplate>>
@@ -70,6 +46,18 @@ interface QuotationTemplateDao {
 
     @Query("SELECT * FROM quotation_template WHERE id = :id LIMIT 1")
     suspend fun getTemplateById(id: Int): QuotationTemplate?
+
+    @Query("SELECT COUNT(id) FROM quotation_template WHERE LOWER(TRIM(projectType)) = LOWER(TRIM(:name)) LIMIT 1")
+    suspend fun countByProjectType(name: String): Int
+
+    @Query("SELECT COUNT(id) FROM quotation_template WHERE LOWER(TRIM(category)) = LOWER(TRIM(:name)) LIMIT 1")
+    suspend fun countByCategory(name: String): Int
+
+    @Query("SELECT COUNT(id) FROM quotation_template WHERE LOWER(TRIM(material)) = LOWER(TRIM(:name)) LIMIT 1")
+    suspend fun countByMaterial(name: String): Int
+
+    @Query("SELECT COUNT(id) FROM quotation_template WHERE LOWER(TRIM(finish)) = LOWER(TRIM(:name)) LIMIT 1")
+    suspend fun countByFinish(name: String): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTemplate(template: QuotationTemplate): Long
@@ -104,6 +92,27 @@ interface QuotationDao {
     @Query("DELETE FROM quotation WHERE id = :id")
     suspend fun deleteById(id: Int)
 
+    @Query("SELECT COUNT(id) FROM quotation WHERE LOWER(TRIM(projectType)) = LOWER(TRIM(:name)) LIMIT 1")
+    suspend fun countByProjectType(name: String): Int
+
+    @Query("SELECT COUNT(id) FROM quotation WHERE LOWER(TRIM(category)) = LOWER(TRIM(:name)) LIMIT 1")
+    suspend fun countByCategory(name: String): Int
+
+    @Query("SELECT COUNT(id) FROM quotation WHERE LOWER(TRIM(material)) = LOWER(TRIM(:name)) LIMIT 1")
+    suspend fun countByMaterial(name: String): Int
+
+    @Query("SELECT COUNT(id) FROM quotation WHERE LOWER(TRIM(finish)) = LOWER(TRIM(:name)) LIMIT 1")
+    suspend fun countByFinish(name: String): Int
+
+    @Query("SELECT COUNT(id) FROM quotation WHERE LOWER(TRIM(warranty)) = LOWER(TRIM(:name)) LIMIT 1")
+    suspend fun countByWarranty(name: String): Int
+
+    @Query("SELECT COUNT(id) FROM quotation WHERE LOWER(termsAndConditions) LIKE '%' || LOWER(TRIM(:name)) || '%' LIMIT 1")
+    suspend fun countByTerms(name: String): Int
+
+    @Query("SELECT * FROM quotation WHERE quotationNumber = :quotationNumber LIMIT 1")
+    suspend fun getQuotationByNumberDirect(quotationNumber: String): Quotation?
+
     @Query("SELECT quotationNumber FROM quotation WHERE quotationNumber LIKE :prefix || '%' ORDER BY id DESC LIMIT 1")
     suspend fun getLatestQuotationNumber(prefix: String): String?
 }
@@ -118,6 +127,9 @@ interface QuotationItemDao {
 
     @Query("SELECT * FROM quotation_item")
     suspend fun getAllQuotationItemsDirect(): List<QuotationItem>
+
+    @Query("SELECT COUNT(id) FROM quotation_item WHERE LOWER(TRIM(unit)) = LOWER(TRIM(:name)) LIMIT 1")
+    suspend fun countByUnit(name: String): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(items: List<QuotationItem>)
@@ -160,30 +172,4 @@ interface MasterDao {
     suspend fun softDeleteMaster(id: Long, timestamp: Long = System.currentTimeMillis())
 }
 
-@Dao
-interface ClientDao {
-    @Query("SELECT * FROM client ORDER BY createdDate DESC")
-    fun getAllClients(): Flow<List<Client>>
-
-    @Query("SELECT * FROM client WHERE isActive = 1 ORDER BY clientName ASC")
-    fun getActiveClients(): Flow<List<Client>>
-
-    @Query("SELECT * FROM client WHERE clientId = :id LIMIT 1")
-    suspend fun getClientById(id: Long): Client?
-
-    @Query("SELECT * FROM client WHERE mobileNumber = :mobile LIMIT 1")
-    suspend fun getClientByMobile(mobile: String): Client?
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertClient(client: Client): Long
-
-    @Update
-    suspend fun updateClient(client: Client)
-
-    @Delete
-    suspend fun deleteClient(client: Client)
-
-    @Query("UPDATE client SET isActive = :isActive, modifiedDate = :timestamp WHERE clientId = :id")
-    suspend fun updateClientStatus(id: Long, isActive: Boolean, timestamp: Long = System.currentTimeMillis())
-}
 

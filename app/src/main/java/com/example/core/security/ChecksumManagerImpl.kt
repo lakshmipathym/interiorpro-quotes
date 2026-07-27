@@ -4,10 +4,20 @@ import java.io.File
 import java.io.FileInputStream
 import java.security.MessageDigest
 
-class ChecksumManagerImpl : ChecksumManager {
+class ChecksumManagerImpl(
+    private val checksumProvider: ChecksumProvider = SHA256ChecksumProvider()
+) : ChecksumManager {
 
     companion object {
         private const val DIGEST_ALGORITHM = "SHA-256"
+    }
+
+    override fun generateChecksum(data: ByteArray): ChecksumResult {
+        return checksumProvider.calculate(data)
+    }
+
+    override fun verifyChecksum(data: ByteArray, expected: ChecksumResult): Boolean {
+        return checksumProvider.verify(data, expected)
     }
 
     override fun computeSha256(data: ByteArray): String {

@@ -8,7 +8,6 @@ class QuotesRepository(private val db: AppDatabase) {
 
     private val companyProfileDao = db.companyProfileDao()
     private val customerDao = db.customerDao()
-    private val masterDataDao = db.masterDataDao()
     private val quotationTemplateDao = db.quotationTemplateDao()
     private val quotationDao = db.quotationDao()
     private val quotationItemDao = db.quotationItemDao()
@@ -25,14 +24,6 @@ class QuotesRepository(private val db: AppDatabase) {
     suspend fun saveCustomer(customer: CustomerEntity): Long = customerDao.insertCustomer(customer)
     suspend fun updateCustomer(customer: CustomerEntity) = customerDao.updateCustomer(customer)
     suspend fun deleteCustomer(customer: CustomerEntity) = customerDao.deleteCustomer(customer)
-
-    // --- MASTER DATA ---
-    val allMasterData: Flow<List<MasterData>> = masterDataDao.getAllMasterData()
-    fun getMasterDataByType(type: String): Flow<List<MasterData>> = masterDataDao.getMasterDataByType(type)
-    suspend fun getMasterDataByTypeDirect(type: String): List<MasterData> = masterDataDao.getMasterDataByTypeDirect(type)
-    suspend fun saveMasterData(master: MasterData): Long = masterDataDao.insertMasterData(master)
-    suspend fun deleteMasterData(master: MasterData) = masterDataDao.deleteMasterData(master)
-    suspend fun deleteMasterDataById(id: Int) = masterDataDao.deleteById(id)
 
     // --- QUOTATION TEMPLATES ---
     val allTemplates: Flow<List<QuotationTemplate>> = quotationTemplateDao.getAllTemplates()
@@ -57,7 +48,7 @@ class QuotesRepository(private val db: AppDatabase) {
                 quotationItemDao.deleteForQuotation(quotation.id)
             }
             // Map items with the correct quotationId
-            val finalItems = items.map { it.copy(quotationId = if (quotation.id > 0) quotation.id else qId) }
+            val finalItems = items.map { it.copy(id = 0, quotationId = if (quotation.id > 0) quotation.id else qId) }
             quotationItemDao.insertAll(finalItems)
             if (quotation.id > 0) quotation.id else qId
         }

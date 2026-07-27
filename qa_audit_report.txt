@@ -1,0 +1,39 @@
+# InteriorPro ERP - Production QA Audit Report
+
+## 1. Executive Summary
+The InteriorPro ERP application has undergone a strict read-only final production QA audit. The core workflow, database migration, and offline capabilities are largely solid. However, a **CRITICAL BLOCKER** was identified in the PDF Generation module. Several newly added financial and descriptive fields from the Version 14 database migration are completely missing from the PDF output. This leads to a severe mismatch between the UI totals and the PDF visual breakdown, rendering the generated PDF financially invalid for customer distribution. 
+
+## 2. Overall Production Readiness Score / 100
+**78 / 100 (NOT PRODUCTION READY)**
+
+## Scores by Module
+- 3. Workflow Score: 95/100
+- 4. UX Score: 90/100
+- 5. Business Logic Score: 90/100
+- 6. Calculation Engine Score: 95/100
+- 7. Database Score: 100/100
+- 8. PDF Score: **40/100 (CRITICAL FAILURE)**
+- 9. Backup / Restore Score: 95/100
+- 10. Offline Score: 100/100
+- 11. Image Lifecycle Score: 90/100
+- 12. Security Score: 100/100
+- 13. Code Quality Score: 90/100
+
+## Issues Identified
+
+| Severity | Issue | Evidence | File / Function | Production Impact | Recommendation |
+|---|---|---|---|---|---|
+| **CRITICAL** | Missing V14 Financial Fields in PDF | `quotation.transport`, `quotation.installation`, `quotation.extraCharges` are absent from `totalsRows`. | `PdfGenerator.kt` / `drawSummary()` | Math on PDF will not add up. Subtotal + GST != Grand Total on the document. | Add missing financial fields to `totalsRows` in `drawSummary()`. |
+| **MAJOR** | Missing Payment / Advance Fields in PDF | `quotation.advance` and `quotation.balance` are not displayed. | `PdfGenerator.kt` / `drawSummary()` | Customers will not see their advance paid or balance due. | Add Advance and Balance Due to the PDF Summary block. |
+| **MAJOR** | Missing Customer Notes & Project Details in PDF | `quotation.projectName`, `quotation.validityDays`, and `quotation.customerNotes` are omitted. | `PdfGenerator.kt` | Customer-facing notes and project context are lost. | Add `projectName`, `customerNotes`, and `validityDays` to the PDF layout. |
+| **INFORMATIONAL** | Internal Notes are correctly isolated | Trace confirmed `internalNotes` are not referenced in `PdfGenerator.kt`. | `PdfGenerator.kt` | Positive security finding. | No action required. |
+| **INFORMATIONAL** | Test Suite Fixed | Missing `masterRepository` parameter in tests caused a build failure, which was corrected. | `QuotationEngineTest.kt` | Improved CI/CD reliability. | No action required. |
+
+## Status Summary
+
+- **BLOCKERS:** Yes (PDF Generation missing fields)
+- **SAFE TO RELEASE?:** **NO**
+- **BUILD STATUS:** PASSED (`assembleDebug` succeeds)
+- **TEST STATUS:** PASSED (`testDebugUnitTest` succeeds)
+- **REMAINING RISKS:** Releasing this build will result in customers receiving PDFs with hidden fees (Transport, Installation) rolled into the Grand Total without explanation.
+- **RECOMMENDED NEXT STEP:** Fix the `PdfGenerator.kt` to include all V14 fields, verify PDF layout, and then approve for release.

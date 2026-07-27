@@ -1,0 +1,36 @@
+--- app/src/main/java/com/example/pdf/PdfGenerator.kt
++++ app/src/main/java/com/example/pdf/PdfGenerator.kt
+@@ -774,18 +774,16 @@
+             }
+             if (wFeet > 0.0) dims.add(formatDimension(wFeet))
+             if (hFeet > 0.0) dims.add(formatDimension(hFeet))
+             if (dFeet > 0.0) dims.add(formatDimension(dFeet))
+ 
+-            if (dims.isNotEmpty()) {
+-                sizeLinesStr.add("Size")
+-                val sizeStr = dims.joinToString(" × ")
+-                val sizeWrappedLines = engine.wrapText(sizeStr, (colWidths[3] - 4f).toInt(), engine.getPaint(COLOR_DARK_SLATE, 6f, TYPEFACE_NORMAL))
+-                sizeLinesStr.addAll(sizeWrappedLines)
+-            }
+-            
+-            val billableQty = com.example.engine.QuotationCalculationEngine.calculateQuantity(specs.width, specs.height, item.quantity, item.unit, specs.depth)
++            if (wFeet > 0.0) sizeLinesStr.add("W : " + formatDimension(wFeet))
++            if (hFeet > 0.0) sizeLinesStr.add("H : " + formatDimension(hFeet))
++            if (dFeet > 0.0) sizeLinesStr.add("D : " + formatDimension(dFeet))
++
++            val billableQty = if (item.rate > 0) item.amount / item.rate else com.example.engine.QuotationCalculationEngine.calculateQuantity(specs.width, specs.height, item.quantity, item.unit, specs.depth)
+             val uLower = item.unit.trim().lowercase(Locale.US)
+             
+             val billableLabel = when {
+-                uLower.contains("sq") -> "Billable Area :"
+-                uLower.contains("cu") -> "Billable Volume :"
+-                uLower.contains("ft") || uLower.contains("meter") || uLower == "r.m" || uLower == "rm" -> "Running Length :"
++                uLower.contains("sq") -> "Area :"
++                uLower.contains("cu") -> "Volume :"
++                uLower.contains("ft") || uLower.contains("meter") || uLower == "r.m" || uLower == "rm" -> "Length :"
+                 else -> ""
+             }
+             if (billableLabel.isNotEmpty()) {
+-                if (sizeLinesStr.isNotEmpty()) sizeLinesStr.add("") // empty line for spacing
+-                
+                 val qtyRounded = Math.round(billableQty * 100.0) / 100.0

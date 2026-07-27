@@ -1,0 +1,2 @@
+sed -i '/root.put("graphics", graphicsObj)/i \
+        val filesDir = context.filesDir\n        val designFiles = filesDir.listFiles { _, name -> name.startsWith("design_") || name.startsWith("temp_des_") }\n        designFiles?.forEach { file ->\n            if (file.exists()) {\n                val bytes = file.readBytes()\n                val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)\n                graphicsObj.put(file.name, base64)\n            }\n        }' app/src/main/java/com/example/core/backup/pkg/BackupPackageManager.kt

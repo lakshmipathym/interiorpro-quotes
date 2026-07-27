@@ -77,7 +77,7 @@ class SyncManagerImpl(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Conflict check failed: ${e.message}")
+
         }
 
         return executeSyncInternal()
@@ -102,9 +102,9 @@ class SyncManagerImpl(
             prefs.edit().putBoolean("sync_pending", false).apply()
             result
         } catch (e: Exception) {
-            val failedState = SyncState.Failed("Sync failed: ${e.message}", e)
+            val failedState = SyncState.Failed("Sync failed")
             _syncState.value = failedState
-            SyncResult.Failure("Sync execution error: ${e.message}", e)
+            SyncResult.Failure("Sync execution error")
         }
     }
 
@@ -122,24 +122,29 @@ class SyncManagerImpl(
                 val cacheDir = File(context.cacheDir, "staging")
                 if (!cacheDir.exists()) cacheDir.mkdirs()
                 val downloadFile = File(cacheDir, "conflict_cloud_backup.bin")
-                val downloadSuccess = driveService.downloadFromAppData(latestCloud.id, downloadFile)
-                if (downloadSuccess) {
-                    val restoreResult = restoreManager.safeRestore(downloadFile, "")
-                    if (restoreResult is RestoreResult.Success) {
-                        _syncState.value = SyncState.Success(Date())
-                        downloadFile.delete()
-                        SyncResult.Success(syncedItemsCount = 1)
+                try {
+                    val downloadSuccess = driveService.downloadFromAppData(latestCloud.id, downloadFile)
+                    if (downloadSuccess) {
+                        val restoreResult = restoreManager.safeRestore(downloadFile, "")
+                        if (restoreResult is RestoreResult.Success) {
+                            _syncState.value = SyncState.Success(Date())
+                            SyncResult.Success(syncedItemsCount = 1)
+                        } else {
+                            _syncState.value = SyncState.Failed("Restoration of cloud backup failed.")
+                            SyncResult.Failure("Restore failed.")
+                        }
                     } else {
-                        _syncState.value = SyncState.Failed("Restoration of cloud backup failed.")
-                        SyncResult.Failure("Restore failed.")
+                        _syncState.value = SyncState.Failed("Failed to download cloud backup.")
+                        SyncResult.Failure("Download failed.")
                     }
-                } else {
-                    _syncState.value = SyncState.Failed("Failed to download cloud backup.")
-                    SyncResult.Failure("Download failed.")
+                } finally {
+                    if (downloadFile.exists()) {
+                        downloadFile.delete()
+                    }
                 }
             } catch (e: Exception) {
-                _syncState.value = SyncState.Failed("Conflict resolution failed: ${e.message}")
-                SyncResult.Failure("Exception during resolution: ${e.message}")
+                _syncState.value = SyncState.Failed("Conflict resolution failed")
+                SyncResult.Failure("Exception during resolution")
             }
         } else {
             // Overwrite cloud by executing normal upload sync
@@ -207,7 +212,7 @@ class SyncManagerImpl(
                 null
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Check for newer backup failed: ${e.message}")
+
             null
         }
     }
@@ -262,7 +267,7 @@ class SyncManagerImpl(
             )
             Log.i(TAG, "Scheduled periodic backup work for policy: $policy with interval: $repeatIntervalDays days")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to schedule periodic backup via WorkManager", e)
+
         }
     }
 
@@ -288,7 +293,7 @@ class SyncManagerImpl(
                 }
             })
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to register default network callback: ${e.message}")
+            Log.w(TAG, "Failed to register default network callback")
         }
     }
 }

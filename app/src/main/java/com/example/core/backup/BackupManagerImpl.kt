@@ -41,7 +41,7 @@ class BackupManagerImpl(
 
             // 2. Compress via GZIP
             if (compress) {
-                Log.d(TAG, "Compressing backup payload...")
+
                 val bos = ByteArrayOutputStream()
                 GZIPOutputStream(bos).use { gzip ->
                     gzip.write(processedData)
@@ -51,7 +51,7 @@ class BackupManagerImpl(
 
             // 3. AES-256 Encrypt
             if (encrypt) {
-                Log.d(TAG, "Encrypting backup payload via AES-256...")
+
                 processedData = encryptionManager.encrypt(processedData, password.ifEmpty { "InteriorProSecureBackupDefault" })
             }
 
@@ -78,8 +78,8 @@ class BackupManagerImpl(
             Log.i(TAG, "Backup pipeline completed successfully. Checksum: $sha256Checksum")
             BackupResult.Success(destinationFile, metadata)
         } catch (e: Exception) {
-            Log.e(TAG, "Critical error during backup pipeline: ${e.message}", e)
-            BackupResult.Failure("Backup pipeline execution failed: ${e.message}", e)
+
+            BackupResult.Failure("Backup pipeline execution failed")
         }
     }
 

@@ -102,7 +102,7 @@ class GoogleDriveServiceImpl(
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     val responseBody = response.body?.string() ?: ""
-                    Log.e(TAG, "Failed upload to Google Drive: Code ${response.code}, Body $responseBody")
+
                     throw IOException("Failed to upload file to Google Drive: ${response.message}")
                 }
 
@@ -115,7 +115,7 @@ class GoogleDriveServiceImpl(
                 return@withContext fileId
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error executing Google Drive file upload: ${e.message}", e)
+
             // Fallback to sandbox on failure to ensure zero-crash operations
             return@withContext uploadToSandbox(file, mimeType, metadata)
         }
@@ -138,7 +138,7 @@ class GoogleDriveServiceImpl(
 
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    Log.e(TAG, "Failed downloading from Google Drive: Code ${response.code}")
+
                     return@withContext downloadFromSandbox(fileId, destination) // Staging fallback
                 }
 
@@ -151,7 +151,7 @@ class GoogleDriveServiceImpl(
                 return@withContext true
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error downloading file from Google Drive: ${e.message}", e)
+
             return@withContext downloadFromSandbox(fileId, destination)
         }
     }
@@ -184,7 +184,7 @@ class GoogleDriveServiceImpl(
 
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    Log.e(TAG, "Failed listing App Data files: Code ${response.code}")
+
                     return@withContext listSandboxFiles()
                 }
 
@@ -218,7 +218,7 @@ class GoogleDriveServiceImpl(
                 return@withContext list
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error listing files from Google Drive: ${e.message}", e)
+
             return@withContext listSandboxFiles()
         }
     }
@@ -245,7 +245,7 @@ class GoogleDriveServiceImpl(
                 return@withContext response.isSuccessful
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error deleting file from Google Drive: ${e.message}", e)
+
             return@withContext deleteFromSandbox(fileId)
         }
     }
@@ -301,7 +301,7 @@ class GoogleDriveServiceImpl(
                     }
                     list.add(DriveFileInfo(id, name, size, modified, propertiesMap))
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to parse simulated sandbox metadata", e)
+
                 }
             }
         }

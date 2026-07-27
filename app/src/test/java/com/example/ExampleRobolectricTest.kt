@@ -19,7 +19,7 @@ class ExampleRobolectricTest {
   fun `read string from context`() {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
-    assertEquals("InteriorPro Quotes", appName)
+    assertEquals("InteriorPro ERP", appName)
   }
 
   @Test
@@ -57,6 +57,8 @@ class ExampleRobolectricTest {
     masterRepo.softDeleteMaster(newMasterId)
     val afterDeleteCount = masterRepo.getMastersByTypeDirect("CATEGORY").size
     assertEquals(originalCount, afterDeleteCount)
+
+    database.close()
   }
 }
 

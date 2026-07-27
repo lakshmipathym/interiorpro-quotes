@@ -14,7 +14,7 @@ sealed interface SyncState {
     object Downloading : SyncState
     object Syncing : SyncState
     data class Success(val lastSyncTime: Date) : SyncState
-    data class Failed(val reason: String, val throwable: Throwable? = null) : SyncState
+    data class Failed(val reason: String) : SyncState
     object Conflict : SyncState
     object WaitingForInternet : SyncState
     object Idle : SyncState

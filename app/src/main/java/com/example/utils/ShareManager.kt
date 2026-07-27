@@ -16,7 +16,14 @@ object ShareManager {
         val quotation = repository.getQuotationByIdDirect(quotationId)
             ?: throw IllegalArgumentException("Quotation not found with id: $quotationId")
         
+        val appDb = com.example.data.AppDatabase.getDatabase(context)
+        val snapshotRepo = com.example.data.snapshot.QuotationSnapshotRepositoryImpl(appDb, repository)
+        val snapshot = snapshotRepo.getSnapshotById(quotationId.toString())
+
+        // Strip out any path traversal patterns (like "../") by resolving or sanitizing the quotation number
         val cleanQuoteNum = quotation.quotationNumber.replace("/", "_")
+            .replace("..", "")
+            .replace("\\", "_")
         
         // Clean any potential old files with a similar prefix in cache to keep it clean
         val cacheDirFile = context.cacheDir
@@ -27,7 +34,6 @@ object ShareManager {
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
         }
 
         // Generate a uniquely-named file to completely bypass external PDF viewer cache
@@ -35,7 +41,13 @@ object ShareManager {
         val file = File(context.cacheDir, "Quotation_${cleanQuoteNum}_$timestamp.pdf")
         
         // Generate the PDF
-        com.example.pdf.PdfGenerator.generateQuotationPdf(context, repository, quotationId, file)
+        if (snapshot != null) {
+            val company = repository.getCompanyProfileDirect() ?: com.example.data.CompanyProfile()
+            com.example.pdf.PdfGenerator.generateQuotationPdf(context, company, snapshot, file)
+        } else {
+            com.example.pdf.PdfGenerator.generateQuotationPdf(context, repository, quotationId, file)
+        }
+
         return file
     }
 
@@ -58,7 +70,7 @@ object ShareManager {
             }
             context.startActivity(Intent.createChooser(intent, "Share Quotation PDF"))
         } catch (e: Exception) {
-            Toast.makeText(context, "Error sharing PDF: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Error sharing PDF", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -91,7 +103,7 @@ object ShareManager {
             context.startActivity(intent)
             return true
         } catch (e: Exception) {
-            Toast.makeText(context, "Error sending to WhatsApp: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Error sending to WhatsApp", Toast.LENGTH_SHORT).show()
             return false
         }
     }
@@ -117,7 +129,7 @@ object ShareManager {
             }
             context.startActivity(Intent.createChooser(intent, "Open Quotation"))
         } catch (e: Exception) {
-            Toast.makeText(context, "Error opening PDF: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Error opening PDF", Toast.LENGTH_SHORT).show()
         }
     }
 

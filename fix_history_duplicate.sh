@@ -1,0 +1,3 @@
+perl -0777 -pi -e 's/val duplicatedItems = items.map \{ item ->/val safeNewQuoteNum = newNumber.replace("\/", "_")\n            val duplicatedItems = items.mapIndexed \{ index, item ->/s' app/src/main/java/com/example/ui/history/HistoryViewModel.kt
+perl -0777 -pi -e 's/"temp_lam_\$\{System\.currentTimeMillis\(\)\}_\$\{java\.util\.UUID\.randomUUID\(\)\.toString\(\)\.substring\(0,5\)\}\.jpg"/"laminate_\$\{safeNewQuoteNum\}_\$\{index\}.jpg"/g' app/src/main/java/com/example/ui/history/HistoryViewModel.kt
+perl -0777 -pi -e 's/"temp_des_\$\{System\.currentTimeMillis\(\)\}_\$\{java\.util\.UUID\.randomUUID\(\)\.toString\(\)\.substring\(0,5\)\}\.jpg"/"design_\$\{safeNewQuoteNum\}_\$\{index\}.jpg"/g' app/src/main/java/com/example/ui/history/HistoryViewModel.kt

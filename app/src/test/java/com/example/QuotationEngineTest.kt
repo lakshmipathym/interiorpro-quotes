@@ -5,6 +5,9 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.*
+import com.example.domain.usecases.*
+import com.example.domain.engine.*
+import com.example.data.snapshot.QuotationSnapshotRepositoryImpl
 import com.example.ui.quotation.QuotationViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -57,15 +60,26 @@ class QuotationEngineTest {
             val context = ApplicationProvider.getApplicationContext<Context>()
             val app = context as Application
             val repository = QuotesRepository(database)
-            val viewModel = QuotationViewModel(app, repository, FakeSyncManager())
+            val itemEngine = ItemCalculationEngineImpl(DimensionParserImpl())
+        val calcEngine = QuotationCalculationEngineImpl(AmountInWordsConverterImpl())
+        val calcUseCase = CalculateQuotationUseCase(itemEngine, calcEngine)
+        val snapFactory = QuotationSnapshotFactoryImpl()
+        val snapRepo = QuotationSnapshotRepositoryImpl(database, repository)
+        val finalizeUseCase = FinalizeQuotationUseCase(snapFactory, snapRepo)
+        val viewModel = QuotationViewModel(app, repository, MasterRepository(database), FakeSyncManager(), calcUseCase, finalizeUseCase, snapRepo)
 
             // Start background collection of StateFlows to activate SharingStarted.WhileSubscribed
             val subtotalJob = launch { viewModel.newQuoteSubtotal.collect {} }
             val gstJob = launch { viewModel.newQuoteGstAmount.collect {} }
             val grandTotalJob = launch { viewModel.newQuoteGrandTotal.collect {} }
+            val itemsJob = launch { viewModel.newQuoteItems.collect {} }
 
             // 1. Verify generation of unique quotation number
-            viewModel.startNewQuotation()
+            val companyProfile = com.example.data.CompanyProfile(
+            companyName = "Test Company"
+        )
+        repository.saveCompanyProfile(companyProfile)
+        viewModel.startNewQuotation()
             testScheduler.advanceUntilIdle()
             
             val quoteNum = viewModel.newQuoteNumber.value
@@ -89,7 +103,7 @@ class QuotationEngineTest {
             val item1 = QuotationItem(
                 quotationId = 0,
                 itemName = "Modern Wardrobe",
-                description = "3-door modular wardrobe with sliding glass",
+                description = "3-door modular wardrobe with sliding glass|||{\"width\":\"1.0\",\"height\":\"1.0\",\"depth\":\"0\"}",
                 material = "MDF",
                 finish = "Glossy",
                 quantity = 2.0,
@@ -102,7 +116,7 @@ class QuotationEngineTest {
             val item2 = QuotationItem(
                 quotationId = 0,
                 itemName = "Kitchen Cabinets",
-                description = "Top cabinets with hydraulic hinges",
+                description = "Top cabinets with hydraulic hinges|||{\"width\":\"1.0\",\"height\":\"1.0\",\"depth\":\"0\"}",
                 material = "Plywood",
                 finish = "Laminate",
                 quantity = 5.0,
@@ -156,7 +170,8 @@ class QuotationEngineTest {
             assertEquals("Kitchen Cabinets", savedItems[1].itemName)
 
             // 5. Test Editing Quotation
-            viewModel.startNewQuotation() // reset
+            repository.saveCompanyProfile(com.example.data.CompanyProfile(companyName = "Test Company 2"))
+        viewModel.startNewQuotation() // reset
             testScheduler.advanceUntilIdle()
             
             val resetQuoteNum = viewModel.newQuoteNumber.value
@@ -179,12 +194,13 @@ class QuotationEngineTest {
 
             // Verify updated totals instantly
             subtotal = viewModel.newQuoteSubtotal.value
-            assertEquals(11400.0, subtotal, 0.001) // 2400 + 9000
+            System.out.println("Subtotal at 191: " + subtotal + " Items: " + viewModel.newQuoteItems.value); assertEquals(11400.0, subtotal, 0.001) // 2400 + 9000
 
             // Clean up StateFlow collector jobs
             subtotalJob.cancel()
             gstJob.cancel()
             grandTotalJob.cancel()
+        itemsJob.cancel()
         } catch (t: Throwable) {
             System.out.println("TEST FAILURE ENCOUNTERED:")
             t.printStackTrace(System.out)
@@ -197,14 +213,25 @@ class QuotationEngineTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val app = context as Application
         val repository = QuotesRepository(database)
-        val quotationViewModel = QuotationViewModel(app, repository, FakeSyncManager())
+        val itemEngine = ItemCalculationEngineImpl(DimensionParserImpl())
+        val calcEngine = QuotationCalculationEngineImpl(AmountInWordsConverterImpl())
+        val calcUseCase = CalculateQuotationUseCase(itemEngine, calcEngine)
+        val snapFactory = QuotationSnapshotFactoryImpl()
+        val snapRepo = QuotationSnapshotRepositoryImpl(database, repository)
+        val finalizeUseCase = FinalizeQuotationUseCase(snapFactory, snapRepo)
+        val quotationViewModel = QuotationViewModel(app, repository, MasterRepository(database), FakeSyncManager(), calcUseCase, finalizeUseCase, snapRepo)
         val historyViewModel = com.example.ui.history.HistoryViewModel(app, repository)
 
         val subtotalJob = launch { quotationViewModel.newQuoteSubtotal.collect {} }
         val gstJob = launch { quotationViewModel.newQuoteGstAmount.collect {} }
         val grandTotalJob = launch { quotationViewModel.newQuoteGrandTotal.collect {} }
+        val itemsJob = launch { quotationViewModel.newQuoteItems.collect {} }
 
         // Create a quote
+        val companyProfile = com.example.data.CompanyProfile(
+            companyName = "Test Company", 
+        )
+        repository.saveCompanyProfile(companyProfile)
         quotationViewModel.startNewQuotation()
         testScheduler.advanceUntilIdle()
 
@@ -242,14 +269,14 @@ class QuotationEngineTest {
 
         val savedQuote = repository.getQuotationByIdDirect(savedId)
         assertNotNull(savedQuote)
-        assertEquals("Draft", savedQuote?.status) // Starts with "Draft"
+        assertEquals("DRAFT", savedQuote?.status) // Starts with "Draft"
 
         // 1. Test update status
-        historyViewModel.updateQuotationStatus(savedId, "Final")
+        historyViewModel.updateQuotationStatus(savedId, "FINAL")
         testScheduler.advanceUntilIdle()
 
         val updatedQuote = repository.getQuotationByIdDirect(savedId)
-        assertEquals("Final", updatedQuote?.status)
+        assertEquals("FINAL", updatedQuote?.status)
 
         // 2. Test edit preserves ID (no duplicates created)
         quotationViewModel.loadQuotationToEdit(updatedQuote!!)
@@ -292,6 +319,71 @@ class QuotationEngineTest {
         subtotalJob.cancel()
         gstJob.cancel()
         grandTotalJob.cancel()
+        itemsJob.cancel()
+    }
+
+    @Test
+    fun testValidationRulesAndBalanceCalculation() = runTest(testDispatcher) {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val app = context as Application
+        val repository = QuotesRepository(database)
+        val itemEngine = ItemCalculationEngineImpl(DimensionParserImpl())
+        val calcEngine = QuotationCalculationEngineImpl(AmountInWordsConverterImpl())
+        val calcUseCase = CalculateQuotationUseCase(itemEngine, calcEngine)
+        val snapFactory = QuotationSnapshotFactoryImpl()
+        val snapRepo = QuotationSnapshotRepositoryImpl(database, repository)
+        val finalizeUseCase = FinalizeQuotationUseCase(snapFactory, snapRepo)
+        val quotationViewModel = QuotationViewModel(app, repository, MasterRepository(database), FakeSyncManager(), calcUseCase, finalizeUseCase, snapRepo)
+        val subtotalJob = launch { quotationViewModel.newQuoteSubtotal.collect {} }
+        val gstJob = launch { quotationViewModel.newQuoteGstAmount.collect {} }
+        val grandTotalJob = launch { quotationViewModel.newQuoteGrandTotal.collect {} }
+        val itemsJob = launch { quotationViewModel.newQuoteItems.collect {} }
+        val balanceJob = launch { quotationViewModel.newQuoteBalance.collect {} }
+        
+        val companyProfile = com.example.data.CompanyProfile(
+            companyName = "Test Company", 
+        )
+        repository.saveCompanyProfile(companyProfile)
+        quotationViewModel.startNewQuotation()
+        testScheduler.advanceUntilIdle()
+
+        // 1. Add item
+        val item = QuotationItem(
+            quotationId = 0, itemName = "Table", quantity = 1.0, unit = "No", rate = 1000.0, amount = 1000.0
+        )
+        quotationViewModel.addQuoteItem(item)
+        testScheduler.advanceUntilIdle()
+
+        System.out.println("Subtotal 339: " + quotationViewModel.newQuoteSubtotal.value); assertEquals(1000.0, quotationViewModel.newQuoteSubtotal.value, 0.001)
+
+        // 2. Discount > Subtotal
+        quotationViewModel.setDiscount(2000.0)
+        testScheduler.advanceUntilIdle()
+        
+        var error = quotationViewModel.validateStep(3)
+        assertEquals("Discount cannot exceed subtotal", error)
+
+        // 3. Negative GST
+        quotationViewModel.setDiscount(0.0)
+        quotationViewModel.setGstRate(-5.0)
+        testScheduler.advanceUntilIdle()
+        
+        error = quotationViewModel.validateStep(3)
+        assertEquals("GST rate cannot be negative", error)
+
+        // 4. Test Balance Due never becomes negative
+        quotationViewModel.setGstRate(18.0) // Taxable: 1000 -> GST: 180 -> Grand Total: 1180
+        quotationViewModel.setAdvance(2000.0)
+        testScheduler.advanceUntilIdle()
+        
+        val balance = quotationViewModel.newQuoteBalance.value
+        assertEquals(0.0, balance, 0.001) // Advance is greater than grand total, but balance must be >= 0
+
+        subtotalJob.cancel()
+        gstJob.cancel()
+        grandTotalJob.cancel()
+        itemsJob.cancel()
+        balanceJob.cancel()
     }
 
     private class FakeSyncManager : com.example.core.sync.SyncManager {

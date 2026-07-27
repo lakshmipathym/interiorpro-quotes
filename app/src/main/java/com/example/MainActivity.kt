@@ -4,6 +4,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,11 +16,9 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.Receipt
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -37,11 +40,6 @@ import androidx.navigation.navArgument
 import com.example.data.AppDatabase
 import com.example.data.QuotesRepository
 import com.example.data.MasterRepository
-import com.example.data.ClientRepository
-import com.example.ui.client.ClientViewModel
-import com.example.ui.client.ClientViewModelFactory
-import com.example.ui.client.ClientsScreen
-import com.example.ui.client.AddEditClientScreen
 import com.example.ui.company.CompanyViewModel
 import com.example.ui.company.CompanyViewModelFactory
 import com.example.ui.company.MasterViewModel
@@ -56,13 +54,27 @@ import com.example.ui.history.QuotationHistoryScreen
 import com.example.ui.quotation.NewQuotationScreen
 import com.example.ui.quotation.QuotationViewModel
 import com.example.ui.quotation.QuotationViewModelFactory
+
+import com.example.domain.usecases.CalculateQuotationUseCase
+import com.example.domain.usecases.FinalizeQuotationUseCase
+import com.example.domain.engine.ItemCalculationEngineImpl
+import com.example.domain.engine.QuotationCalculationEngineImpl
+import com.example.domain.engine.DimensionParserImpl
+import com.example.domain.engine.AmountInWordsConverterImpl
+import com.example.data.snapshot.QuotationSnapshotRepositoryImpl
+import com.example.domain.engine.QuotationSnapshotFactoryImpl
 import com.example.ui.settings.SettingsScreen
 import com.example.ui.settings.SettingsViewModel
 import com.example.ui.settings.SettingsViewModelFactory
+import com.example.core.sync.dashboard.DashboardRepositoryImpl
+import com.example.core.sync.dashboard.DashboardStateManager
+import com.example.core.sync.dashboard.SyncDashboardViewModel
+import com.example.core.sync.dashboard.ui.SyncDashboardScreen
 import com.example.ui.theme.MyApplicationTheme
 
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
@@ -79,61 +91,104 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
-import androidx.compose.material.icons.filled.CloudDownload
 import com.example.core.backup.BackupMetadata
 
 class MainActivity : ComponentActivity() {
 
-    private lateinit var companyViewModel: CompanyViewModel
-    private lateinit var customerViewModel: CustomerViewModel
-    private lateinit var historyViewModel: HistoryViewModel
-    private lateinit var settingsViewModel: SettingsViewModel
-    private lateinit var quotationViewModel: QuotationViewModel
-    private lateinit var masterViewModel: MasterViewModel
-    private lateinit var clientViewModel: ClientViewModel
+    // Databases & Repositories (Lazy initialized to prevent cold start bottlenecks)
+    private val database by lazy { AppDatabase.getDatabase(applicationContext) }
+    private val repository by lazy { QuotesRepository(database) }
+    private val masterRepository by lazy { MasterRepository(database) }
+
+    // Core Sync & Security Infrastructure (Lazy initialized on-demand)
+    private val signInManager by lazy { com.example.core.drive.GoogleSignInManagerImpl(applicationContext) }
+    private val driveService by lazy { com.example.core.drive.GoogleDriveServiceImpl(applicationContext, signInManager) }
+    private val encryptionManager by lazy { com.example.core.security.EncryptionManagerImpl() }
+    private val checksumManager by lazy { com.example.core.security.ChecksumManagerImpl() }
+    private val integrityValidator by lazy { com.example.core.security.IntegrityValidatorImpl(checksumManager) }
+    private val restoreManager by lazy { com.example.core.backup.RestoreManagerImpl(applicationContext, database, repository, encryptionManager, checksumManager, integrityValidator) }
+    private val deviceManager by lazy { com.example.core.device.DeviceManagerImpl(applicationContext) }
+    private val backupManager by lazy { com.example.core.backup.BackupManagerImpl(database, repository, encryptionManager, checksumManager, deviceManager) }
+    private val syncCoordinator by lazy { com.example.core.sync.SyncCoordinatorImpl() }
+    private val syncManager by lazy { com.example.core.sync.SyncManagerImpl(applicationContext, driveService, backupManager, restoreManager, deviceManager, syncCoordinator) }
+    private val workspaceManager by lazy { com.example.core.backup.WorkspaceManagerImpl(applicationContext, database, repository, encryptionManager, checksumManager) }
+    private val themeManager by lazy { com.example.ui.theme.ThemeManager(applicationContext) }
+
+    // ViewModels (Lazy initialized when required by the Compose graph/screen)
+    private val companyViewModel: CompanyViewModel by lazy {
+        ViewModelProvider(this, CompanyViewModelFactory(application, repository, masterRepository))[CompanyViewModel::class.java]
+    }
+    private val customerViewModel: CustomerViewModel by lazy {
+        ViewModelProvider(this, CustomerViewModelFactory(application, repository))[CustomerViewModel::class.java]
+    }
+    private val historyViewModel: HistoryViewModel by lazy {
+        ViewModelProvider(this, HistoryViewModelFactory(application, repository))[HistoryViewModel::class.java]
+    }
+    private val settingsViewModel: SettingsViewModel by lazy {
+        ViewModelProvider(this, SettingsViewModelFactory(application, repository, syncManager, workspaceManager, deviceManager, signInManager))[SettingsViewModel::class.java]
+    }
+    private val quotationViewModel: QuotationViewModel by lazy {
+        val itemEngine = ItemCalculationEngineImpl(DimensionParserImpl())
+        val calcEngine = QuotationCalculationEngineImpl(AmountInWordsConverterImpl())
+        val calcUseCase = CalculateQuotationUseCase(itemEngine, calcEngine)
+        val snapFactory = QuotationSnapshotFactoryImpl()
+        val snapRepo = QuotationSnapshotRepositoryImpl(com.example.data.AppDatabase.getDatabase(applicationContext), repository)
+        val finalizeUseCase = FinalizeQuotationUseCase(snapFactory, snapRepo)
+        ViewModelProvider(this, QuotationViewModelFactory(application, repository, masterRepository, syncManager, calcUseCase, finalizeUseCase, snapRepo))[QuotationViewModel::class.java]
+    }
+    private val masterViewModel: MasterViewModel by lazy {
+        ViewModelProvider(this, MasterViewModelFactory(application, masterRepository))[MasterViewModel::class.java]
+    }
+
+    private val syncDashboardViewModel: SyncDashboardViewModel by lazy {
+        val repository = DashboardRepositoryImpl(com.example.data.AppDatabase.getDatabase(applicationContext))
+        val stateManager = DashboardStateManager(repository)
+        val factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return SyncDashboardViewModel(stateManager) as T
+            }
+        }
+        ViewModelProvider(this, factory)[SyncDashboardViewModel::class.java]
+    }
+
+    private fun cleanOrphanedImages() {
+        try {
+            val filesDir = this.filesDir
+            val tempFiles = filesDir.listFiles { _, name ->
+                name.startsWith("temp_des_") || name.startsWith("temp_lam_")
+            }
+            tempFiles?.forEach { it.delete() }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // 1. Initialize offline database & repository
-        val database = AppDatabase.getDatabase(applicationContext)
-        val repository = QuotesRepository(database)
-        val masterRepository = MasterRepository(database)
-        val clientRepository = ClientRepository(database)
-
-        // Initialize Core Architectural Dependencies
-        val signInManager = com.example.core.drive.GoogleSignInManagerImpl(applicationContext)
-        val driveService = com.example.core.drive.GoogleDriveServiceImpl(applicationContext, signInManager)
-        val encryptionManager = com.example.core.security.EncryptionManagerImpl()
-        val checksumManager = com.example.core.security.ChecksumManagerImpl()
-        val integrityValidator = com.example.core.security.IntegrityValidatorImpl(checksumManager)
-        val restoreManager = com.example.core.backup.RestoreManagerImpl(applicationContext, database, repository, encryptionManager, checksumManager, integrityValidator)
-        val deviceManager = com.example.core.device.DeviceManagerImpl(applicationContext)
-        val backupManager = com.example.core.backup.BackupManagerImpl(database, repository, encryptionManager, checksumManager, deviceManager)
-        val syncCoordinator = com.example.core.sync.SyncCoordinatorImpl()
-        val syncManager = com.example.core.sync.SyncManagerImpl(applicationContext, driveService, backupManager, restoreManager, deviceManager, syncCoordinator)
-        val workspaceManager = com.example.core.backup.WorkspaceManagerImpl(applicationContext, database, repository, encryptionManager, checksumManager)
-
-        // 2. Instantiate Split ViewModels
-        companyViewModel = ViewModelProvider(this, CompanyViewModelFactory(application, repository))[CompanyViewModel::class.java]
-        customerViewModel = ViewModelProvider(this, CustomerViewModelFactory(application, repository))[CustomerViewModel::class.java]
-        historyViewModel = ViewModelProvider(this, HistoryViewModelFactory(application, repository))[HistoryViewModel::class.java]
-        settingsViewModel = ViewModelProvider(this, SettingsViewModelFactory(application, repository, syncManager, workspaceManager, deviceManager, signInManager))[SettingsViewModel::class.java]
-        quotationViewModel = ViewModelProvider(this, QuotationViewModelFactory(application, repository, syncManager))[QuotationViewModel::class.java]
-        masterViewModel = ViewModelProvider(this, MasterViewModelFactory(application, masterRepository))[MasterViewModel::class.java]
-        clientViewModel = ViewModelProvider(this, ClientViewModelFactory(application, clientRepository))[ClientViewModel::class.java]
+        // Clean orphaned temporary images from aborted quotation edits
+        cleanOrphanedImages()
 
         setContent {
-            MyApplicationTheme {
+            val themeMode by themeManager.themeMode.collectAsState()
+            val systemIsDark = androidx.compose.foundation.isSystemInDarkTheme()
+            val isDarkTheme = when (themeMode) {
+                com.example.ui.theme.ThemeMode.DARK -> true
+                com.example.ui.theme.ThemeMode.LIGHT -> false
+                com.example.ui.theme.ThemeMode.SYSTEM -> systemIsDark
+            }
+            MyApplicationTheme(darkTheme = isDarkTheme) {
                 MainDashboard(
-                    companyViewModel,
-                    customerViewModel,
-                    historyViewModel,
-                    settingsViewModel,
-                    quotationViewModel,
-                    masterViewModel,
-                    clientViewModel
+                    companyViewModelProvider = { companyViewModel },
+                    customerViewModelProvider = { customerViewModel },
+                    historyViewModelProvider = { historyViewModel },
+                    settingsViewModelProvider = { settingsViewModel },
+                    quotationViewModelProvider = { quotationViewModel },
+                    masterViewModelProvider = { masterViewModel },
+                    themeManagerProvider = { themeManager },
+                    syncDashboardViewModelProvider = { syncDashboardViewModel }
                 )
             }
         }
@@ -142,13 +197,14 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainDashboard(
-    companyViewModel: CompanyViewModel,
-    customerViewModel: CustomerViewModel,
-    historyViewModel: HistoryViewModel,
-    settingsViewModel: SettingsViewModel,
-    quotationViewModel: QuotationViewModel,
-    masterViewModel: MasterViewModel,
-    clientViewModel: ClientViewModel
+    companyViewModelProvider: () -> CompanyViewModel,
+    customerViewModelProvider: () -> CustomerViewModel,
+    historyViewModelProvider: () -> HistoryViewModel,
+    settingsViewModelProvider: () -> SettingsViewModel,
+    quotationViewModelProvider: () -> QuotationViewModel,
+    masterViewModelProvider: () -> MasterViewModel,
+    themeManagerProvider: () -> com.example.ui.theme.ThemeManager,
+    syncDashboardViewModelProvider: () -> com.example.core.sync.dashboard.SyncDashboardViewModel
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -159,7 +215,9 @@ fun MainDashboard(
     var isRestoringCloudBackup by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        settingsViewModel.checkForNewerBackup { metadata ->
+        // Defer cloud backup checks slightly to allow completely smooth startup transition
+        kotlinx.coroutines.delay(2000)
+        settingsViewModelProvider().checkForNewerBackup { metadata ->
             if (metadata != null) {
                 newerBackupMetadata = metadata
             }
@@ -199,7 +257,7 @@ fun MainDashboard(
                 Button(
                     onClick = {
                         isRestoringCloudBackup = true
-                        settingsViewModel.resolveConflicts(preferCloud = true) { result ->
+                        settingsViewModelProvider().resolveConflicts(preferCloud = true) { result ->
                             isRestoringCloudBackup = false
                             newerBackupMetadata = null
                             if (result is com.example.core.sync.SyncResult.Success) {
@@ -233,70 +291,119 @@ fun MainDashboard(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
             NavigationBar(
-                modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+                modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                tonalElevation = 8.dp
             ) {
+                val isHistory = currentRoute == "history"
                 NavigationBarItem(
-                    selected = currentRoute == "history",
+                    selected = isHistory,
                     onClick = {
-                        if (currentRoute != "history") {
+                        if (!isHistory) {
                             navController.navigate("history") {
-                                popUpTo("history") { inclusive = true }
+                                popUpTo("history") { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
                             }
                         }
                     },
-                    icon = { Icon(Icons.Filled.Receipt, contentDescription = "History") },
-                    label = { Text("History", fontWeight = FontWeight.Bold) }
+                    icon = { Icon(if(isHistory) Icons.AutoMirrored.Filled.List else Icons.AutoMirrored.Filled.List, contentDescription = "History") },
+                    label = { Text("History", fontWeight = if(isHistory) FontWeight.Bold else FontWeight.Normal) },
+                    alwaysShowLabel = true
                 )
+                
+                val isNewQuote = currentRoute == "new_quote"
                 NavigationBarItem(
-                    selected = currentRoute == "new_quote",
+                    selected = isNewQuote,
                     onClick = {
-                        quotationViewModel.startNewQuotation()
-                        if (currentRoute != "new_quote") {
+                        quotationViewModelProvider().startNewQuotation()
+                        if (!isNewQuote) {
                             navController.navigate("new_quote") {
+                                popUpTo("history") { saveState = true }
                                 launchSingleTop = true
+                                restoreState = true
                             }
                         }
                     },
-                    icon = { Icon(Icons.Filled.AddCircle, contentDescription = "Create") },
-                    label = { Text("New Quote", fontWeight = FontWeight.Bold) }
+                    icon = { Icon(if(isNewQuote) Icons.Filled.AddCircle else Icons.Filled.Add, contentDescription = "Create") },
+                    label = { Text("New Quote", fontWeight = if(isNewQuote) FontWeight.Bold else FontWeight.Normal) },
+                    alwaysShowLabel = true
                 )
+                
+                val isCustomers = currentRoute == "customers"
                 NavigationBarItem(
-                    selected = currentRoute == "clients",
+                    selected = isCustomers,
                     onClick = {
-                        if (currentRoute != "clients") {
-                            navController.navigate("clients") {
+                        if (!isCustomers) {
+                            navController.navigate("customers") {
+                                popUpTo("history") { saveState = true }
                                 launchSingleTop = true
+                                restoreState = true
                             }
                         }
                     },
-                    icon = { Icon(Icons.Filled.People, contentDescription = "Clients") },
-                    label = { Text("Clients", fontWeight = FontWeight.Bold) }
+                    icon = { Icon(if(isCustomers) Icons.Filled.Person else Icons.Filled.Person, contentDescription = "Clients") },
+                    label = { Text("Customers", fontWeight = if(isCustomers) FontWeight.Bold else FontWeight.Normal) },
+                    alwaysShowLabel = true
                 )
+                
+                val isSettings = currentRoute == "settings"
                 NavigationBarItem(
-                    selected = currentRoute == "settings",
+                    selected = isSettings,
                     onClick = {
-                        if (currentRoute != "settings") {
+                        if (!isSettings) {
                             navController.navigate("settings") {
+                                popUpTo("history") { saveState = true }
                                 launchSingleTop = true
+                                restoreState = true
                             }
                         }
                     },
                     icon = { Icon(Icons.Filled.Settings, contentDescription = "Settings") },
-                    label = { Text("Settings", fontWeight = FontWeight.Bold) }
+                    label = { Text("Settings", fontWeight = if(isSettings) FontWeight.Bold else FontWeight.Normal) },
+                    alwaysShowLabel = true
                 )
             }
         }
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
-            NavHost(navController = navController, startDestination = "history") {
+            NavHost(
+                navController = navController,
+                startDestination = "history",
+                enterTransition = {
+                    slideInHorizontally(
+                        initialOffsetX = { 300 },
+                        animationSpec = tween(250)
+                    ) + fadeIn(animationSpec = tween(250))
+                },
+                exitTransition = {
+                    slideOutHorizontally(
+                        targetOffsetX = { -300 },
+                        animationSpec = tween(250)
+                    ) + fadeOut(animationSpec = tween(250))
+                },
+                popEnterTransition = {
+                    slideInHorizontally(
+                        initialOffsetX = { -300 },
+                        animationSpec = tween(250)
+                    ) + fadeIn(animationSpec = tween(250))
+                },
+                popExitTransition = {
+                    slideOutHorizontally(
+                        targetOffsetX = { 300 },
+                        animationSpec = tween(250)
+                    ) + fadeOut(animationSpec = tween(250))
+                }
+            ) {
                 composable("history") {
                     QuotationHistoryScreen(
-                        historyViewModel = historyViewModel,
-                        quotationViewModel = quotationViewModel,
-                        companyViewModel = companyViewModel,
-                        customerViewModel = customerViewModel,
+                        historyViewModel = historyViewModelProvider(),
+                        quotationViewModel = quotationViewModelProvider(),
+                        companyViewModel = companyViewModelProvider(),
+                        customerViewModel = customerViewModelProvider(),
                         onNavigateToCreate = {
-                            quotationViewModel.startNewQuotation()
+                            quotationViewModelProvider().startNewQuotation()
                             navController.navigate("new_quote") {
                                 launchSingleTop = true
                             }
@@ -310,8 +417,8 @@ fun MainDashboard(
                 }
                 composable("new_quote") {
                     NewQuotationScreen(
-                        quotationViewModel = quotationViewModel,
-                        customerViewModel = customerViewModel,
+                        quotationViewModel = quotationViewModelProvider(),
+                        customerViewModel = customerViewModelProvider(),
                         onSuccessReturn = {
                             navController.navigate("history") {
                                 popUpTo("history") { inclusive = true }
@@ -319,49 +426,51 @@ fun MainDashboard(
                         }
                     )
                 }
-                composable("clients") {
-                    ClientsScreen(
-                        clientViewModel = clientViewModel,
-                        onNavigateToAddClient = {
-                            navController.navigate("add_edit_client?clientId=0") {
-                                launchSingleTop = true
-                            }
-                        },
-                        onNavigateToEditClient = { clientId ->
-                            navController.navigate("add_edit_client?clientId=$clientId") {
-                                launchSingleTop = true
-                            }
-                        }
-                    )
-                }
-                composable(
-                    route = "add_edit_client?clientId={clientId}",
-                    arguments = listOf(
-                        navArgument("clientId") {
-                            type = NavType.LongType
-                            defaultValue = 0L
-                        }
-                    )
-                ) { backStackEntry ->
-                    val clientId = backStackEntry.arguments?.getLong("clientId") ?: 0L
-                    AddEditClientScreen(
-                        clientId = clientId,
-                        clientViewModel = clientViewModel,
-                        onBack = { navController.popBackStack() }
+                composable("customers") {
+                    CustomersScreen(
+                        customerViewModel = customerViewModelProvider()
                     )
                 }
                 composable("masters") {
-                    MasterDataScreen(masterViewModel = masterViewModel)
+                    MasterDataScreen(masterViewModel = masterViewModelProvider())
                 }
                 composable("settings") {
                     SettingsScreen(
-                        settingsViewModel = settingsViewModel,
-                        companyViewModel = companyViewModel,
+                        settingsViewModel = settingsViewModelProvider(),
+                        companyViewModel = companyViewModelProvider(),
+                        masterViewModel = masterViewModelProvider(),
+                        themeManager = themeManagerProvider(),
                         onNavigateToMasters = {
                             navController.navigate("masters") {
                                 launchSingleTop = true
                             }
+                        },
+                        onNavigateToAbout = {
+                            navController.navigate("about") {
+                                launchSingleTop = true
+                            }
+                        },
+                        onNavigateToSyncDashboard = {
+                            navController.navigate("sync_dashboard") {
+                                launchSingleTop = true
+                            }
                         }
+                    )
+                }
+                composable("sync_dashboard") {
+                    SyncDashboardScreen(
+                        viewModel = syncDashboardViewModelProvider(), 
+                        onNavigateBack = { navController.popBackStack() },
+                        onNewQuotation = { navController.navigate("new_quote") },
+                        onAddCustomer = { navController.navigate("customers") },
+                        onAddMaterial = { navController.navigate("masters") },
+                        onCompanyProfile = { navController.navigate("settings") },
+                        onBackup = { navController.navigate("settings") }
+                    )
+                }
+                composable("about") {
+                    com.example.ui.settings.AboutScreen(
+                        onNavigateBack = { navController.popBackStack() }
                     )
                 }
             }

@@ -1,0 +1,1 @@
+perl -0777 -pi -e 's/private val repository: QuotesRepository,.*?\n/private val repository: QuotesRepository,\n    private val masterRepository: com.example.data.MasterRepository,\n/' app/src/main/java/com/example/ui/quotation/QuotationViewModel.kt

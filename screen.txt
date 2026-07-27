@@ -1,0 +1,1124 @@
+package com.example.ui.settings
+
+import android.content.Context
+import android.net.Uri
+import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
+import com.example.data.*
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
+
+import com.example.ui.theme.ThemeManager
+import com.example.ui.theme.ThemeMode
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreen(
+    settingsViewModel: com.example.ui.settings.SettingsViewModel,
+    companyViewModel: com.example.ui.company.CompanyViewModel,
+    masterViewModel: com.example.ui.company.MasterViewModel,
+    themeManager: ThemeManager,
+    onNavigateToMasters: () -> Unit = {},
+    onNavigateToAbout: () -> Unit = {},
+    onNavigateToSyncDashboard: () -> Unit = {}
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val companyProfile by companyViewModel.companyProfile.collectAsState()
+    
+    val gstRates by masterViewModel.getFilteredMasters("GST_RATE").collectAsState(initial = emptyList())
+    val paymentTermsMaster by masterViewModel.getFilteredMasters("PAYMENT_TERM").collectAsState(initial = emptyList())
+
+    // Company Profile state variables
+    var coName by remember { mutableStateOf("") }
+    var tagline by remember { mutableStateOf("") }
+    var ownerName by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var whatsappNumber by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var website by remember { mutableStateOf("") }
+    var gstin by remember { mutableStateOf("") }
+
+    // Address
+    var address by remember { mutableStateOf("") }
+    var city by remember { mutableStateOf("") }
+    var district by remember { mutableStateOf("") }
+    var state by remember { mutableStateOf("") }
+    var pincode by remember { mutableStateOf("") }
+
+    // Bank details
+    var bankName by remember { mutableStateOf("") }
+    var accountHolderName by remember { mutableStateOf("") }
+    var bankAccount by remember { mutableStateOf("") }
+    var bankIfsc by remember { mutableStateOf("") }
+    var bankBranch by remember { mutableStateOf("") }
+    var upiId by remember { mutableStateOf("") }
+
+    // Branding & Customization
+    var logoPath by remember { mutableStateOf("") }
+    var signaturePath by remember { mutableStateOf("") }
+    var companySealPath by remember { mutableStateOf("") }
+    var signatureText by remember { mutableStateOf("") }
+
+    // Quotation Defaults State
+    var defaultGstRateStr by remember { mutableStateOf("18.0") }
+    var defaultDiscountStr by remember { mutableStateOf("0.0") }
+    var defaultValidityDaysStr by remember { mutableStateOf("30") }
+    var defaultDeliveryDaysStr by remember { mutableStateOf("15") }
+    var logoRefreshKey by remember { mutableStateOf(System.currentTimeMillis()) }
+    var sigRefreshKey by remember { mutableStateOf(System.currentTimeMillis()) }
+    var sealRefreshKey by remember { mutableStateOf(System.currentTimeMillis()) }
+
+    // Terms
+    var termsAndConditions by remember { mutableStateOf("") }
+    var defaultWarranty by remember { mutableStateOf("") }
+    var defaultDeliveryTime by remember { mutableStateOf("") }
+    var defaultInstallationTime by remember { mutableStateOf("") }
+    var defaultPaymentTerms by remember { mutableStateOf("") }
+    var defaultQuoteValidity by remember { mutableStateOf("") }
+    var additionalConditions by remember { mutableStateOf("") }
+
+    var gstExpanded by remember { mutableStateOf(false) }
+    var paymentTermsExpanded by remember { mutableStateOf(false) }
+
+    // Error states
+    var coNameError by remember { mutableStateOf<String?>(null) }
+    var phoneError by remember { mutableStateOf<String?>(null) }
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var gstinError by remember { mutableStateOf<String?>(null) }
+
+    val sharedPref = remember { context.getSharedPreferences("backup_prefs", Context.MODE_PRIVATE) }
+    val pdfPrefs = remember { context.getSharedPreferences("pdf_prefs", Context.MODE_PRIVATE) }
+    var pdfShowLogo by remember { mutableStateOf(pdfPrefs.getBoolean("pdf_show_logo", true)) }
+    var pdfShowGst by remember { mutableStateOf(pdfPrefs.getBoolean("pdf_show_gst", true)) }
+    var pdfShowWebsite by remember { mutableStateOf(pdfPrefs.getBoolean("pdf_show_website", true)) }
+    var pdfShowWhatsapp by remember { mutableStateOf(pdfPrefs.getBoolean("pdf_show_whatsapp", true)) }
+    var pdfShowValidUntil by remember { mutableStateOf(pdfPrefs.getBoolean("pdf_show_valid_until", true)) }
+    var pdfShowQrCode by remember { mutableStateOf(pdfPrefs.getBoolean("pdf_show_qr_code", true)) }
+    var pdfShowBankDetails by remember { mutableStateOf(pdfPrefs.getBoolean("pdf_show_bank_details", true)) }
+    var pdfShowAmountInWords by remember { mutableStateOf(pdfPrefs.getBoolean("pdf_show_amount_in_words", true)) }
+    var pdfShowCompanySeal by remember { mutableStateOf(pdfPrefs.getBoolean("pdf_show_company_seal", true)) }
+    var pdfShowSignature by remember { mutableStateOf(pdfPrefs.getBoolean("pdf_show_signature", true)) }
+    var pdfShowTermsConditions by remember { mutableStateOf(pdfPrefs.getBoolean("pdf_show_terms_conditions", true)) }
+    var pdfShowPageNumber by remember { mutableStateOf(pdfPrefs.getBoolean("pdf_show_page_number", true)) }
+    var lastBackupDate by remember { mutableStateOf(sharedPref.getString("last_backup_date", "Never")) }
+    var isConfirmRestoreDialogOpen by remember { mutableStateOf(false) }
+    var pendingRestoreJson by remember { mutableStateOf("") }
+
+    // Sprint 3 State tracking
+    val syncState by settingsViewModel.syncState.collectAsState()
+    val isUserSignedIn by settingsViewModel.isUserSignedIn.collectAsState()
+    val currentUserEmail by settingsViewModel.currentUserEmail.collectAsState()
+    val currentUserDisplayName by settingsViewModel.currentUserDisplayName.collectAsState()
+
+    var cloudBackupsList by remember { mutableStateOf<List<com.example.core.drive.DriveFileInfo>>(emptyList()) }
+    var isRefreshingCloudList by remember { mutableStateOf(false) }
+
+    var workspacePreviewState by remember { mutableStateOf<com.example.core.backup.WorkspacePreview?>(null) }
+    var isConfirmWorkspaceImportDialogOpen by remember { mutableStateOf(false) }
+
+    var isConfirmSpecificRestoreDialogOpen by remember { mutableStateOf(false) }
+    var specificRestoreFileId by remember { mutableStateOf("") }
+    var specificRestoreFileName by remember { mutableStateOf("") }
+
+    LaunchedEffect(isUserSignedIn) {
+        if (isUserSignedIn) {
+            try {
+                cloudBackupsList = settingsViewModel.listCloudBackups()
+            } catch (e: Exception) {
+
+            }
+        }
+    }
+
+    // Backup & Restore activity result launchers
+    val createBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri: Uri? ->
+        uri?.let {
+            scope.launch {
+                settingsViewModel.exportBackupData { json ->
+                    try {
+                        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                            outputStream.write(json.toByteArray(Charsets.UTF_8))
+                        }
+                        val currentDate = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+                        sharedPref.edit().putString("last_backup_date", currentDate).apply()
+                        lastBackupDate = currentDate
+                        Toast.makeText(context, "Backup file saved successfully!", Toast.LENGTH_LONG).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Failed to save backup file", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+    }
+
+    val restoreBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let {
+            scope.launch {
+                try {
+                    val jsonContent = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                        inputStream.bufferedReader().use { reader ->
+                            val sb = java.lang.StringBuilder()
+                            val buffer = CharArray(8192)
+                            var charsRead: Int
+                            var totalChars = 0
+                            val maxChars = 50 * 1024 * 1024 // 50MB limit
+                            while (reader.read(buffer).also { charsRead = it } != -1) {
+                                totalChars += charsRead
+                                if (totalChars > maxChars) throw SecurityException("Backup file exceeds maximum allowed size")
+                                sb.append(buffer, 0, charsRead)
+                            }
+                            sb.toString()
+                        }
+                    }
+                    if (jsonContent != null) {
+                        val isValid = settingsViewModel.validateBackupData(jsonContent)
+                        if (isValid) {
+                            pendingRestoreJson = jsonContent
+                            isConfirmRestoreDialogOpen = true
+                        } else {
+                            Toast.makeText(context, "Invalid backup file structure or corrupted data.", Toast.LENGTH_LONG).show()
+                        }
+                    } else {
+                        Toast.makeText(context, "Failed to read backup file.", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Error reading backup", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    val createWorkspaceLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri: Uri? ->
+        uri?.let {
+            scope.launch {
+                val tempFile = File(context.cacheDir, "temp_export.ipro")
+                settingsViewModel.exportWorkspaceBundle(tempFile) { file ->
+                    try {
+                        if (file != null && file.exists()) {
+                            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                                outputStream.write(file.readBytes())
+                            }
+                            Toast.makeText(context, "Workspace exported successfully!", Toast.LENGTH_LONG).show()
+                        } else {
+                            Toast.makeText(context, "Workspace packaging failed.", Toast.LENGTH_LONG).show()
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Export writing failed", Toast.LENGTH_LONG).show()
+                    } finally {
+                        if (tempFile.exists()) {
+                            tempFile.delete()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val importWorkspaceLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let {
+            scope.launch {
+                val tempFile = File(context.cacheDir, "temp_import.ipro")
+                try {
+                    context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                        tempFile.outputStream().use { outputStream ->
+                            val buffer = ByteArray(8192)
+                            var bytesRead: Int
+                            var totalBytes = 0
+                            val maxBytes = 50 * 1024 * 1024 // 50MB limit
+                            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                                totalBytes += bytesRead
+                                if (totalBytes > maxBytes) throw SecurityException("Workspace file exceeds maximum allowed size")
+                                outputStream.write(buffer, 0, bytesRead)
+                            }
+                        }
+                    }
+                    settingsViewModel.verifyAndPreviewWorkspaceBundle(tempFile) { preview ->
+                        if (tempFile.exists()) {
+                            tempFile.delete()
+                        }
+                        if (preview.isValid) {
+                            workspacePreviewState = preview
+                            isConfirmWorkspaceImportDialogOpen = true
+                        } else {
+                            Toast.makeText(context, "Verification failed: ${preview.errorReason}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    if (tempFile.exists()) {
+                        tempFile.delete()
+                    }
+                    Toast.makeText(context, "Failed to read file", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    // Launchers for choosing images
+    val logoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            val copiedPath = copyUriToInternalStorage(context, it, "company_logo.png")
+            if (copiedPath != null) {
+                logoPath = copiedPath
+                logoRefreshKey = System.currentTimeMillis()
+                Toast.makeText(context, "Company Logo updated!", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Failed to copy logo image", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val signaturePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            if (!validateSignatureImage(context, it)) {
+                Toast.makeText(context, "Invalid Signature: Please upload a horizontally cropped signature image, not a square or vertical photo.", Toast.LENGTH_LONG).show()
+                return@let
+            }
+            val copiedPath = copyUriToInternalStorage(context, it, "auth_signature.png")
+            if (copiedPath != null) {
+                signaturePath = copiedPath
+                sigRefreshKey = System.currentTimeMillis()
+                Toast.makeText(context, "Authorized Signature updated!", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Failed to copy signature image", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val companySealPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            val copiedPath = copyUriToInternalStorage(context, it, "company_seal.png")
+            if (copiedPath != null) {
+                companySealPath = copiedPath
+                sealRefreshKey = System.currentTimeMillis()
+                Toast.makeText(context, "Company Seal updated successfully!", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Failed to copy seal image", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // Load initial values when companyProfile loads
+    LaunchedEffect(companyProfile) {
+        companyProfile?.let {
+            coName = it.companyName
+            ownerName = it.ownerName
+            phone = it.phone
+            whatsappNumber = it.whatsappNumber
+            email = it.email
+            website = it.website
+            gstin = it.gstin
+
+            address = it.address
+            city = it.city
+            district = it.district
+            state = it.state
+            pincode = it.pincode
+
+            bankName = it.bankName
+            accountHolderName = it.accountHolderName
+            bankAccount = it.accountNumber
+            bankIfsc = it.ifsc
+            bankBranch = it.branch
+
+            upiId = it.upiId
+            logoPath = it.logoPath
+            signaturePath = it.signaturePath
+            signatureText = it.signatureText
+
+            // Module 3 Fields Loading
+            tagline = it.tagline
+            companySealPath = it.companySealPath
+            defaultGstRateStr = it.defaultGstRate.toString()
+            defaultDiscountStr = it.defaultDiscount.toString()
+            defaultValidityDaysStr = it.defaultValidityDays.toString()
+            defaultDeliveryDaysStr = it.defaultDeliveryDays.toString()
+            termsAndConditions = it.termsAndConditions
+            defaultWarranty = it.defaultWarranty
+            defaultDeliveryTime = it.defaultDeliveryTime
+            defaultInstallationTime = it.defaultInstallationTime
+            defaultPaymentTerms = it.defaultPaymentTerms
+            defaultQuoteValidity = it.defaultQuoteValidity
+            additionalConditions = it.additionalConditions
+        }
+    }
+
+    fun validateEmail(mail: String): Boolean {
+        if (mail.trim().isEmpty()) return true
+        return com.example.utils.ValidationManager.isValidEmail(mail)
+    }
+
+    fun validateGst(gst: String): Boolean {
+        if (gst.trim().isEmpty()) return true
+        return com.example.utils.ValidationManager.isValidGstin(gst)
+    }
+
+
+    
+    var selectedTabIndex by remember { mutableStateOf(0) }
+    val tabs = listOf("Profile & Bank", "Branding", "Quotation Defaults", "PDF Prefs", "Data & Backup")
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Settings") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        }
+    ) { paddingValues ->
+        Column(modifier = Modifier.padding(paddingValues)) {
+            ScrollableTabRow(
+                selectedTabIndex = selectedTabIndex,
+                edgePadding = 16.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTabIndex == index,
+                        onClick = { selectedTabIndex = index },
+                        text = { Text(title, fontWeight = FontWeight.Bold, maxLines = 1) }
+                    )
+                }
+            }
+            
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                when (selectedTabIndex) {
+                    0 -> {
+                        // Profile & Bank Tab
+                        SettingsProfileAndBankTab(
+                            coName = coName, onCoNameChange = { coName = it },
+                            tagline = tagline, onTaglineChange = { tagline = it },
+                            ownerName = ownerName, onOwnerNameChange = { ownerName = it },
+                            phone = phone, onPhoneChange = { phone = it },
+                            whatsappNumber = whatsappNumber, onWhatsappChange = { whatsappNumber = it },
+                            email = email, onEmailChange = { email = it },
+                            website = website, onWebsiteChange = { website = it },
+                            gstin = gstin, onGstinChange = { gstin = it },
+                            address = address, onAddressChange = { address = it },
+                            city = city, onCityChange = { city = it },
+                            district = district, onDistrictChange = { district = it },
+                            state = state, onStateChange = { state = it },
+                            pincode = pincode, onPincodeChange = { pincode = it },
+                            bankName = bankName, onBankNameChange = { bankName = it },
+                            accountHolderName = accountHolderName, onAccountHolderNameChange = { accountHolderName = it },
+                            bankAccount = bankAccount, onBankAccountChange = { bankAccount = it },
+                            bankIfsc = bankIfsc, onBankIfscChange = { bankIfsc = it },
+                            bankBranch = bankBranch, onBankBranchChange = { bankBranch = it },
+                            upiId = upiId, onUpiIdChange = { upiId = it },
+                            coNameError = coNameError, phoneError = phoneError, emailError = emailError, gstinError = gstinError
+                        )
+                        // Save Button
+                        Button(
+                            onClick = {
+                                val hasCoNameError = coName.trim().isEmpty()
+                                val hasPhoneError = phone.trim().isEmpty()
+                                val hasEmailError = !validateEmail(email)
+                                val hasGstError = !validateGst(gstin)
+
+                                coNameError = if (hasCoNameError) "Company Name is required" else null
+                                phoneError = if (hasPhoneError) "Phone Number is required" else null
+                                emailError = if (hasEmailError) "Invalid Email Address" else null
+                                gstinError = if (hasGstError) "Invalid GSTIN format" else null
+
+                                if (!hasCoNameError && !hasPhoneError && !hasEmailError && !hasGstError) {
+                                    val currentProfile = companyProfile
+                                    val newProfile = currentProfile?.copy(
+                                        companyName = coName.trim(),
+                                        contactPerson = ownerName.trim(),
+                                        ownerName = ownerName.trim(),
+                                        phone = phone.trim(),
+                                        whatsappNumber = whatsappNumber.trim(),
+                                        email = email.trim(),
+                                        website = website.trim(),
+                                        gstin = gstin.trim().uppercase(),
+                                        address = address.trim(),
+                                        city = city.trim(),
+                                        district = district.trim(),
+                                        state = state.trim(),
+                                        pincode = pincode.trim(),
+                                        bankName = bankName.trim(),
+                                        accountHolderName = accountHolderName.trim(),
+                                        accountNumber = bankAccount.trim(),
+                                        ifsc = bankIfsc.trim().uppercase(),
+                                        branch = bankBranch.trim(),
+                                        upiId = upiId.trim(),
+                                        tagline = tagline.trim()
+                                    ) ?: CompanyProfile(
+                                        id = 1,
+                                        companyName = coName.trim(),
+                                        contactPerson = ownerName.trim(),
+                                        ownerName = ownerName.trim(),
+                                        phone = phone.trim(),
+                                        whatsappNumber = whatsappNumber.trim(),
+                                        email = email.trim(),
+                                        website = website.trim(),
+                                        gstin = gstin.trim().uppercase(),
+                                        address = address.trim(),
+                                        city = city.trim(),
+                                        district = district.trim(),
+                                        state = state.trim(),
+                                        pincode = pincode.trim(),
+                                        bankName = bankName.trim(),
+                                        accountHolderName = accountHolderName.trim(),
+                                        accountNumber = bankAccount.trim(),
+                                        ifsc = bankIfsc.trim().uppercase(),
+                                        branch = bankBranch.trim(),
+                                        upiId = upiId.trim(),
+                                        tagline = tagline.trim()
+                                    )
+                                    companyViewModel.saveCompanyProfile(newProfile)
+                                    Toast.makeText(context, "Company profile saved successfully!", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "Please fix all validation errors before saving.", Toast.LENGTH_LONG).show()
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(48.dp)
+                        ) {
+                            Text("Save Profile & Bank")
+                        }
+                    }
+                    1 -> {
+                        SettingsBrandingTab(
+                            logoPath = logoPath, onLogoPathChange = { logoPath = it },
+                            signaturePath = signaturePath, onSignaturePathChange = { signaturePath = it },
+                            companySealPath = companySealPath, onCompanySealPathChange = { companySealPath = it },
+                            signatureText = signatureText, onSignatureTextChange = { signatureText = it },
+                            logoRefreshKey = logoRefreshKey, onLogoRefreshKeyChange = { logoRefreshKey = it },
+                            sigRefreshKey = sigRefreshKey, onSigRefreshKeyChange = { sigRefreshKey = it },
+                            sealRefreshKey = sealRefreshKey, onSealRefreshKeyChange = { sealRefreshKey = it }
+                        )
+                        // Save Button
+                        Button(
+                            onClick = {
+                                val currentProfile = companyProfile
+                                val newProfile = currentProfile?.copy(
+                                    logoPath = logoPath.trim(),
+                                    signaturePath = signaturePath.trim(),
+                                    signatureText = signatureText.trim(),
+                                    companySealPath = companySealPath.trim()
+                                ) ?: CompanyProfile(
+                                    id = 1,
+                                    logoPath = logoPath.trim(),
+                                    signaturePath = signaturePath.trim(),
+                                    signatureText = signatureText.trim(),
+                                    companySealPath = companySealPath.trim()
+                                )
+                                companyViewModel.saveCompanyProfile(newProfile)
+                                Toast.makeText(context, "Branding saved successfully!", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.fillMaxWidth().height(48.dp)
+                        ) {
+                            Text("Save Branding")
+                        }
+                    }
+                    2 -> {
+                        // Quotation Defaults Tab
+                        SettingsQuotationDefaultsTab(
+                            defaultGstRateStr = defaultGstRateStr, onDefaultGstRateStrChange = { defaultGstRateStr = it },
+                            defaultDiscountStr = defaultDiscountStr, onDefaultDiscountStrChange = { defaultDiscountStr = it },
+                            defaultValidityDaysStr = defaultValidityDaysStr, onDefaultValidityDaysStrChange = { defaultValidityDaysStr = it },
+                            defaultDeliveryDaysStr = defaultDeliveryDaysStr, onDefaultDeliveryDaysStrChange = { defaultDeliveryDaysStr = it },
+                            defaultWarranty = defaultWarranty, onDefaultWarrantyChange = { defaultWarranty = it },
+                            defaultDeliveryTime = defaultDeliveryTime, onDefaultDeliveryTimeChange = { defaultDeliveryTime = it },
+                            defaultInstallationTime = defaultInstallationTime, onDefaultInstallationTimeChange = { defaultInstallationTime = it },
+                            defaultPaymentTerms = defaultPaymentTerms, onDefaultPaymentTermsChange = { defaultPaymentTerms = it },
+                            defaultQuoteValidity = defaultQuoteValidity, onDefaultQuoteValidityChange = { defaultQuoteValidity = it },
+                            additionalConditions = additionalConditions, onAdditionalConditionsChange = { additionalConditions = it },
+                            termsAndConditions = termsAndConditions, onTermsAndConditionsChange = { termsAndConditions = it },
+                            paymentTermsExpanded = paymentTermsExpanded, onPaymentTermsExpandedChange = { paymentTermsExpanded = it },
+                            paymentTermsMaster = paymentTermsMaster
+                        )
+                        // Save Button
+                        Button(
+                            onClick = {
+                                val currentProfile = companyProfile
+                                val newProfile = currentProfile?.copy(
+                                    defaultGstRate = defaultGstRateStr.toDoubleOrNull() ?: 18.0,
+                                    defaultDiscount = defaultDiscountStr.toDoubleOrNull() ?: 0.0,
+                                    defaultValidityDays = defaultValidityDaysStr.toIntOrNull() ?: 30,
+                                    defaultDeliveryDays = defaultDeliveryDaysStr.toIntOrNull() ?: 15,
+                                    termsAndConditions = termsAndConditions.trim(),
+                                    defaultWarranty = defaultWarranty.trim(),
+                                    defaultDeliveryTime = defaultDeliveryTime.trim(),
+                                    defaultInstallationTime = defaultInstallationTime.trim(),
+                                    defaultPaymentTerms = defaultPaymentTerms.trim(),
+                                    defaultQuoteValidity = defaultQuoteValidity.trim(),
+                                    additionalConditions = additionalConditions.trim()
+                                ) ?: CompanyProfile(
+                                    id = 1,
+                                    defaultGstRate = defaultGstRateStr.toDoubleOrNull() ?: 18.0,
+                                    defaultDiscount = defaultDiscountStr.toDoubleOrNull() ?: 0.0,
+                                    defaultValidityDays = defaultValidityDaysStr.toIntOrNull() ?: 30,
+                                    defaultDeliveryDays = defaultDeliveryDaysStr.toIntOrNull() ?: 15,
+                                    termsAndConditions = termsAndConditions.trim(),
+                                    defaultWarranty = defaultWarranty.trim(),
+                                    defaultDeliveryTime = defaultDeliveryTime.trim(),
+                                    defaultInstallationTime = defaultInstallationTime.trim(),
+                                    defaultPaymentTerms = defaultPaymentTerms.trim(),
+                                    defaultQuoteValidity = defaultQuoteValidity.trim(),
+                                    additionalConditions = additionalConditions.trim()
+                                )
+                                companyViewModel.saveCompanyProfile(newProfile)
+                                Toast.makeText(context, "Quotation defaults saved successfully!", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.fillMaxWidth().height(48.dp)
+                        ) {
+                            Text("Save Defaults")
+                        }
+                    }
+                    3 -> {
+                        // PDF Preferences Tab
+                        SettingsPdfPreferencesTab(
+                            pdfShowLogo = pdfShowLogo, onPdfShowLogoChange = { pdfShowLogo = it; pdfPrefs.edit().putBoolean("pdf_show_logo", it).apply() },
+                            pdfShowGst = pdfShowGst, onPdfShowGstChange = { pdfShowGst = it; pdfPrefs.edit().putBoolean("pdf_show_gst", it).apply() },
+                            pdfShowWebsite = pdfShowWebsite, onPdfShowWebsiteChange = { pdfShowWebsite = it; pdfPrefs.edit().putBoolean("pdf_show_website", it).apply() },
+                            pdfShowWhatsapp = pdfShowWhatsapp, onPdfShowWhatsappChange = { pdfShowWhatsapp = it; pdfPrefs.edit().putBoolean("pdf_show_whatsapp", it).apply() },
+                            pdfShowValidUntil = pdfShowValidUntil, onPdfShowValidUntilChange = { pdfShowValidUntil = it; pdfPrefs.edit().putBoolean("pdf_show_valid_until", it).apply() },
+                            pdfShowQrCode = pdfShowQrCode, onPdfShowQrCodeChange = { pdfShowQrCode = it; pdfPrefs.edit().putBoolean("pdf_show_qr_code", it).apply() },
+                            pdfShowBankDetails = pdfShowBankDetails, onPdfShowBankDetailsChange = { pdfShowBankDetails = it; pdfPrefs.edit().putBoolean("pdf_show_bank_details", it).apply() },
+                            pdfShowAmountInWords = pdfShowAmountInWords, onPdfShowAmountInWordsChange = { pdfShowAmountInWords = it; pdfPrefs.edit().putBoolean("pdf_show_amount_in_words", it).apply() },
+                            pdfShowCompanySeal = pdfShowCompanySeal, onPdfShowCompanySealChange = { pdfShowCompanySeal = it; pdfPrefs.edit().putBoolean("pdf_show_company_seal", it).apply() },
+                            pdfShowSignature = pdfShowSignature, onPdfShowSignatureChange = { pdfShowSignature = it; pdfPrefs.edit().putBoolean("pdf_show_signature", it).apply() },
+                            pdfShowTermsConditions = pdfShowTermsConditions, onPdfShowTermsConditionsChange = { pdfShowTermsConditions = it; pdfPrefs.edit().putBoolean("pdf_show_terms_conditions", it).apply() },
+                            pdfShowPageNumber = pdfShowPageNumber, onPdfShowPageNumberChange = { pdfShowPageNumber = it; pdfPrefs.edit().putBoolean("pdf_show_page_number", it).apply() }
+                        )
+                    }
+                    4 -> {
+                        // Data & Backup Tab
+                        SettingsDataAndBackupTab(
+                            onCreateWorkspace = { createWorkspaceLauncher.launch("InteriorPro_Workspace.ipro") },
+                            onImportWorkspace = { importWorkspaceLauncher.launch(arrayOf("*/*")) },
+                            lastBackupDate = lastBackupDate ?: "Never",
+                            onNavigateToMasters = onNavigateToMasters,
+                            onNavigateToSyncDashboard = onNavigateToSyncDashboard,
+                            themeManager = themeManager,
+                            onNavigateToAbout = onNavigateToAbout
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsProfileAndBankTab(
+    coName: String, onCoNameChange: (String) -> Unit,
+    tagline: String, onTaglineChange: (String) -> Unit,
+    ownerName: String, onOwnerNameChange: (String) -> Unit,
+    phone: String, onPhoneChange: (String) -> Unit,
+    whatsappNumber: String, onWhatsappChange: (String) -> Unit,
+    email: String, onEmailChange: (String) -> Unit,
+    website: String, onWebsiteChange: (String) -> Unit,
+    gstin: String, onGstinChange: (String) -> Unit,
+    address: String, onAddressChange: (String) -> Unit,
+    city: String, onCityChange: (String) -> Unit,
+    district: String, onDistrictChange: (String) -> Unit,
+    state: String, onStateChange: (String) -> Unit,
+    pincode: String, onPincodeChange: (String) -> Unit,
+    bankName: String, onBankNameChange: (String) -> Unit,
+    accountHolderName: String, onAccountHolderNameChange: (String) -> Unit,
+    bankAccount: String, onBankAccountChange: (String) -> Unit,
+    bankIfsc: String, onBankIfscChange: (String) -> Unit,
+    bankBranch: String, onBankBranchChange: (String) -> Unit,
+    upiId: String, onUpiIdChange: (String) -> Unit,
+    coNameError: String?, phoneError: String?, emailError: String?, gstinError: String?
+) {
+    Text("Company Profile", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = coName, onValueChange = onCoNameChange,
+        label = "Company Name *", modifier = Modifier.fillMaxWidth(),
+        isError = coNameError != null, errorMessage = coNameError
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = tagline, onValueChange = onTaglineChange,
+        label = "Tagline", modifier = Modifier.fillMaxWidth()
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = ownerName, onValueChange = onOwnerNameChange,
+        label = "Owner / Contact Person", modifier = Modifier.fillMaxWidth()
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = phone, onValueChange = onPhoneChange,
+        label = "Phone Number *", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+        modifier = Modifier.fillMaxWidth(),
+        isError = phoneError != null, errorMessage = phoneError
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = whatsappNumber, onValueChange = onWhatsappChange,
+        label = "WhatsApp Number", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+        modifier = Modifier.fillMaxWidth()
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = email, onValueChange = onEmailChange,
+        label = "Email Address *", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+        modifier = Modifier.fillMaxWidth(),
+        isError = emailError != null, errorMessage = emailError
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = website, onValueChange = onWebsiteChange,
+        label = "Website", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+        modifier = Modifier.fillMaxWidth()
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = gstin, onValueChange = onGstinChange,
+        label = "GSTIN / TAX ID", modifier = Modifier.fillMaxWidth(),
+        isError = gstinError != null, errorMessage = gstinError
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+    Text("Address", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = address, onValueChange = onAddressChange,
+        label = "Street Address", modifier = Modifier.fillMaxWidth()
+    )
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        com.example.ui.components.PremiumOutlinedTextField(
+            value = city, onValueChange = onCityChange,
+            label = "City", modifier = Modifier.weight(1f)
+        )
+        com.example.ui.components.PremiumOutlinedTextField(
+            value = pincode, onValueChange = onPincodeChange,
+            label = "Pincode", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.weight(1f)
+        )
+    }
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        com.example.ui.components.PremiumOutlinedTextField(
+            value = district, onValueChange = onDistrictChange,
+            label = "District", modifier = Modifier.weight(1f)
+        )
+        com.example.ui.components.PremiumOutlinedTextField(
+            value = state, onValueChange = onStateChange,
+            label = "State", modifier = Modifier.weight(1f)
+        )
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+    Text("Bank Details", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = bankName, onValueChange = onBankNameChange,
+        label = "Bank Name", modifier = Modifier.fillMaxWidth()
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = accountHolderName, onValueChange = onAccountHolderNameChange,
+        label = "Account Holder Name", modifier = Modifier.fillMaxWidth()
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = bankAccount, onValueChange = onBankAccountChange,
+        label = "Account Number", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = Modifier.fillMaxWidth()
+    )
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        com.example.ui.components.PremiumOutlinedTextField(
+            value = bankIfsc, onValueChange = onBankIfscChange,
+            label = "IFSC Code", modifier = Modifier.weight(1f)
+        )
+        com.example.ui.components.PremiumOutlinedTextField(
+            value = bankBranch, onValueChange = onBankBranchChange,
+            label = "Branch", modifier = Modifier.weight(1f)
+        )
+    }
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = upiId, onValueChange = onUpiIdChange,
+        label = "UPI ID", modifier = Modifier.fillMaxWidth()
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsQuotationDefaultsTab(
+    defaultGstRateStr: String, onDefaultGstRateStrChange: (String) -> Unit,
+    defaultDiscountStr: String, onDefaultDiscountStrChange: (String) -> Unit,
+    defaultValidityDaysStr: String, onDefaultValidityDaysStrChange: (String) -> Unit,
+    defaultDeliveryDaysStr: String, onDefaultDeliveryDaysStrChange: (String) -> Unit,
+    defaultWarranty: String, onDefaultWarrantyChange: (String) -> Unit,
+    defaultDeliveryTime: String, onDefaultDeliveryTimeChange: (String) -> Unit,
+    defaultInstallationTime: String, onDefaultInstallationTimeChange: (String) -> Unit,
+    defaultPaymentTerms: String, onDefaultPaymentTermsChange: (String) -> Unit,
+    defaultQuoteValidity: String, onDefaultQuoteValidityChange: (String) -> Unit,
+    additionalConditions: String, onAdditionalConditionsChange: (String) -> Unit,
+    termsAndConditions: String, onTermsAndConditionsChange: (String) -> Unit,
+    paymentTermsExpanded: Boolean, onPaymentTermsExpandedChange: (Boolean) -> Unit,
+    paymentTermsMaster: List<com.example.data.MasterEntity>
+) {
+    Text("Quotation Defaults", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        com.example.ui.components.PremiumOutlinedTextField(
+            value = defaultGstRateStr, onValueChange = onDefaultGstRateStrChange,
+            label = "Default GST (%)", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.weight(1f)
+        )
+        com.example.ui.components.PremiumOutlinedTextField(
+            value = defaultDiscountStr, onValueChange = onDefaultDiscountStrChange,
+            label = "Default Discount (%)", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.weight(1f)
+        )
+    }
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        com.example.ui.components.PremiumOutlinedTextField(
+            value = defaultValidityDaysStr, onValueChange = onDefaultValidityDaysStrChange,
+            label = "Validity (Days)", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.weight(1f)
+        )
+        com.example.ui.components.PremiumOutlinedTextField(
+            value = defaultDeliveryDaysStr, onValueChange = onDefaultDeliveryDaysStrChange,
+            label = "Delivery (Days)", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.weight(1f)
+        )
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+    Text("Terms & Conditions (PDF)", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = defaultWarranty, onValueChange = onDefaultWarrantyChange,
+        label = "Default Warranty", modifier = Modifier.fillMaxWidth()
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = defaultDeliveryTime, onValueChange = onDefaultDeliveryTimeChange,
+        label = "Default Delivery Time", modifier = Modifier.fillMaxWidth()
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = defaultInstallationTime, onValueChange = onDefaultInstallationTimeChange,
+        label = "Default Installation Time", modifier = Modifier.fillMaxWidth()
+    )
+
+    ExposedDropdownMenuBox(
+        expanded = paymentTermsExpanded,
+        onExpandedChange = onPaymentTermsExpandedChange,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        OutlinedTextField(
+            value = defaultPaymentTerms,
+            onValueChange = onDefaultPaymentTermsChange,
+            label = { Text("Default Payment Terms") },
+            readOnly = true,
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = paymentTermsExpanded) },
+            colors = ExposedDropdownMenuDefaults.textFieldColors(),
+            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth()
+        )
+        ExposedDropdownMenu(
+            expanded = paymentTermsExpanded,
+            onDismissRequest = { onPaymentTermsExpandedChange(false) }
+        ) {
+            if (paymentTermsMaster.isEmpty()) {
+                DropdownMenuItem(
+                    text = { Text("No Payment Terms found (Add in Masters)") },
+                    onClick = { onPaymentTermsExpandedChange(false) }
+                )
+            } else {
+                paymentTermsMaster.forEach { term ->
+                    DropdownMenuItem(
+                        text = { Text(term.name) },
+                        onClick = {
+                            onDefaultPaymentTermsChange(term.name)
+                            onPaymentTermsExpandedChange(false)
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = defaultQuoteValidity, onValueChange = onDefaultQuoteValidityChange,
+        label = "Default Quote Validity", modifier = Modifier.fillMaxWidth()
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = additionalConditions, onValueChange = onAdditionalConditionsChange,
+        label = "Additional Conditions", modifier = Modifier.fillMaxWidth()
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = termsAndConditions, onValueChange = onTermsAndConditionsChange,
+        label = "Custom Terms & Conditions (Multiline)", modifier = Modifier.fillMaxWidth()
+    )
+}
+
+@Composable
+fun SettingsPdfPreferencesTab(
+    pdfShowLogo: Boolean, onPdfShowLogoChange: (Boolean) -> Unit,
+    pdfShowGst: Boolean, onPdfShowGstChange: (Boolean) -> Unit,
+    pdfShowWebsite: Boolean, onPdfShowWebsiteChange: (Boolean) -> Unit,
+    pdfShowWhatsapp: Boolean, onPdfShowWhatsappChange: (Boolean) -> Unit,
+    pdfShowValidUntil: Boolean, onPdfShowValidUntilChange: (Boolean) -> Unit,
+    pdfShowQrCode: Boolean, onPdfShowQrCodeChange: (Boolean) -> Unit,
+    pdfShowBankDetails: Boolean, onPdfShowBankDetailsChange: (Boolean) -> Unit,
+    pdfShowAmountInWords: Boolean, onPdfShowAmountInWordsChange: (Boolean) -> Unit,
+    pdfShowCompanySeal: Boolean, onPdfShowCompanySealChange: (Boolean) -> Unit,
+    pdfShowSignature: Boolean, onPdfShowSignatureChange: (Boolean) -> Unit,
+    pdfShowTermsConditions: Boolean, onPdfShowTermsConditionsChange: (Boolean) -> Unit,
+    pdfShowPageNumber: Boolean, onPdfShowPageNumberChange: (Boolean) -> Unit
+) {
+    Text("PDF Configuration", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    Text("Configure what details appear on your PDFs. Changes are saved instantly.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    
+    Spacer(modifier = Modifier.height(16.dp))
+    
+    PreferenceSwitchRow("Company Logo", pdfShowLogo, onPdfShowLogoChange, Icons.Default.Business)
+    PreferenceSwitchRow("GST / PAN Details", pdfShowGst, onPdfShowGstChange, Icons.Default.Receipt)
+    PreferenceSwitchRow("Show Website", pdfShowWebsite, onPdfShowWebsiteChange, Icons.Default.Language)
+    PreferenceSwitchRow("WhatsApp Number", pdfShowWhatsapp, onPdfShowWhatsappChange, Icons.Default.PhoneAndroid)
+    PreferenceSwitchRow("Valid Until Date", pdfShowValidUntil, onPdfShowValidUntilChange, Icons.Default.Event)
+    PreferenceSwitchRow("UPI Payment QR", pdfShowQrCode, onPdfShowQrCodeChange, Icons.Default.QrCode)
+    PreferenceSwitchRow("Bank Account Info", pdfShowBankDetails, onPdfShowBankDetailsChange, Icons.Default.AccountBalance)
+    PreferenceSwitchRow("Amount in Words", pdfShowAmountInWords, onPdfShowAmountInWordsChange, Icons.Default.Description)
+    PreferenceSwitchRow("Company Seal", pdfShowCompanySeal, onPdfShowCompanySealChange, Icons.Default.CheckCircle)
+    PreferenceSwitchRow("Signature", pdfShowSignature, onPdfShowSignatureChange, Icons.Default.Create)
+    PreferenceSwitchRow("Terms & Conditions", pdfShowTermsConditions, onPdfShowTermsConditionsChange, Icons.Default.Gavel)
+    PreferenceSwitchRow("Page Numbers", pdfShowPageNumber, onPdfShowPageNumberChange, Icons.Default.Numbers)
+}
+
+@Composable
+fun SettingsDataAndBackupTab(
+    onCreateWorkspace: () -> Unit,
+    onImportWorkspace: () -> Unit,
+    lastBackupDate: String,
+    onNavigateToMasters: () -> Unit,
+    onNavigateToSyncDashboard: () -> Unit,
+    themeManager: com.example.ui.theme.ThemeManager,
+    onNavigateToAbout: () -> Unit
+) {
+    Text("Database Masters", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    ListItem(
+        headlineContent = { Text("Manage Masters") },
+        supportingContent = { Text("Edit materials, finishes, categories") },
+        leadingContent = { Icon(Icons.Default.List, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
+        modifier = Modifier.clickable { onNavigateToMasters() },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
+
+    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+    
+    Text("Data Backup & Restore", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    ListItem(
+        headlineContent = { Text("Export Workspace (Backup)") },
+        supportingContent = { Text("Export a local backup. Last: $lastBackupDate") },
+        leadingContent = { Icon(Icons.Default.Download, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        modifier = Modifier.clickable { onCreateWorkspace() },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
+    ListItem(
+        headlineContent = { Text("Import Workspace (Restore)") },
+        supportingContent = { Text("Restore database from .ipro file") },
+        leadingContent = { Icon(Icons.Default.Upload, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        modifier = Modifier.clickable { onImportWorkspace() },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
+    
+    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+    
+    Text("Google Drive Sync", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    ListItem(
+        headlineContent = { Text("Enterprise Sync Dashboard") },
+        supportingContent = { Text("Advanced workspace health and sync status") },
+        leadingContent = { Icon(Icons.Default.Dashboard, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
+        modifier = Modifier.clickable { onNavigateToSyncDashboard() },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
+
+    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+    
+    Text("App Preferences", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    val isDark = themeManager.themeMode.collectAsState(initial = com.example.ui.theme.ThemeMode.SYSTEM).value == com.example.ui.theme.ThemeMode.DARK
+    ListItem(
+        headlineContent = { Text("Appearance") },
+        supportingContent = { Text(if (isDark) "Dark Mode Active" else "Light Mode Active") },
+        leadingContent = { Icon(Icons.Default.Palette, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        modifier = Modifier.clickable { 
+            themeManager.setThemeMode(if (isDark) com.example.ui.theme.ThemeMode.LIGHT else com.example.ui.theme.ThemeMode.DARK) 
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
+    ListItem(
+        headlineContent = { Text("About Application") },
+        supportingContent = { Text("Version, developer and database info") },
+        leadingContent = { Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
+        modifier = Modifier.clickable { onNavigateToAbout() },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
+}
+
+@Composable
+fun PreferenceSwitchRow(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 8.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(title, fontSize = 14.sp)
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+fun SettingsBrandingTab(
+    logoPath: String, onLogoPathChange: (String) -> Unit,
+    signaturePath: String, onSignaturePathChange: (String) -> Unit,
+    companySealPath: String, onCompanySealPathChange: (String) -> Unit,
+    signatureText: String, onSignatureTextChange: (String) -> Unit,
+    logoRefreshKey: Long, onLogoRefreshKeyChange: (Long) -> Unit,
+    sigRefreshKey: Long, onSigRefreshKeyChange: (Long) -> Unit,
+    sealRefreshKey: Long, onSealRefreshKeyChange: (Long) -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    
+    val logoLauncher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri: android.net.Uri? ->
+        uri?.let {
+            val path = copyUriToInternalStorage(context, it, "logo.png")
+            if (path != null) {
+                onLogoPathChange(path)
+                onLogoRefreshKeyChange(System.currentTimeMillis())
+            }
+        }
+    }
+    
+    val signatureLauncher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri: android.net.Uri? ->
+        uri?.let {
+            val path = copyUriToInternalStorage(context, it, "signature.png")
+            if (path != null) {
+                onSignaturePathChange(path)
+                onSigRefreshKeyChange(System.currentTimeMillis())
+            }
+        }
+    }
+    
+    val sealLauncher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri: android.net.Uri? ->
+        uri?.let {
+            val path = copyUriToInternalStorage(context, it, "company_seal.png")
+            if (path != null) {
+                onCompanySealPathChange(path)
+                onSealRefreshKeyChange(System.currentTimeMillis())
+            }
+        }
+    }
+
+    Text("Document Assets", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    Text("Upload logo, signature, and seal to be used in your exported documents.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Spacer(modifier = Modifier.height(16.dp))
+    
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+        Text("Company Logo")
+        Button(onClick = { logoLauncher.launch("image/*") }) { Text("Upload") }
+    }
+    if (logoPath.isNotEmpty()) {
+        Text("Current: $logoPath", fontSize = 10.sp)
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+        Text("Authorized Signature")
+        Button(onClick = { signatureLauncher.launch("image/*") }) { Text("Upload") }
+    }
+    if (signaturePath.isNotEmpty()) {
+        Text("Current: $signaturePath", fontSize = 10.sp)
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+        Text("Company Seal")
+        Button(onClick = { sealLauncher.launch("image/*") }) { Text("Upload") }
+    }
+    if (companySealPath.isNotEmpty()) {
+        Text("Current: $companySealPath", fontSize = 10.sp)
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+    
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = signatureText, onValueChange = onSignatureTextChange,
+        label = "Signature Under-text (e.g. For YourCompany)", modifier = Modifier.fillMaxWidth()
+    )
+}
+
+fun copyUriToInternalStorage(context: android.content.Context, uri: android.net.Uri, fileName: String): String? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+        val file = java.io.File(context.filesDir, fileName)
+        val outputStream = java.io.FileOutputStream(file)
+        inputStream.copyTo(outputStream)
+        inputStream.close()
+        outputStream.close()
+        file.absolutePath
+    } catch (e: Exception) {
+        null
+    }
+}
+
+fun validateSignatureImage(context: android.content.Context, uri: android.net.Uri): Boolean {
+    // Basic validation stub
+    return true
+}
+

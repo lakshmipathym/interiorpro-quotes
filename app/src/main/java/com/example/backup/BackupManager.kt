@@ -120,45 +120,8 @@ object BackupManager {
         }
         root.put("customers", custArr)
 
-        // 2.1 Clients
-        val clients = db.clientDao().getAllClients().first()
-        val clientArr = JSONArray()
-        clients.forEach { client ->
-            val clObj = JSONObject()
-            clObj.put("clientId", client.clientId)
-            clObj.put("clientName", client.clientName)
-            clObj.put("companyName", client.companyName)
-            clObj.put("contactPerson", client.contactPerson)
-            clObj.put("mobileNumber", client.mobileNumber)
-            clObj.put("whatsappNumber", client.whatsappNumber)
-            clObj.put("email", client.email)
-            clObj.put("address", client.address)
-            clObj.put("siteLocation", client.siteLocation)
-            clObj.put("city", client.city)
-            clObj.put("district", client.district)
-            clObj.put("state", client.state)
-            clObj.put("pincode", client.pincode)
-            clObj.put("country", client.country)
-            clObj.put("gstin", client.gstin)
-            clObj.put("notes", client.notes)
-            clObj.put("isActive", client.isActive)
-            clObj.put("createdDate", client.createdDate)
-            clObj.put("modifiedDate", client.modifiedDate)
-            clientArr.put(clObj)
-        }
-        root.put("clients", clientArr)
 
         // 3. Master Data
-        val masterDataList = repository.allMasterData.first()
-        val mastArr = JSONArray()
-        masterDataList.forEach { master ->
-            val mObj = JSONObject()
-            mObj.put("type", master.type)
-            mObj.put("value", master.value)
-            mObj.put("extra", master.extra)
-            mastArr.put(mObj)
-        }
-        root.put("master_data", mastArr)
 
         // 3.1 Masters (MasterEntity)
         val mastersList = db.masterDao().getAllMastersDirect()
@@ -206,6 +169,10 @@ object BackupManager {
             qObj.put("customerName", q.customerName)
             qObj.put("customerPhone", q.customerPhone)
             qObj.put("customerAddress", q.customerAddress)
+            qObj.put("siteName", q.siteName)
+            qObj.put("siteAddress", q.siteAddress)
+            qObj.put("projectName", q.projectName)
+            qObj.put("validityDays", q.validityDays)
             qObj.put("projectType", q.projectType)
             qObj.put("category", q.category)
             qObj.put("material", q.material)
@@ -214,9 +181,17 @@ object BackupManager {
             qObj.put("discount", q.discount)
             qObj.put("gstRate", q.gstRate)
             qObj.put("gstAmount", q.gstAmount)
+            qObj.put("transport", q.transport)
+            qObj.put("installation", q.installation)
+            qObj.put("extraCharges", q.extraCharges)
+            qObj.put("roundOff", q.roundOff)
             qObj.put("grandTotal", q.grandTotal)
+            qObj.put("advance", q.advance)
+            qObj.put("balance", q.balance)
             qObj.put("termsAndConditions", q.termsAndConditions)
             qObj.put("warranty", q.warranty)
+            qObj.put("customerNotes", q.customerNotes)
+            qObj.put("internalNotes", q.internalNotes)
             qObj.put("status", q.status)
 
             val items = repository.getQuotationItemsDirect(q.id)
@@ -244,13 +219,23 @@ object BackupManager {
 
     fun validateBackup(jsonStr: String, password: String = ""): Boolean {
         return try {
-            val decryptedJson = if (jsonStr.trim().startsWith("{")) {
+            val isPlaintext = jsonStr.isNotEmpty() && jsonStr.firstOrNull { !it.isWhitespace() } == '{'
+            val decryptedJson = if (isPlaintext) {
                 jsonStr
             } else {
                 decryptAES(jsonStr, password)
             }
             val root = JSONObject(decryptedJson)
-            root.has("backup_version")
+            if (!root.has("backup_version") || !root.has("database_version")) {
+                return false
+            }
+            val version = root.optInt("backup_version", 0)
+            val dbVersion = root.optInt("database_version", 0)
+            if (version <= 0 || dbVersion <= 0) {
+                return false
+            }
+            // Ensure basic structural fields of a valid backup/workspace package
+            root.has("customers") || root.has("quotations") || root.has("company_profile") || root.has("clients") || root.has("workspace_format")
         } catch (e: Exception) {
             false
         }
@@ -258,7 +243,8 @@ object BackupManager {
 
     suspend fun importBackup(db: AppDatabase, repository: QuotesRepository, jsonStr: String, password: String = ""): Boolean {
         return try {
-            val decryptedJson = if (jsonStr.trim().startsWith("{")) {
+            val isPlaintext = jsonStr.isNotEmpty() && jsonStr.firstOrNull { !it.isWhitespace() } == '{'
+            val decryptedJson = if (isPlaintext) {
                 // If it starts with {, it is a legacy plaintext JSON backup
                 jsonStr
             } else {
@@ -342,14 +328,17 @@ object BackupManager {
                     }
                 }
 
-                // 2.1 Restore Clients
+        
+                // 2.1 Restore Clients (Legacy) into Customer
                 if (root.has("clients")) {
                     val clientArr = root.getJSONArray("clients")
                     for (i in 0 until clientArr.length()) {
                         val clObj = clientArr.getJSONObject(i)
-                        val c = Client(
-                            clientId = clObj.optLong("clientId", 0),
-                            clientName = clObj.optString("clientName", ""),
+                        
+                        // Map to CustomerEntity
+                        val c = CustomerEntity(
+                            customerId = 0, // Let Room auto-generate
+                            customerName = clObj.optString("clientName", ""), 
                             companyName = clObj.optString("companyName", ""),
                             contactPerson = clObj.optString("contactPerson", ""),
                             mobileNumber = clObj.optString("mobileNumber", ""),
@@ -368,26 +357,11 @@ object BackupManager {
                             createdDate = clObj.optLong("createdDate", System.currentTimeMillis()),
                             modifiedDate = clObj.optLong("modifiedDate", System.currentTimeMillis())
                         )
-                        db.clientDao().insertClient(c)
+                        db.customerDao().insertCustomer(c)
                     }
                 }
 
                 // 3. Restore Master Data
-                if (root.has("master_data")) {
-                    val mastArr = root.getJSONArray("master_data")
-                    val masters = mutableListOf<MasterData>()
-                    for (i in 0 until mastArr.length()) {
-                        val mObj = mastArr.getJSONObject(i)
-                        masters.add(
-                            MasterData(
-                                type = mObj.getString("type"),
-                                value = mObj.getString("value"),
-                                extra = mObj.optString("extra")
-                            )
-                        )
-                    }
-                    db.masterDataDao().insertAll(masters)
-                }
 
                 // 3.1 Restore Masters Entities
                 if (root.has("masters_entities")) {
@@ -439,10 +413,14 @@ object BackupManager {
                             id = originalQId,
                             quotationNumber = qObj.getString("quotationNumber"),
                             date = qObj.getLong("date"),
-                            customerId = qObj.getInt("customerId"),
+                            customerId = qObj.optLong("customerId", 0L),
                             customerName = qObj.getString("customerName"),
                             customerPhone = qObj.optString("customerPhone"),
                             customerAddress = qObj.optString("customerAddress"),
+                            siteName = qObj.optString("siteName", ""), 
+                            siteAddress = qObj.optString("siteAddress", ""), 
+                            projectName = qObj.optString("projectName", ""),
+                            validityDays = qObj.optInt("validityDays", 30),
                             projectType = qObj.optString("projectType"),
                             category = qObj.optString("category"),
                             material = qObj.optString("material"),
@@ -451,9 +429,17 @@ object BackupManager {
                             discount = qObj.optDouble("discount", 0.0),
                             gstRate = qObj.optDouble("gstRate", 18.0),
                             gstAmount = qObj.optDouble("gstAmount", 0.0),
+                            transport = qObj.optDouble("transport", 0.0),
+                            installation = qObj.optDouble("installation", 0.0),
+                            extraCharges = qObj.optDouble("extraCharges", 0.0),
+                            roundOff = qObj.optDouble("roundOff", 0.0),
                             grandTotal = qObj.getDouble("grandTotal"),
+                            advance = qObj.optDouble("advance", 0.0),
+                            balance = qObj.optDouble("balance", 0.0),
                             termsAndConditions = qObj.optString("termsAndConditions"),
                             warranty = qObj.optString("warranty"),
+                            customerNotes = qObj.optString("customerNotes", ""),
+                            internalNotes = qObj.optString("internalNotes", ""),
                             status = qObj.optString("status", "DRAFT")
                         )
 
@@ -486,7 +472,6 @@ object BackupManager {
             }
             true
         } catch (e: Exception) {
-            e.printStackTrace()
             false
         }
     }

@@ -1,0 +1,10 @@
+--- app/src/main/java/com/example/data/Daos.kt
++++ app/src/main/java/com/example/data/Daos.kt
+@@ -112,6 +112,9 @@
+     @Query("SELECT COUNT(id) FROM quotation WHERE LOWER(termsAndConditions) LIKE '%' || LOWER(TRIM(:name)) || '%' LIMIT 1")
+     suspend fun countByTerms(name: String): Int
+ 
++    @Query("SELECT * FROM quotation WHERE quotationNumber = :quotationNumber LIMIT 1")
+     suspend fun getQuotationByNumberDirect(quotationNumber: String): Quotation?
+ 
+     @Query("SELECT quotationNumber FROM quotation WHERE quotationNumber LIKE :prefix || '%' ORDER BY id DESC LIMIT 1")

@@ -87,11 +87,11 @@ class GoogleSignInManagerImpl(private val context: Context) : GoogleSignInManage
                 }
                 return@withContext true
             } else {
-                Log.e(TAG, "Received unsupported credential type: ${credential.type}")
+
                 return@withContext false
             }
         } catch (e: GetCredentialException) {
-            Log.e(TAG, "Credential Manager error during active sign-in: ${e.message}", e)
+
             // Graceful sandbox fallback for simulated testing / development builds
             if (DEFAULT_CLIENT_ID.contains("sampleclientid")) {
                 performSandboxSignIn()
@@ -99,7 +99,7 @@ class GoogleSignInManagerImpl(private val context: Context) : GoogleSignInManage
             }
             return@withContext false
         } catch (e: Exception) {
-            Log.e(TAG, "Unexpected error during sign-in: ${e.message}", e)
+
             return@withContext false
         }
     }
@@ -147,10 +147,10 @@ class GoogleSignInManagerImpl(private val context: Context) : GoogleSignInManage
             }
             return@withContext false
         } catch (e: GetCredentialException) {
-            Log.w(TAG, "Credential Manager silent sign-in failed (user may need to interact): ${e.message}")
+            Log.w(TAG, "Credential Manager silent sign-in failed (user may need to interact)")
             return@withContext false
         } catch (e: Exception) {
-            Log.e(TAG, "Unexpected error during silent sign-in: ${e.message}", e)
+
             return@withContext false
         }
     }
@@ -173,7 +173,7 @@ class GoogleSignInManagerImpl(private val context: Context) : GoogleSignInManage
             }
             return@withContext true
         } catch (e: Exception) {
-            Log.e(TAG, "Error clearing credential state: ${e.message}", e)
+
             return@withContext false
         }
     }

@@ -1,0 +1,295 @@
+--- app/src/main/java/com/example/ui/settings/SettingsScreen.kt
++++ app/src/main/java/com/example/ui/settings/SettingsScreen.kt
+@@ -2458,111 +2458,95 @@
+         modifier = Modifier.fillMaxSize(),
+-        contentPadding = PaddingValues(16.dp),
+-        verticalArrangement = Arrangement.spacedBy(8.dp)
++        contentPadding = PaddingValues(16.dp)
+     ) {
+         item {
+             Text(
+                 text = "Settings",
+                 style = MaterialTheme.typography.headlineMedium,
+                 fontWeight = FontWeight.Bold,
+                 color = MaterialTheme.colorScheme.primary,
+                 modifier = Modifier.padding(bottom = 16.dp)
+             )
+         }
+ 
+         // --- APPEARANCE ---
+         item {
+-            SettingsSectionHeader("Appearance")
+-        }
+-        item {
+-            val isDark = themeManager.themeMode.collectAsState(initial = ThemeMode.SYSTEM).value == ThemeMode.DARK
+-            ListItem(
+-                headlineContent = { Text("App Theme") },
+-                supportingContent = { Text("Configure display theme") },
+-                leadingContent = { Icon(Icons.Default.Palette, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+-                trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
+-                modifier = Modifier.clickable { onNavigate("appearance") },
+-                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+-            )
++            SettingsCard("Appearance") {
++                val isDark = themeManager.themeMode.collectAsState(initial = ThemeMode.SYSTEM).value == ThemeMode.DARK
++                ListItem(
++                    headlineContent = { Text("App Theme") },
++                    supportingContent = { Text("Configure display theme") },
++                    leadingContent = { Icon(Icons.Default.Palette, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
++                    trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
++                    modifier = Modifier.clickable { onNavigate("appearance") },
++                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
++                )
++            }
+         }
+ 
+         // --- COMPANY ---
+         item {
+-            Spacer(modifier = Modifier.height(16.dp))
+-            SettingsSectionHeader("Company")
+-        }
+-        item {
+-            ListItem(
+-                headlineContent = { Text("Company Profile") },
+-                supportingContent = { Text("Business identity, contact, address & banking") },
+-                leadingContent = { Icon(Icons.Default.Business, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+-                trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
+-                modifier = Modifier.clickable { onNavigate("company_profile") },
+-                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+-            )
+-        }
+-        item {
+-            ListItem(
+-                headlineContent = { Text("Document Assets") },
+-                supportingContent = { Text("Logo, Signature and Company Seal") },
+-                leadingContent = { Icon(Icons.Default.Image, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+-                trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
+-                modifier = Modifier.clickable { onNavigate("document_assets") },
+-                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+-            )
++            SettingsCard("Company") {
++                ListItem(
++                    headlineContent = { Text("Company Profile") },
++                    supportingContent = { Text("Business identity, contact, address & banking") },
++                    leadingContent = { Icon(Icons.Default.Business, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
++                    trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
++                    modifier = Modifier.clickable { onNavigate("company_profile") },
++                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
++                )
++                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.5f))
++                ListItem(
++                    headlineContent = { Text("Document Assets") },
++                    supportingContent = { Text("Logo, Signature and Company Seal") },
++                    leadingContent = { Icon(Icons.Default.Image, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
++                    trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
++                    modifier = Modifier.clickable { onNavigate("document_assets") },
++                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
++                )
++            }
+         }
+ 
+         // --- QUOTATION DEFAULTS ---
+         item {
+-            Spacer(modifier = Modifier.height(16.dp))
+-            SettingsSectionHeader("Quotation Defaults")
+-        }
+-        item {
+-            ListItem(
+-                headlineContent = { Text("Default Parameters") },
+-                supportingContent = { Text("GST, Payment Terms, Validity & Warranty") },
+-                leadingContent = { Icon(Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+-                trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
+-                modifier = Modifier.clickable { onNavigate("quotation_defaults") },
+-                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+-            )
++            SettingsCard("Quotation Defaults") {
++                ListItem(
++                    headlineContent = { Text("Default Parameters") },
++                    supportingContent = { Text("GST, Payment Terms, Validity & Warranty") },
++                    leadingContent = { Icon(Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
++                    trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
++                    modifier = Modifier.clickable { onNavigate("quotation_defaults") },
++                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
++                )
++            }
+         }
+ 
+         // --- PDF SETTINGS ---
+         item {
+-            Spacer(modifier = Modifier.height(16.dp))
+-            SettingsSectionHeader("PDF Configuration")
+-        }
+-        item {
+-            ListItem(
+-                headlineContent = { Text("PDF Elements") },
+-                supportingContent = { Text("Configure what details appear on PDFs") },
+-                leadingContent = { Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+-                trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
+-                modifier = Modifier.clickable { onNavigate("pdf_preferences") },
+-                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+-            )
++            SettingsCard("PDF Configuration") {
++                ListItem(
++                    headlineContent = { Text("PDF Elements") },
++                    supportingContent = { Text("Configure what details appear on PDFs") },
++                    leadingContent = { Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
++                    trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
++                    modifier = Modifier.clickable { onNavigate("pdf_preferences") },
++                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
++                )
++            }
+         }
+ 
+         // --- MASTERS ---
+         item {
+-            Spacer(modifier = Modifier.height(16.dp))
+-            SettingsSectionHeader("Database Masters")
+-        }
+-        item {
+-            ListItem(
+-                headlineContent = { Text("Manage Masters") },
+-                supportingContent = { Text("Edit categories, brands and units") },
+-                leadingContent = { Icon(Icons.Default.List, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+-                trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
+-                modifier = Modifier.clickable { onNavigate("manage_masters") },
+-                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+-            )
++            SettingsCard("Database Masters") {
++                ListItem(
++                    headlineContent = { Text("Manage Masters") },
++                    supportingContent = { Text("Edit categories, brands and units") },
++                    leadingContent = { Icon(Icons.Default.List, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
++                    trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
++                    modifier = Modifier.clickable { onNavigate("manage_masters") },
++                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
++                )
++            }
+         }
+ 
+         // --- BACKUP & RESTORE ---
+         item {
+-            Spacer(modifier = Modifier.height(16.dp))
+-            SettingsSectionHeader("Backup & Restore")
+-        }
+-        item {
+-            ListItem(
+-                headlineContent = { Text("Manual Backup") },
+-                supportingContent = { Text("Export a workspace backup to your device") },
+-                leadingContent = { Icon(Icons.Default.Download, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+-                modifier = Modifier.clickable { onCreateWorkspace() },
+-                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+-            )
+-        }
+-        item {
+-            ListItem(
+-                headlineContent = { Text("Restore Backup") },
+-                supportingContent = { Text("Import a workspace backup from your device") },
+-                leadingContent = { Icon(Icons.Default.Upload, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+-                modifier = Modifier.clickable { onImportWorkspace() },
+-                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+-            )
+-        }
+-        item {
+-            ListItem(
+-                headlineContent = { Text("Backup History & Cloud") },
+-                supportingContent = { Text("Advanced sync and cloud backups") },
+-                leadingContent = { Icon(Icons.Default.CloudSync, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+-                trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
+-                modifier = Modifier.clickable { onNavigate("cloud_backup") },
+-                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+-            )
+-        }
+-        item {
+-            ListItem(
+-                headlineContent = { Text("Enterprise Dashboard") },
+-                supportingContent = { Text("Advanced workspace health and sync status") },
+-                leadingContent = { Icon(Icons.Default.Dashboard, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+-                trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
+-                modifier = Modifier.clickable { onNavigateToSyncDashboard() },
+-                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+-            )
++            SettingsCard("Backup & Restore") {
++                ListItem(
++                    headlineContent = { Text("Manual Backup") },
++                    supportingContent = { Text("Export a workspace backup to your device") },
++                    leadingContent = { Icon(Icons.Default.Download, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
++                    modifier = Modifier.clickable { onCreateWorkspace() },
++                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
++                )
++                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.5f))
++                ListItem(
++                    headlineContent = { Text("Restore Backup") },
++                    supportingContent = { Text("Import a workspace backup from your device") },
++                    leadingContent = { Icon(Icons.Default.Upload, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
++                    modifier = Modifier.clickable { onImportWorkspace() },
++                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
++                )
++                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.5f))
++                ListItem(
++                    headlineContent = { Text("Backup History & Cloud") },
++                    supportingContent = { Text("Advanced sync and cloud backups") },
++                    leadingContent = { Icon(Icons.Default.CloudSync, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
++                    trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
++                    modifier = Modifier.clickable { onNavigate("cloud_backup") },
++                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
++                )
++                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.5f))
++                ListItem(
++                    headlineContent = { Text("Enterprise Dashboard") },
++                    supportingContent = { Text("Advanced workspace health and sync status") },
++                    leadingContent = { Icon(Icons.Default.Dashboard, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
++                    trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
++                    modifier = Modifier.clickable { onNavigateToSyncDashboard() },
++                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
++                )
++            }
+         }
+         
+         // --- STORAGE ---
+         item {
+-            Spacer(modifier = Modifier.height(16.dp))
+-            SettingsSectionHeader("Storage")
+-        }
+-        item {
+-            ListItem(
+-                headlineContent = { Text("Local Backup Status") },
+-                supportingContent = { Text("Last backup: $lastBackupDate") },
+-                leadingContent = { Icon(Icons.Default.Storage, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+-                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+-            )
++            SettingsCard("Storage") {
++                ListItem(
++                    headlineContent = { Text("Local Backup Status") },
++                    supportingContent = { Text("Last backup: $lastBackupDate") },
++                    leadingContent = { Icon(Icons.Default.Storage, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
++                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
++                )
++            }
+         }
+ 
+         // --- ABOUT ---
+         item {
+-            Spacer(modifier = Modifier.height(16.dp))
+-            SettingsSectionHeader("About")
+-        }
+-        item {
+-            ListItem(
+-                headlineContent = { Text("App Information") },
+-                supportingContent = { Text("Version, developer and database info") },
+-                leadingContent = { Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+-                trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
+-                modifier = Modifier.clickable { onNavigateToAbout() },
+-                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+-            )
++            SettingsCard("About") {
++                ListItem(
++                    headlineContent = { Text("App Information") },
++                    supportingContent = { Text("Version, developer and database info") },
++                    leadingContent = { Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
++                    trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
++                    modifier = Modifier.clickable { onNavigateToAbout() },
++                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
++                )
++            }
+         }
+         

@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,6 +37,7 @@ import java.util.Locale
 import com.example.utils.ShareManager
 import com.example.ui.customer.CustomerViewModel
 import androidx.compose.ui.platform.testTag
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun QuotationHistoryScreen(
@@ -48,13 +50,14 @@ fun QuotationHistoryScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val quotations by historyViewModel.allQuotations.collectAsState()
-    val companyProfile by companyViewModel.companyProfile.collectAsState()
-    val customersList by customerViewModel.customers.collectAsState()
+    val quotations by historyViewModel.allQuotations.collectAsStateWithLifecycle()
+    val companyProfile by companyViewModel.companyProfile.collectAsStateWithLifecycle()
+    val customersList by customerViewModel.customers.collectAsStateWithLifecycle()
     
     var searchQuery by remember { mutableStateOf("") }
     var selectedStatusFilter by remember { mutableStateOf("All") }
     var selectedSortOption by remember { mutableStateOf("Newest First") }
+    var isGeneratingPdf by remember { mutableStateOf(false) }
 
     // Search, Filter, and Sort logic combined reactively
     val filteredAndSortedQuotes = remember(quotations, searchQuery, selectedStatusFilter, selectedSortOption) {
@@ -120,17 +123,17 @@ fun QuotationHistoryScreen(
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(
+            ExtendedFloatingActionButton(
                 onClick = {
                     quotationViewModel.startNewQuotation()
                     onNavigateToCreate()
                 },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.testTag("fab_new_quote")
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = "New Quotation")
-            }
+                modifier = Modifier.testTag("fab_new_quote"),
+                text = { Text("New Quote", fontWeight = FontWeight.Bold) },
+                icon = { Icon(Icons.Filled.Add, contentDescription = "New Quotation") }
+            )
         }
     ) { innerPadding ->
         Box(
@@ -198,21 +201,19 @@ fun QuotationHistoryScreen(
                 // 2. Search and Filtering Section
                 item {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
-                            label = { Text("Search Quotations") },
-                            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                            trailingIcon = {
-                                if (searchQuery.isNotEmpty()) {
+                        com.example.ui.components.PremiumOutlinedTextField(
+    value = searchQuery,
+    onValueChange = {searchQuery = it},
+    label = "Search Quotations",
+    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+    trailingIcon = {if (searchQuery.isNotEmpty()) {
                                     IconButton(onClick = { searchQuery = "" }) {
                                         Icon(Icons.Filled.Clear, contentDescription = "Clear")
                                     }
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth().testTag("search_field"),
-                            shape = RoundedCornerShape(12.dp)
-                        )
+                                }},
+    singleLine = true,
+    modifier = Modifier.fillMaxWidth()
+)
 
                         Spacer(modifier = Modifier.height(10.dp))
 
@@ -292,8 +293,12 @@ fun QuotationHistoryScreen(
                 if (!isSearchingOrFiltering) {
                     if (quotations.isEmpty()) {
                         item {
-                            EmptyHistoryState(
-                                onCreateQuote = {
+                            com.example.ui.components.EmptyState(
+                                title = "No Quotations Yet",
+                                message = "You haven't created any quotations. Tap the 'New Quotation' button below to get started.",
+                                icon = Icons.Filled.History,
+                                actionLabel = "Create Quotation",
+                                onActionClick = { 
                                     quotationViewModel.startNewQuotation()
                                     onNavigateToCreate()
                                 }
@@ -302,16 +307,16 @@ fun QuotationHistoryScreen(
                     } else {
                         // --- HERO SECTION ---
                         item {
-                            Card(
+                            ElevatedCard(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp)
                                     .testTag("hero_section_card"),
                                 shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(
+                                colors = CardDefaults.elevatedCardColors(
                                     containerColor = MaterialTheme.colorScheme.primaryContainer
                                 ),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
                             ) {
                             Column(
                                 modifier = Modifier.padding(20.dp)
@@ -361,7 +366,7 @@ fun QuotationHistoryScreen(
                                     modifier = Modifier.padding(bottom = 8.dp)
                                 )
                                 
-                                Card(
+                                ElevatedCard(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
@@ -369,7 +374,7 @@ fun QuotationHistoryScreen(
                                             onNavigateToEdit()
                                         }
                                         .testTag("continue_draft_card"),
-                                    colors = CardDefaults.cardColors(
+                                    colors = CardDefaults.elevatedCardColors(
                                         containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
                                     ),
                                     shape = RoundedCornerShape(12.dp)
@@ -474,7 +479,7 @@ fun QuotationHistoryScreen(
                                             .joinToString("") { it.take(1).uppercase() }
                                             .ifEmpty { "C" }
                                             
-                                        Card(
+                                        ElevatedCard(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .clickable {
@@ -483,11 +488,11 @@ fun QuotationHistoryScreen(
                                                     onNavigateToCreate()
                                                 }
                                                 .testTag("customer_chip_${customer.customerId}"),
-                                            colors = CardDefaults.cardColors(
+                                            colors = CardDefaults.elevatedCardColors(
                                                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                                             ),
-                                            shape = RoundedCornerShape(12.dp),
-                                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                                            shape = RoundedCornerShape(12.dp)
+
                                         ) {
                                             Row(
                                                 modifier = Modifier
@@ -559,12 +564,12 @@ fun QuotationHistoryScreen(
                                 )
                                 
                                 stats.forEachIndexed { index, (label, count, color) ->
-                                    Card(
+                                    ElevatedCard(
                                         modifier = Modifier
                                             .weight(1f)
                                             .height(80.dp)
                                             .testTag("summary_card_$index"),
-                                        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.4f)),
+                                        colors = CardDefaults.elevatedCardColors(containerColor = color.copy(alpha = 0.4f)),
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
                                         Column(
@@ -609,10 +614,10 @@ fun QuotationHistoryScreen(
                     val countToShow = minOf(recentQuotes.size, 5)
                     if (countToShow == 0) {
                         item {
-                            Card(
+                            ElevatedCard(
                                 modifier = Modifier.fillMaxWidth().testTag("empty_quotations_card"),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
-                            ) {
+                                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
+) {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -631,17 +636,32 @@ fun QuotationHistoryScreen(
                         items(recentQuotes) { quote ->
                             QuotationRowItem(
                                 quote = quote,
+                                modifier = Modifier.animateItem(),
                                 onSelect = { selectedQuoteForOptions = quote },
                                 onViewPdf = {
                                     scope.launch {
-                                        val file = ShareManager.generateQuotationPdf(context, historyViewModel.repository, quote.id)
-                                        ShareManager.openOrViewPdf(context, file)
+                                        try {
+                                            isGeneratingPdf = true
+                                            val file = ShareManager.generateQuotationPdf(context, historyViewModel.repository, quote.id)
+                                            ShareManager.openOrViewPdf(context, file)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Failed to view PDF: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        } finally {
+                                            isGeneratingPdf = false
+                                        }
                                     }
                                 },
                                 onSharePdf = {
                                     scope.launch {
-                                        val file = ShareManager.generateQuotationPdf(context, historyViewModel.repository, quote.id)
-                                        ShareManager.shareQuotation(context, file, quote.quotationNumber)
+                                        try {
+                                            isGeneratingPdf = true
+                                            val file = ShareManager.generateQuotationPdf(context, historyViewModel.repository, quote.id)
+                                            ShareManager.shareQuotation(context, file, quote.quotationNumber)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Failed to share PDF: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        } finally {
+                                            isGeneratingPdf = false
+                                        }
                                     }
                                 },
                                 onEdit = {
@@ -670,66 +690,47 @@ fun QuotationHistoryScreen(
                     // 4. Searching/Filtering results List
                     if (filteredAndSortedQuotes.isEmpty()) {
                         item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(300.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.padding(24.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Search,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(64.dp),
-                                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                                    )
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    Text(
-                                        text = "No matching quotations found",
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 16.sp,
-                                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-                                    )
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    Text(
-                                        text = "Try a different search query or filter by a different status.",
-                                        textAlign = TextAlign.Center,
-                                        fontSize = 13.sp,
-                                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-                                    )
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Button(
-                                        onClick = {
-                                            searchQuery = ""
-                                            selectedStatusFilter = "All"
-                                        },
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Icon(Icons.Filled.Refresh, contentDescription = null)
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Reset Filters")
-                                    }
+                            com.example.ui.components.EmptyState(
+                                title = "No matching quotations found",
+                                message = "Try a different search query or filter by a different status.",
+                                icon = Icons.Filled.SearchOff,
+                                actionLabel = "Reset Search",
+                                onActionClick = {
+                                    searchQuery = ""
+                                    selectedStatusFilter = "All"
                                 }
-                            }
+                            )
                         }
                     } else {
                         items(filteredAndSortedQuotes) { quote ->
                             QuotationRowItem(
                                 quote = quote,
+                                modifier = Modifier.animateItem(),
                                 onSelect = { selectedQuoteForOptions = quote },
                                 onViewPdf = {
                                     scope.launch {
-                                        val file = ShareManager.generateQuotationPdf(context, historyViewModel.repository, quote.id)
-                                        ShareManager.openOrViewPdf(context, file)
+                                        try {
+                                            isGeneratingPdf = true
+                                            val file = ShareManager.generateQuotationPdf(context, historyViewModel.repository, quote.id)
+                                            ShareManager.openOrViewPdf(context, file)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Failed to view PDF: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        } finally {
+                                            isGeneratingPdf = false
+                                        }
                                     }
                                 },
                                 onSharePdf = {
                                     scope.launch {
-                                        val file = ShareManager.generateQuotationPdf(context, historyViewModel.repository, quote.id)
-                                        ShareManager.shareQuotation(context, file, quote.quotationNumber)
+                                        try {
+                                            isGeneratingPdf = true
+                                            val file = ShareManager.generateQuotationPdf(context, historyViewModel.repository, quote.id)
+                                            ShareManager.shareQuotation(context, file, quote.quotationNumber)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Failed to share PDF: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        } finally {
+                                            isGeneratingPdf = false
+                                        }
                                     }
                                 },
                                 onEdit = {
@@ -760,10 +761,10 @@ fun QuotationHistoryScreen(
     // --- DIALOG FOR OPTIONS ---
     selectedQuoteForOptions?.let { quote ->
         Dialog(onDismissRequest = { selectedQuoteForOptions = null }) {
-            Card(
+            ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
@@ -784,9 +785,16 @@ fun QuotationHistoryScreen(
                         leadingContent = { Icon(Icons.Filled.Share, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
                         modifier = Modifier.clickable {
                             scope.launch {
-                                val file = ShareManager.generateQuotationPdf(context, historyViewModel.repository, quote.id)
-                                ShareManager.shareQuotation(context, file, quote.quotationNumber)
-                                selectedQuoteForOptions = null
+                                try {
+                                    isGeneratingPdf = true
+                                    val file = ShareManager.generateQuotationPdf(context, historyViewModel.repository, quote.id)
+                                    ShareManager.shareQuotation(context, file, quote.quotationNumber)
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Failed to share PDF: ${e.message}", Toast.LENGTH_SHORT).show()
+                                } finally {
+                                    isGeneratingPdf = false
+                                    selectedQuoteForOptions = null
+                                }
                             }
                         }
                     )
@@ -795,9 +803,16 @@ fun QuotationHistoryScreen(
                         leadingContent = { Icon(Icons.Filled.FileDownload, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                         modifier = Modifier.clickable {
                             scope.launch {
-                                val file = ShareManager.generateQuotationPdf(context, historyViewModel.repository, quote.id)
-                                ShareManager.openOrViewPdf(context, file)
-                                selectedQuoteForOptions = null
+                                try {
+                                    isGeneratingPdf = true
+                                    val file = ShareManager.generateQuotationPdf(context, historyViewModel.repository, quote.id)
+                                    ShareManager.openOrViewPdf(context, file)
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Failed to view PDF: ${e.message}", Toast.LENGTH_SHORT).show()
+                                } finally {
+                                    isGeneratingPdf = false
+                                    selectedQuoteForOptions = null
+                                }
                             }
                         }
                     )
@@ -868,28 +883,67 @@ fun QuotationHistoryScreen(
 
     // --- DELETE CONFIRM ---
     showDeleteConfirm?.let { quote ->
-        AlertDialog(
+        com.example.ui.components.PremiumDialog(
             onDismissRequest = { showDeleteConfirm = null },
-            title = { Text("Delete Quotation") },
-            text = { Text("Are you sure you want to permanently delete quotation ${quote.quotationNumber}? This action cannot be undone.") },
-            confirmButton = {
-                TextButton(
+            title = "Delete Quotation",
+            actions = {
+                com.example.ui.components.PremiumTextButton(onClick = { showDeleteConfirm = null }) {
+                    Text("Cancel")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                com.example.ui.components.PremiumPrimaryButton(
                     onClick = {
                         historyViewModel.deleteQuotation(quote.id)
                         showDeleteConfirm = null
                         Toast.makeText(context, "Quotation deleted", Toast.LENGTH_SHORT).show()
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    }
                 ) {
                     Text("Delete")
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = null }) {
-                    Text("Cancel")
+            }
+        ) {
+            Text("Are you sure you want to permanently delete quotation ${quote.quotationNumber}? This action cannot be undone.")
+        }
+    }
+
+    // --- PDF GENERATION PROGRESS DIALOG ---
+    if (isGeneratingPdf) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
+            ElevatedCard(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp),
+                modifier = Modifier.width(280.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 4.dp,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Text(
+                        text = "Generating PDF",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Rendering vector elements and styling document page...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
-        )
+        }
     }
 }
 
@@ -897,17 +951,16 @@ fun QuotationHistoryScreen(
 fun EmptyHistoryState(
     onCreateQuote: () -> Unit
 ) {
-    Card(
+    ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 16.dp)
             .testTag("empty_history_card"),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
+        colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
-        ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-    ) {
+        )
+) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -925,7 +978,7 @@ fun EmptyHistoryState(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Filled.ReceiptLong,
+                    imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(40.dp)
@@ -985,6 +1038,7 @@ fun EmptyHistoryState(
 @Composable
 fun QuotationRowItem(
     quote: Quotation,
+    modifier: Modifier = Modifier,
     onSelect: () -> Unit,
     onViewPdf: () -> Unit,
     onSharePdf: () -> Unit,
@@ -996,20 +1050,16 @@ fun QuotationRowItem(
     val sdf = remember { SimpleDateFormat("dd-MMM-yyyy", Locale.getDefault()) }
     val formattedDate = remember(quote.date) { sdf.format(Date(quote.date)) }
 
-    Card(
-        modifier = Modifier
+    ElevatedCard(
+        modifier = modifier
             .fillMaxWidth()
             .clickable { onSelect() }
             .testTag("quotation_card_${quote.id}"),
-        colors = CardDefaults.cardColors(
+        colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-        ),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(

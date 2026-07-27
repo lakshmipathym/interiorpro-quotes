@@ -8,14 +8,22 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.*
 import com.example.engine.QuotationCalculationEngine
 import com.example.engine.TaxEngine
+
+import com.example.domain.usecases.CalculateQuotationUseCase
+import com.example.domain.usecases.FinalizeQuotationUseCase
+import com.example.domain.contracts.QuotationSnapshotRepository
+import com.example.domain.models.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 
 class QuotationViewModel(
     application: Application,
-    val repository: QuotesRepository,
-    private val syncManager: com.example.core.sync.SyncManager
+    val repository: QuotesRepository, val masterRepository: com.example.data.MasterRepository,
+    private val syncManager: com.example.core.sync.SyncManager,
+    private val calculateQuotationUseCase: CalculateQuotationUseCase,
+    private val finalizeQuotationUseCase: FinalizeQuotationUseCase,
+    private val snapshotRepository: QuotationSnapshotRepository
 ) : AndroidViewModel(application) {
 
     init {
@@ -122,12 +130,11 @@ class QuotationViewModel(
                     }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
             }
         }
     }
 
-    val allMasterData: StateFlow<List<MasterData>> = repository.allMasterData
+    val allMasterData: StateFlow<List<com.example.data.MasterEntity>> = masterRepository.getAllMasters()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
         
     val allTemplates: StateFlow<List<QuotationTemplate>> = repository.allTemplates
@@ -144,6 +151,10 @@ class QuotationViewModel(
 
     private val _newQuoteCustomer = MutableStateFlow<CustomerEntity?>(null)
     val newQuoteCustomer: StateFlow<CustomerEntity?> = _newQuoteCustomer.asStateFlow()
+    private val _newQuoteSiteName = MutableStateFlow("")
+    val newQuoteSiteName: StateFlow<String> = _newQuoteSiteName.asStateFlow()
+    private val _newQuoteSiteAddress = MutableStateFlow("")
+    val newQuoteSiteAddress: StateFlow<String> = _newQuoteSiteAddress.asStateFlow()
 
     private val _newQuoteProjectType = MutableStateFlow("")
     val newQuoteProjectType: StateFlow<String> = _newQuoteProjectType.asStateFlow()
@@ -157,12 +168,41 @@ class QuotationViewModel(
     private val _newQuoteFinish = MutableStateFlow("")
     val newQuoteFinish: StateFlow<String> = _newQuoteFinish.asStateFlow()
 
+    private val _newQuoteProjectName = MutableStateFlow("")
+    val newQuoteProjectName: StateFlow<String> = _newQuoteProjectName.asStateFlow()
+
+    private val _newQuoteDate = MutableStateFlow(System.currentTimeMillis())
+    val newQuoteDate: StateFlow<Long> = _newQuoteDate.asStateFlow()
+
+    private val _newQuoteValidityDays = MutableStateFlow(30)
+    val newQuoteValidityDays: StateFlow<Int> = _newQuoteValidityDays.asStateFlow()
+
+    private val _newQuoteTransport = MutableStateFlow(0.0)
+    val newQuoteTransport: StateFlow<Double> = _newQuoteTransport.asStateFlow()
+
+    private val _newQuoteInstallation = MutableStateFlow(0.0)
+    val newQuoteInstallation: StateFlow<Double> = _newQuoteInstallation.asStateFlow()
+
+    private val _newQuoteExtraCharges = MutableStateFlow(0.0)
+    val newQuoteExtraCharges: StateFlow<Double> = _newQuoteExtraCharges.asStateFlow()
+
+    private val _newQuoteRoundOff = MutableStateFlow(0.0)
+    val newQuoteRoundOff: StateFlow<Double> = _newQuoteRoundOff.asStateFlow()
+
+    private val _newQuoteAdvance = MutableStateFlow(0.0)
+    val newQuoteAdvance: StateFlow<Double> = _newQuoteAdvance.asStateFlow()
+
+    private val _newQuoteCustomerNotes = MutableStateFlow("")
+    val newQuoteCustomerNotes: StateFlow<String> = _newQuoteCustomerNotes.asStateFlow()
+
+    private val _newQuoteInternalNotes = MutableStateFlow("")
+    val newQuoteInternalNotes: StateFlow<String> = _newQuoteInternalNotes.asStateFlow()
+
     private val _newQuoteTemplate = MutableStateFlow<QuotationTemplate?>(null)
     val newQuoteTemplate: StateFlow<QuotationTemplate?> = _newQuoteTemplate.asStateFlow()
 
     private val _newQuoteItems = MutableStateFlow<List<QuotationItem>>(emptyList())
-    val newQuoteItems: StateFlow<List<QuotationItem>> = _newQuoteItems.asStateFlow()
-
+    
     private val _newQuoteDiscount = MutableStateFlow(0.0)
     val newQuoteDiscount: StateFlow<Double> = _newQuoteDiscount.asStateFlow()
 
@@ -178,23 +218,95 @@ class QuotationViewModel(
     private val _newQuoteNumber = MutableStateFlow("")
     val newQuoteNumber: StateFlow<String> = _newQuoteNumber.asStateFlow()
 
-    val newQuoteSubtotal: StateFlow<Double> = _newQuoteItems.map { items ->
-        QuotationCalculationEngine.calculateSubtotal(items)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+    val calculatedQuotation: StateFlow<CalculatedQuotation> = combine(
+        combine(_newQuoteItems, _newQuoteDiscount, _newQuoteGstRate) { i, d, g -> Triple(i, d, g) },
+        combine(_newQuoteTransport, _newQuoteInstallation, _newQuoteExtraCharges) { t, i, e -> Triple(t, i, e) },
+        combine(_newQuoteRoundOff, _newQuoteAdvance) { r, a -> Pair(r, a) }
+    ) { (items, discount, gstRate), (transport, installation, extraCharges), (roundOff, advance) ->
+        val rawInput = RawQuotationInput(
+            discount = discount,
+            gstRate = gstRate,
+            transport = transport,
+            installation = installation,
+            extraCharges = extraCharges,
+            roundOff = roundOff,
+            advance = advance
+        )
+        val rawItems = items.map {
+            val parts = it.description.split("|||")
+            val userDesc = parts[0].trim()
+            val specsJson = if (parts.size > 1) parts[1].trim() else "{}"
+            var w = "0"; var h = "0"; var d = "0"
+            var jsonParsed = false
+            try {
+                if (specsJson.startsWith("{") && specsJson.endsWith("}")) {
+                    val json = org.json.JSONObject(specsJson)
+                    if (json.has("width") || json.has("height") || json.has("depth")) {
+                        w = json.optString("width", "0")
+                        h = json.optString("height", "0")
+                        d = json.optString("depth", "0")
+                        jsonParsed = true
+                    }
+                }
+            } catch (e: Exception) {}
 
-    val newQuoteGstAmount: StateFlow<Double> = combine(newQuoteSubtotal, _newQuoteDiscount, _newQuoteGstRate) { sub, disc, rate ->
-        TaxEngine.calculateGstAmount(sub, disc, rate)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+            if (!jsonParsed || (w == "0" && h == "0" && d == "0")) {
+                if (it.rawWidth.isNotEmpty()) w = it.rawWidth
+                if (it.rawHeight.isNotEmpty()) h = it.rawHeight
+                if (it.rawDepth.isNotEmpty()) d = it.rawDepth
+            }
 
-    val newQuoteGrandTotal: StateFlow<Double> = combine(newQuoteSubtotal, _newQuoteDiscount, newQuoteGstAmount) { sub, disc, gst ->
-        QuotationCalculationEngine.calculateGrandTotal(sub, disc, gst)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+            val qty = if (it.rawQuantity > 0.0 && it.quantity == it.billableQuantity) {
+                it.rawQuantity
+            } else {
+                it.quantity
+            }
+
+            RawItemInput(
+                itemName = it.itemName,
+                description = userDesc,
+                material = it.material,
+                finish = it.finish,
+                width = w,
+                height = h,
+                depth = d,
+                quantity = qty,
+                unit = it.unit,
+                rate = it.rate
+            )
+        }
+        calculateQuotationUseCase.execute(rawInput, rawItems)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 
+        CalculatedQuotation(emptyList(), 0.0, 0.0, 0.0, 0.0, 0.0, "")
+    )
+
+    val newQuoteSubtotal: StateFlow<Double> = calculatedQuotation.map { it.subtotal }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+    val newQuoteGstAmount: StateFlow<Double> = calculatedQuotation.map { it.gstAmount }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+    val newQuoteGrandTotal: StateFlow<Double> = calculatedQuotation.map { it.grandTotal }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+    val newQuoteBalance: StateFlow<Double> = calculatedQuotation.map { it.balanceDue }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val newQuoteItems: StateFlow<List<QuotationItem>> = combine(_newQuoteItems, calculatedQuotation) { raw, calc ->
+        if (raw.size == calc.items.size) {
+            raw.mapIndexed { index, item ->
+                item.copy(
+                    billableQuantity = calc.items[index].billableQuantity,
+                    amount = calc.items[index].itemAmount
+                )
+            }
+        } else {
+            raw
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun startNewQuotation() {
         viewModelScope.launch {
             _editingQuotationId.value = null
             _editingQuotationStatus.value = "Draft"
             _newQuoteCustomer.value = null
+            _newQuoteSiteName.value = ""
+            _newQuoteSiteAddress.value = ""
+            _newQuoteProjectName.value = ""
+            _newQuoteDate.value = System.currentTimeMillis()
             _newQuoteProjectType.value = ""
             _newQuoteCategory.value = ""
             _newQuoteMaterial.value = ""
@@ -203,17 +315,54 @@ class QuotationViewModel(
             _newQuoteItems.value = emptyList()
             
             val company = repository.getCompanyProfileDirect()
+            _newQuoteValidityDays.value = company?.defaultValidityDays?.takeIf { it > 0 } ?: 30
             _newQuoteDiscount.value = company?.defaultDiscount ?: 0.0
             _newQuoteGstRate.value = company?.defaultGstRate ?: 18.0
-            _newQuoteWarranty.value = ""
+            _newQuoteWarranty.value = company?.defaultWarranty ?: ""
+            _newQuoteTerms.value = company?.termsAndConditions ?: ""
             
-            _newQuoteTerms.value = ""
+            _newQuoteTransport.value = 0.0
+            _newQuoteInstallation.value = 0.0
+            _newQuoteExtraCharges.value = 0.0
+            _newQuoteRoundOff.value = 0.0
+            _newQuoteAdvance.value = 0.0
+            _newQuoteCustomerNotes.value = ""
+            _newQuoteInternalNotes.value = ""
+            
             _newQuoteNumber.value = repository.generateNextQuotationNumber()
         }
     }
 
     fun selectCustomer(customer: CustomerEntity) {
         _newQuoteCustomer.value = customer
+        _newQuoteSiteName.value = customer.siteLocation
+        _newQuoteSiteAddress.value = customer.siteAddress.ifBlank { customer.address }
+    }
+
+    fun updateSiteDetails(name: String, address: String) {
+        _newQuoteSiteName.value = name
+        _newQuoteSiteAddress.value = address
+    }
+
+    fun previewItemCalculation(width: String, height: String, depth: String, qty: Double, unit: String, rate: Double): Pair<Double, Double> {
+        val rawItem = com.example.domain.models.RawItemInput(
+            itemName = "", description = "", material = "", finish = "",
+            width = width, height = height, depth = depth, quantity = qty, unit = unit, rate = rate
+        )
+        val calculated = calculateQuotationUseCase.previewItem(rawItem)
+        return Pair(calculated.billableQuantity, calculated.itemAmount)
+    }
+
+    fun updateProjectName(name: String) {
+        _newQuoteProjectName.value = name
+    }
+
+    fun updateDate(dateMillis: Long) {
+        _newQuoteDate.value = dateMillis
+    }
+
+    fun updateValidityDays(days: Int) {
+        _newQuoteValidityDays.value = days
     }
 
     fun selectProjectType(type: String) {
@@ -262,7 +411,6 @@ class QuotationViewModel(
                 }
                 _newQuoteItems.value = items
             } catch (e: Exception) {
-                e.printStackTrace()
             }
         }
     }
@@ -291,11 +439,93 @@ class QuotationViewModel(
         }
     }
 
+
+    fun moveQuoteItemUp(index: Int) {
+        if (index > 0) {
+            val list = _newQuoteItems.value.toMutableList()
+            val item = list.removeAt(index)
+            list.add(index - 1, item)
+            _newQuoteItems.value = list
+        }
+    }
+
+    fun moveQuoteItemDown(index: Int) {
+        if (index < _newQuoteItems.value.size - 1) {
+            val list = _newQuoteItems.value.toMutableList()
+            val item = list.removeAt(index)
+            list.add(index + 1, item)
+            _newQuoteItems.value = list
+        }
+    }
+
     fun duplicateQuoteItem(index: Int) {
         val current = _newQuoteItems.value.toMutableList()
         if (index in current.indices) {
             val original = current[index]
-            val duplicated = original.copy(id = 0)
+            var duplicatedDesc = original.description
+            try {
+                if (duplicatedDesc.contains("|||")) {
+                    val parts = duplicatedDesc.split("|||")
+                    val userDesc = parts[0].trim()
+                    val specsJson = parts[1].trim()
+                    if (specsJson.startsWith("{") && specsJson.endsWith("}")) {
+                        val json = org.json.JSONObject(specsJson)
+                        
+                        val laminateImageUri = json.optString("laminateImageUri", "")
+                        if (laminateImageUri.isNotEmpty()) {
+                            val filesDir = getApplication<Application>().filesDir
+                            val oldFile = java.io.File(filesDir, java.io.File(laminateImageUri).name)
+                            if (oldFile.exists()) {
+                                val newFile = java.io.File(oldFile.parent, "temp_lam_${System.currentTimeMillis()}_${java.util.UUID.randomUUID().toString().substring(0,5)}.jpg")
+                                oldFile.copyTo(newFile, overwrite = true)
+                                json.put("laminateImageUri", newFile.absolutePath)
+                            }
+                        }
+                        
+                        val designImageUri = json.optString("designImageUri", "")
+                        if (designImageUri.isNotEmpty()) {
+                            val filesDir = getApplication<Application>().filesDir
+                            val oldFile = java.io.File(filesDir, java.io.File(designImageUri).name)
+                            if (oldFile.exists()) {
+                                val newFile = java.io.File(oldFile.parent, "temp_des_${System.currentTimeMillis()}_${java.util.UUID.randomUUID().toString().substring(0,5)}.jpg")
+                                oldFile.copyTo(newFile, overwrite = true)
+                                json.put("designImageUri", newFile.absolutePath)
+                            }
+                        }
+                        
+                        duplicatedDesc = "$userDesc ||| $json"
+                    }
+                } else if (duplicatedDesc.startsWith("{") && duplicatedDesc.endsWith("}")) {
+                    val json = org.json.JSONObject(duplicatedDesc)
+                    
+                    val laminateImageUri = json.optString("laminateImageUri", "")
+                    if (laminateImageUri.isNotEmpty()) {
+                        val filesDir = getApplication<Application>().filesDir
+                            val oldFile = java.io.File(filesDir, java.io.File(laminateImageUri).name)
+                        if (oldFile.exists()) {
+                            val newFile = java.io.File(oldFile.parent, "temp_lam_${System.currentTimeMillis()}_${java.util.UUID.randomUUID().toString().substring(0,5)}.jpg")
+                            oldFile.copyTo(newFile, overwrite = true)
+                            json.put("laminateImageUri", newFile.absolutePath)
+                        }
+                    }
+                    
+                    val designImageUri = json.optString("designImageUri", "")
+                    if (designImageUri.isNotEmpty()) {
+                        val filesDir = getApplication<Application>().filesDir
+                            val oldFile = java.io.File(filesDir, java.io.File(designImageUri).name)
+                        if (oldFile.exists()) {
+                            val newFile = java.io.File(oldFile.parent, "temp_des_${System.currentTimeMillis()}_${java.util.UUID.randomUUID().toString().substring(0,5)}.jpg")
+                            oldFile.copyTo(newFile, overwrite = true)
+                            json.put("designImageUri", newFile.absolutePath)
+                        }
+                    }
+                    
+                    duplicatedDesc = json.toString()
+                }
+            } catch (e: Exception) {
+                // Ignore
+            }
+            val duplicated = original.copy(id = 0, description = duplicatedDesc)
             current.add(index + 1, duplicated)
             _newQuoteItems.value = current
         }
@@ -317,44 +547,149 @@ class QuotationViewModel(
         _newQuoteWarranty.value = warranty
     }
 
+    fun setTransport(value: Double) {
+        _newQuoteTransport.value = value
+    }
+
+    fun setInstallation(value: Double) {
+        _newQuoteInstallation.value = value
+    }
+
+    fun setExtraCharges(value: Double) {
+        _newQuoteExtraCharges.value = value
+    }
+
+    fun setRoundOff(value: Double) {
+        _newQuoteRoundOff.value = value
+    }
+
+    fun setAdvance(value: Double) {
+        _newQuoteAdvance.value = value
+    }
+
+    fun setCustomerNotes(notes: String) {
+        _newQuoteCustomerNotes.value = notes
+    }
+
+    fun setInternalNotes(notes: String) {
+        _newQuoteInternalNotes.value = notes
+    }
+
     fun setQuoteNumber(num: String) {
         _newQuoteNumber.value = num
     }
 
+    
+    fun validateStep(step: Int): String? {
+        return when (step) {
+            1 -> {
+                when {
+                    _newQuoteCustomer.value == null -> "Select a customer to continue"
+                    _newQuoteSiteName.value.isBlank() -> "Enter Site Name to continue"
+                    _newQuoteSiteAddress.value.isBlank() -> "Enter Site Address to continue"
+                    else -> null
+                }
+            }
+            2 -> {
+                when {
+                    _newQuoteItems.value.isEmpty() -> "Add at least one item to continue"
+                    else -> null
+                }
+            }
+            3 -> {
+                when {
+                    _newQuoteDiscount.value > newQuoteSubtotal.value -> "Discount cannot exceed subtotal"
+                    _newQuoteGstRate.value < 0 -> "GST rate cannot be negative"
+                    _newQuoteTransport.value < 0 -> "Transport cannot be negative"
+                    _newQuoteInstallation.value < 0 -> "Installation cannot be negative"
+                    _newQuoteExtraCharges.value < 0 -> "Extra charges cannot be negative"
+                    _newQuoteAdvance.value < 0 -> "Advance cannot be negative"
+                    else -> null
+                }
+            }
+            else -> null
+        }
+    }
+
     fun saveQuotation(onComplete: (Int) -> Unit) {
         viewModelScope.launch {
-            val customer = _newQuoteCustomer.value ?: return@launch
-            val quote = Quotation(
-                id = _editingQuotationId.value ?: 0,
-                quotationNumber = _newQuoteNumber.value.ifEmpty { repository.generateNextQuotationNumber() },
-                customerId = customer.customerId.toInt(),
-                customerName = customer.customerName,
-                customerPhone = customer.mobileNumber,
-                customerAddress = customer.address,
-                projectType = _newQuoteProjectType.value,
-                category = _newQuoteCategory.value,
-                material = _newQuoteMaterial.value,
-                finish = _newQuoteFinish.value,
-                subtotal = newQuoteSubtotal.value,
+            val customerEntity = _newQuoteCustomer.value ?: return@launch
+            val companyProfile = repository.getCompanyProfileDirect() ?: return@launch
+            
+            val quoteNumber = _newQuoteNumber.value.ifEmpty { repository.generateNextQuotationNumber() }
+            val qIdStr = (_editingQuotationId.value ?: 0).toString()
+
+            val customerSnapshot = CustomerSnapshot(
+                customerId = customerEntity.customerId.toString(),
+                customerName = customerEntity.customerName,
+                customerPhone = customerEntity.mobileNumber,
+                customerAddress = customerEntity.address,
+                siteName = _newQuoteSiteName.value,
+                siteAddress = _newQuoteSiteAddress.value
+            )
+
+            val companySnapshot = CompanySnapshot(
+                companyName = companyProfile.companyName,
+                ownerName = companyProfile.ownerName,
+                phone = companyProfile.phone,
+                email = companyProfile.email,
+                address = companyProfile.address,
+                gstin = companyProfile.gstin,
+                bankName = companyProfile.bankName,
+                accountHolderName = companyProfile.accountHolderName,
+                accountNumber = companyProfile.accountNumber,
+                ifsc = companyProfile.ifsc,
+                branch = companyProfile.branch,
+                upiId = companyProfile.upiId
+            )
+
+            val rawInput = RawQuotationInput(
                 discount = _newQuoteDiscount.value,
                 gstRate = _newQuoteGstRate.value,
-                gstAmount = newQuoteGstAmount.value,
-                grandTotal = newQuoteGrandTotal.value,
+                transport = _newQuoteTransport.value,
+                installation = _newQuoteInstallation.value,
+                extraCharges = _newQuoteExtraCharges.value,
+                roundOff = _newQuoteRoundOff.value,
+                advance = _newQuoteAdvance.value
+            )
+            
+            val calcQuote = calculatedQuotation.value
+
+            finalizeQuotationUseCase.execute(
+                id = qIdStr,
+                quotationNumber = quoteNumber,
+                date = _newQuoteDate.value,
+                customer = customerSnapshot,
+                company = companySnapshot,
                 termsAndConditions = _newQuoteTerms.value,
                 warranty = _newQuoteWarranty.value,
-                status = _editingQuotationStatus.value
+                validityDays = _newQuoteValidityDays.value,
+                notes = _newQuoteCustomerNotes.value,
+                rawInput = rawInput,
+                calculatedQuotation = calcQuote
             )
-            val qId = repository.saveQuotationWithItems(quote, _newQuoteItems.value)
+            
+            // To maintain compatibility with legacy onComplete(Int), fetch the saved snapshot
+            val savedSnapshot = snapshotRepository.getSnapshotByNumber(quoteNumber)
+            val newId = savedSnapshot?.id?.toIntOrNull() ?: _editingQuotationId.value ?: 0
+            
             syncManager.onQuotationSaved()
-            onComplete(qId)
+            onComplete(newId)
         }
     }
 
     fun loadQuotationToEdit(quotation: Quotation) {
         viewModelScope.launch {
-            _editingQuotationId.value = quotation.id
-            _editingQuotationStatus.value = quotation.status
-            _newQuoteNumber.value = quotation.quotationNumber
+            if (quotation.status.equals("Final", ignoreCase = true) || quotation.status.equals("Cancelled", ignoreCase = true)) {
+                _editingQuotationId.value = 0
+                _editingQuotationStatus.value = "Draft"
+                _newQuoteNumber.value = ""
+            } else {
+                _editingQuotationId.value = quotation.id
+                _editingQuotationStatus.value = quotation.status
+                _newQuoteNumber.value = quotation.quotationNumber
+            }
+            _newQuoteDate.value = quotation.date
             _newQuoteProjectType.value = quotation.projectType
             _newQuoteCategory.value = quotation.category
             _newQuoteMaterial.value = quotation.material
@@ -364,12 +699,27 @@ class QuotationViewModel(
             _newQuoteTerms.value = quotation.termsAndConditions
             _newQuoteWarranty.value = quotation.warranty
             
-            val cust = repository.getCustomerById(quotation.customerId.toLong())
-            _newQuoteCustomer.value = cust ?: CustomerEntity(
-                customerId = quotation.customerId.toLong(),
+            _newQuoteSiteName.value = quotation.siteName
+            _newQuoteSiteAddress.value = quotation.siteAddress
+            _newQuoteProjectName.value = quotation.projectName
+            
+            _newQuoteTransport.value = quotation.transport
+            _newQuoteInstallation.value = quotation.installation
+            _newQuoteExtraCharges.value = quotation.extraCharges
+            _newQuoteRoundOff.value = quotation.roundOff
+            _newQuoteAdvance.value = quotation.advance
+            _newQuoteCustomerNotes.value = quotation.customerNotes
+            _newQuoteInternalNotes.value = quotation.internalNotes
+            _newQuoteValidityDays.value = quotation.validityDays
+
+            val dbCustomer = repository.getCustomerById(quotation.customerId)
+            _newQuoteCustomer.value = dbCustomer ?: CustomerEntity(
+                customerId = quotation.customerId,
                 customerName = quotation.customerName,
                 mobileNumber = quotation.customerPhone,
-                address = quotation.customerAddress
+                address = quotation.customerAddress,
+                email = "", city = "", state = "", pincode = "",
+                gstin = "", companyName = "", siteAddress = ""
             )
 
             val items = repository.getQuotationItemsDirect(quotation.id)
@@ -389,12 +739,16 @@ class QuotationViewModel(
 class QuotationViewModelFactory(
     private val application: Application,
     private val repository: QuotesRepository,
-    private val syncManager: com.example.core.sync.SyncManager
+    private val masterRepository: com.example.data.MasterRepository,
+    private val syncManager: com.example.core.sync.SyncManager,
+    private val calculateQuotationUseCase: CalculateQuotationUseCase,
+    private val finalizeQuotationUseCase: FinalizeQuotationUseCase,
+    private val snapshotRepository: QuotationSnapshotRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(QuotationViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return QuotationViewModel(application, repository, syncManager) as T
+            return QuotationViewModel(application, repository, masterRepository, syncManager, calculateQuotationUseCase, finalizeQuotationUseCase, snapshotRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

@@ -1,3 +1,30 @@
 <resources>
-    <string name="app_name">InteriorPro Quotes</string>
+    <string name="app_name">InteriorPro ERP</string>
+    
+    <!-- Smart Sync Dashboard -->
+    <string name="title_sync_dashboard">Smart Sync Dashboard</string>
+    <string name="card_title_backup_status">Backup Status</string>
+    <string name="label_last_backup_time">Last Backup Time:</string>
+    <string name="label_status">Status:</string>
+    <string name="label_size">Size:</string>
+    <string name="card_title_sync_status">Sync Status</string>
+    <string name="card_title_google_account">Google Account</string>
+    <string name="label_account">Account:</string>
+    <string name="label_connected">Connected:</string>
+    <string name="card_title_workspace">Workspace</string>
+    <string name="label_customers">Customers:</string>
+    <string name="label_quotations">Quotations:</string>
+    <string name="label_master_records">Master Records:</string>
+    <string name="label_database_version">Database Version:</string>
+    <string name="card_title_health">Health</string>
+    <string name="label_backup_ready">Backup Ready:</string>
+    <string name="label_restore_ready">Restore Ready:</string>
+    <string name="label_sync_ready">Sync Ready:</string>
+    <string name="label_pdf_engine_ready">PDF Engine Ready:</string>
+    <string name="label_database_healthy">Database Healthy:</string>
+    <string name="value_yes">Yes</string>
+    <string name="value_no">No</string>
+    <string name="value_none">None</string>
+    <string name="value_na">N/A</string>
+    <string name="value_bytes">%d bytes</string>
 </resources>

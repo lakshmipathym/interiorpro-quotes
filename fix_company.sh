@@ -1,0 +1,1 @@
+perl -0777 -pi -e 's/    val defaultInstallationTime: String = ""\n\)/    val defaultInstallationTime: String = "",\n    val defaultPaymentTerms: String = "",\n    val defaultQuoteValidity: String = "",\n    val additionalConditions: String = ""\n\)/s' app/src/main/java/com/example/data/Entities.kt

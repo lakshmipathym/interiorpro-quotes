@@ -1,0 +1,92 @@
+Reusing configuration cache.
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:processDebugGoogleServices UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :app:kspDebugKotlin
+
+> Task :app:compileDebugKotlin FAILED
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:187:38 None of the following candidates is applicable:
+fun Modifier.background(brush: Brush, shape: Shape = ..., alpha: Float = ...): Modifier
+fun Modifier.background(color: Color, shape: Shape = ...): Modifier
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:190:33 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:193:58 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:196:30 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1098:35 'when' expression must be exhaustive. Add an 'else' branch.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1098:54 None of the following candidates is applicable:
+fun String.lowercase(): String
+fun String.lowercase(locale: Locale): String
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1100:29 Syntax error: Unexpected tokens (use ';' to separate expressions on the same line).
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1101:33 Syntax error: Unexpected tokens (use ';' to separate expressions on the same line).
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1102:21 Syntax error: Expecting an element.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1102:26 Syntax error: Unexpected tokens (use ';' to separate expressions on the same line).
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1103:18 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1104:39 'when' expression must be exhaustive. Add an 'else' branch.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1104:58 None of the following candidates is applicable:
+fun String.lowercase(): String
+fun String.lowercase(locale: Locale): String
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1106:29 Syntax error: Unexpected tokens (use ';' to separate expressions on the same line).
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1107:33 Syntax error: Unexpected tokens (use ';' to separate expressions on the same line).
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1108:21 Syntax error: Expecting an element.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1108:26 Syntax error: Unexpected tokens (use ';' to separate expressions on the same line).
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1111:17 Unresolved reference 'Box'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1111:20 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1112:21 'val' cannot be reassigned.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1112:21 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1114:26 None of the following candidates is applicable:
+fun Modifier.background(brush: Brush, shape: Shape = ..., alpha: Float = ...): Modifier
+fun Modifier.background(color: Color, shape: Shape = ...): Modifier
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1118:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1123:49 None of the following candidates is applicable:
+fun String.uppercase(): String
+fun String.uppercase(locale: Locale): String
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1126:37 Unresolved reference 'statusTextColor'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1128:25 Unresolved reference 'Icon'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1129:29 Unresolved reference 'imageVector'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1129:29 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1129:69 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1131:36 Unresolved reference 'statusTextColor'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1135:18 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2563:13 No value passed for parameter 'quantity'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2563:13 No value passed for parameter 'unit'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2563:13 No value passed for parameter 'rate'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2563:13 No value passed for parameter 'amount'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2568:17 No parameter with name 'material' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2569:17 No parameter with name 'finish' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2570:17 No parameter with name 'quantity' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2571:17 No parameter with name 'unit' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2572:17 No parameter with name 'rate' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2573:17 No parameter with name 'amount' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2574:14 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1341:9 No value passed for parameter 'content'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1346:21 None of the following candidates is applicable:
+fun RoundedCornerShape(topStart: Dp = ..., topEnd: Dp = ..., bottomEnd: Dp = ..., bottomStart: Dp = ...): RoundedCornerShape
+fun RoundedCornerShape(topStart: Float = ..., topEnd: Float = ..., bottomEnd: Float = ..., bottomStart: Float = ...): RoundedCornerShape
+fun RoundedCornerShape(topStartPercent: Int = ..., topEndPercent: Int = ..., bottomEndPercent: Int = ..., bottomStartPercent: Int = ...): RoundedCornerShape
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1348:13 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1995:9 Unresolved reference 'Spacer'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1995:16 Unresolved reference 'modifier'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1995:16 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1995:50 Syntax error: Expecting ')'.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 9s
+9 actionable tasks: 2 executed, 7 up-to-date
+Configuration cache entry reused.

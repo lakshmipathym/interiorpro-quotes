@@ -1,0 +1,2 @@
+sed -i -e '/val grandTotalRounded = grandTotalRaw/d' app/src/main/java/com/example/pdf/PdfGenerator.kt
+sed -i -e 's/val grandTotalRaw = com.example.engine.QuotationCalculationEngine.calculateGrandTotal(subtotal, quotation.discount, gstAmount)/val grandTotalRaw = com.example.engine.QuotationCalculationEngine.calculateGrandTotal(subtotal, quotation.discount, gstAmount)\n        val grandTotalRounded = grandTotalRaw/' app/src/main/java/com/example/pdf/PdfGenerator.kt

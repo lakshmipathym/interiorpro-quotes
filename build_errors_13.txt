@@ -1,0 +1,23 @@
+Reusing configuration cache.
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:processDebugGoogleServices UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:generateDebugBuildConfig FROM-CACHE
+> Task :app:processDebugNavigationResources FROM-CACHE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :app:kspDebugKotlin
+
+> Task :app:compileDebugKotlin
+w: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:252:69 'val Icons.Filled.Sort: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Sort.
+w: file:///app/applet/app/src/main/java/com/example/ui/settings/AboutScreen.kt:36:44 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1154:50 'val Icons.Filled.ListAlt: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ListAlt.
+w: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1160:50 'val Icons.Filled.List: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.List.
+w: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1256:53 'val Icons.Filled.List: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.List.
+w: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1331:49 'val Icons.Filled.KeyboardArrowRight: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.KeyboardArrowRight.
+
+BUILD SUCCESSFUL in 25s
+9 actionable tasks: 2 executed, 2 from cache, 5 up-to-date
+Configuration cache entry reused.

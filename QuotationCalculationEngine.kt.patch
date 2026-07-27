@@ -1,0 +1,64 @@
+--- app/src/main/java/com/example/engine/QuotationCalculationEngine.kt
++++ app/src/main/java/com/example/engine/QuotationCalculationEngine.kt
+@@ -23,24 +23,41 @@
+         return feetPartStr.toDoubleOrNull() ?: 0.0
+     }
+ 
+-    fun calculateQuantity(width: String, height: String, qtyCount: Double, unit: String): Double {
+-        val wFeet = parseDimensionToFeet(width)
+-        val hFeet = parseDimensionToFeet(height)
++    fun calculateQuantity(width: String, height: String, qtyCount: Double, unit: String, depth: String = "0"): Double {
++        val wFeet = maxOf(0.0, parseDimensionToFeet(width))
++        val hFeet = maxOf(0.0, parseDimensionToFeet(height))
++        val dFeet = maxOf(0.0, parseDimensionToFeet(depth))
++        val safeQty = maxOf(0.0, qtyCount)
+         val uLower = unit.trim().lowercase(Locale.US)
++
+         return when {
+-            uLower == "sq.ft" || uLower.contains("sq.ft") || uLower.contains("sqft") || uLower == "sft" || uLower.contains("sq") -> {
+-                wFeet * hFeet * qtyCount
++            uLower == "cu.m" || uLower.contains("cu.m") || uLower.contains("cum") || uLower.contains("cubic meter") || uLower.contains("cubic mtr") -> {
++                wFeet * hFeet * dFeet * 0.028316846592 * safeQty
+             }
+-            uLower == "running feet" || uLower.contains("run") || uLower.contains("rft") || uLower.contains("r.ft") || uLower == "meter" || uLower.contains("meter") || uLower.contains("mtr") -> {
+-                wFeet * qtyCount
++            uLower == "cu.ft" || uLower.contains("cu.ft") || uLower.contains("cuft") || uLower.contains("cubic feet") || uLower.contains("cft") -> {
++                wFeet * hFeet * dFeet * safeQty
+             }
+-            uLower == "sq.m" || uLower.contains("sq.m") || uLower.contains("sqm") || uLower.contains("square meter") -> {
+-                wFeet * hFeet * 0.09290304 * qtyCount
++            uLower == "sq.m" || uLower.contains("sq.m") || uLower.contains("sqm") || uLower.contains("square meter") || uLower.contains("square mtr") -> {
++                wFeet * hFeet * 0.09290304 * safeQty
+             }
+-            uLower == "nos" || uLower.contains("nos") || uLower == "pcs" || uLower.contains("piece") -> {
+-                qtyCount
++            uLower == "sq.ft" || uLower.contains("sq.ft") || uLower.contains("sqft") || uLower == "sft" || uLower.contains("square feet") || uLower.contains("sq") -> {
++                wFeet * hFeet * safeQty
++            }
++            uLower == "meter" || uLower.contains("meter") || uLower.contains("mtr") || uLower == "r.m" || uLower == "rm" -> {
++                wFeet * 0.3048 * safeQty
++            }
++            uLower == "running feet" || uLower.contains("run") || uLower.contains("rft") || uLower.contains("r.ft") || uLower == "r.f" -> {
++                wFeet * safeQty
++            }
++            uLower == "lumpsum" || uLower.contains("lump sum") || uLower == "l.s" || uLower == "ls" -> {
++                safeQty
+             }
+             else -> {
+-                qtyCount
++                safeQty
+             }
++        }.let {
++            if (it.isNaN() || it.isInfinite()) 0.0 else it
+         }
+     }
+ 
+-    fun calculateItemAmount(width: String, height: String, qtyCount: Double, unit: String, rate: Double): Double {
+-        return calculateQuantity(width, height, qtyCount, unit) * rate
++    fun calculateItemAmount(width: String, height: String, qtyCount: Double, unit: String, rate: Double, depth: String = "0"): Double {
++        val safeRate = maxOf(0.0, rate)
++        val amount = calculateQuantity(width, height, qtyCount, unit, depth) * safeRate
++        return if (amount.isNaN() || amount.isInfinite()) 0.0 else amount
+     }
+ 
+     fun calculateSubtotal(items: List<QuotationItem>): Double {

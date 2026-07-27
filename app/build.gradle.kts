@@ -17,8 +17,8 @@ android {
     applicationId = "com.aistudio.interiorproquotes.qyhtsn"
     minSdk = 28
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0.0"
+    versionCode = 5
+    versionName = "1.5.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -41,12 +41,18 @@ android {
 
   buildTypes {
     release {
-      isCrunchPngs = false
-      isMinifyEnabled = false
+      isMinifyEnabled = true
+      isShrinkResources = true
+      buildConfigField("String", "RELEASE_NAME", "\"InteriorPro ERP v1.5\"")
+      buildConfigField("String", "BUILD_TIMESTAMP", "\"${System.currentTimeMillis()}\"")
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }
-    debug { signingConfig = signingConfigs.getByName("debugConfig") }
+    debug { 
+      signingConfig = signingConfigs.getByName("debugConfig") 
+      buildConfigField("String", "RELEASE_NAME", "\"InteriorPro ERP v1.5 (Debug)\"")
+      buildConfigField("String", "BUILD_TIMESTAMP", "\"${System.currentTimeMillis()}\"")
+    }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11

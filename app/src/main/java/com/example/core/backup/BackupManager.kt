@@ -7,7 +7,7 @@ import java.io.File
  */
 sealed interface BackupResult {
     data class Success(val backupFile: File, val metadata: BackupMetadata) : BackupResult
-    data class Failure(val reason: String, val throwable: Throwable? = null) : BackupResult
+    data class Failure(val reason: String) : BackupResult
 }
 
 /**

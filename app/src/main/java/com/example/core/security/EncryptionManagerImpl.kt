@@ -9,12 +9,34 @@ import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-class EncryptionManagerImpl : EncryptionManager {
+class EncryptionManagerImpl(
+    private val encryptionProvider: EncryptionProvider = AESEncryptionProvider()
+) : EncryptionManager {
 
     companion object {
         private const val ALGORITHM = "AES/CBC/PKCS5Padding"
         private const val KEY_ALGORITHM = "AES"
         private const val DIGEST_ALGORITHM = "SHA-256"
+    }
+
+    private var activeConfig: EncryptionConfig? = null
+
+    override fun setConfig(config: EncryptionConfig) {
+        this.activeConfig = config
+    }
+
+    override fun getConfig(): EncryptionConfig? {
+        return this.activeConfig
+    }
+
+    override fun encrypt(data: ByteArray): EncryptionResult {
+        val config = activeConfig ?: throw IllegalStateException("Encryption configuration not set")
+        return encryptionProvider.encrypt(data, config)
+    }
+
+    override fun decrypt(result: EncryptionResult): ByteArray {
+        val config = activeConfig ?: throw IllegalStateException("Encryption configuration not set")
+        return encryptionProvider.decrypt(result, config)
     }
 
     private fun getSecretKeySpec(password: String): SecretKeySpec {
@@ -24,8 +46,6 @@ class EncryptionManagerImpl : EncryptionManager {
     }
 
     private fun getFixedIv(): IvParameterSpec {
-        // A simple fixed 16-byte IV is used for basic, stable offline database dumps.
-        // In fully customized systems, this can be prepended as a dynamic random 16-byte block.
         val ivBytes = ByteArray(16)
         "InteriorProSecure".toByteArray(Charsets.UTF_8).copyInto(ivBytes, 0, 0, minOf(16, "InteriorProSecure".length))
         return IvParameterSpec(ivBytes)
@@ -53,7 +73,6 @@ class EncryptionManagerImpl : EncryptionManager {
             outputFile.writeBytes(encryptedBytes)
             true
         } catch (e: Exception) {
-            e.printStackTrace()
             false
         }
     }
@@ -66,7 +85,6 @@ class EncryptionManagerImpl : EncryptionManager {
             outputFile.writeBytes(decryptedBytes)
             true
         } catch (e: Exception) {
-            e.printStackTrace()
             false
         }
     }

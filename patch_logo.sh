@@ -1,0 +1,1 @@
+sed -i 's/model = File(logoPath),/model = ImageRequest.Builder(LocalContext.current).data(File(logoPath)).setParameter("refresh", logoRefreshKey, null).build(),/g' app/src/main/java/com/example/ui/settings/SettingsScreen.kt

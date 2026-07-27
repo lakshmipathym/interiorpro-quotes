@@ -19,6 +19,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -76,11 +77,44 @@ data class ItemSpecs(
     val glassType: String = "",
     val glassThickness: String = "",
     val acpColour: String = "",
-    val grade: String = ""
+    val grade: String = "",
+    val cncDesign: String = ""
 )
 
 fun parseItemSpecs(description: String): Pair<String, ItemSpecs> {
     if (!description.contains("|||")) {
+        val trimmed = description.trim()
+        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+            try {
+                val json = org.json.JSONObject(trimmed)
+                val specs = ItemSpecs(
+                    width = json.optString("width", ""),
+                    height = json.optString("height", ""),
+                    depth = json.optString("depth", ""),
+                    doorType = json.optString("doorType", ""),
+                    finish = json.optString("finish", ""),
+                    hardware = json.optString("hardware", ""),
+                    brand = json.optString("brand", ""),
+                    thickness = json.optString("thickness", ""),
+                    colour = json.optString("colour", ""),
+                    laminateImageUri = json.optString("laminateImageUri", ""),
+                    designImageUri = json.optString("designImageUri", ""),
+                    profileSeries = json.optString("profileSeries", ""),
+                    profileColour = json.optString("profileColour", ""),
+                    glassType = json.optString("glassType", ""),
+                    glassThickness = json.optString("glassThickness", ""),
+                    acpColour = json.optString("acpColour", ""),
+                    grade = json.optString("grade", ""),
+                    cncDesign = json.optString("cncDesign", "")
+                )
+                // Return original description but if it was entirely JSON we just show it empty or a default string.
+                // However, they said "Description field displays JSON instead of user description". 
+                // That implies we should hide the JSON.
+                return Pair("", specs)
+            } catch (e: Exception) {
+                // ignore
+            }
+        }
         return Pair(description, ItemSpecs())
     }
     val parts = description.split("|||")
@@ -105,7 +139,8 @@ fun parseItemSpecs(description: String): Pair<String, ItemSpecs> {
             glassType = json.optString("glassType", ""),
             glassThickness = json.optString("glassThickness", ""),
             acpColour = json.optString("acpColour", ""),
-            grade = json.optString("grade", "")
+            grade = json.optString("grade", ""),
+                    cncDesign = json.optString("cncDesign", "")
         )
         Pair(userDesc, specs)
     } catch (e: Exception) {
@@ -132,6 +167,7 @@ fun serializeItemSpecs(userDesc: String, specs: ItemSpecs): String {
         put("glassThickness", specs.glassThickness)
         put("acpColour", specs.acpColour)
         put("grade", specs.grade)
+        put("cncDesign", specs.cncDesign)
     }
     return "$userDesc ||| $json"
 }
@@ -152,7 +188,9 @@ fun parseFieldFromSummary(summary: String, fieldName: String): String {
 fun copyUriToInternalStorage(context: Context, uri: Uri, fileName: String): String? {
     return try {
         val inputStream = context.contentResolver.openInputStream(uri) ?: return null
-        val file = File(context.filesDir, fileName)
+        // Strip out any path traversal patterns (like "../") by resolving the file name part
+        val cleanFileName = File(fileName).name
+        val file = File(context.filesDir, cleanFileName)
         FileOutputStream(file).use { outputStream ->
             inputStream.use { input ->
                 input.copyTo(outputStream)
@@ -160,7 +198,6 @@ fun copyUriToInternalStorage(context: Context, uri: Uri, fileName: String): Stri
         }
         file.absolutePath
     } catch (e: Exception) {
-        e.printStackTrace()
         null
     }
 }
@@ -175,7 +212,7 @@ fun WizardStepIndicator(activeStep: Int) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        for (step in 1..5) {
+        for (step in 1..3) {
             val isActive = step == activeStep
             val isCompleted = step < activeStep
             val containerColor = if (isActive) {
@@ -192,7 +229,6 @@ fun WizardStepIndicator(activeStep: Int) {
             } else {
                 MaterialTheme.colorScheme.onSurfaceVariant
             }
-
             Box(
                 modifier = Modifier
                     .size(28.dp)
@@ -216,8 +252,7 @@ fun WizardStepIndicator(activeStep: Int) {
                     )
                 }
             }
-
-            if (step < 5) {
+            if (step < 3) {
                 val lineColor = if (step < activeStep) {
                     MaterialTheme.colorScheme.primary
                 } else {
@@ -241,11 +276,11 @@ fun CompactLiveSummary(
     gstAmount: Double,
     grandTotal: Double
 ) {
-    Card(
+    ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)),
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
@@ -296,6 +331,8 @@ fun NewQuotationScreen(
     
     // State collection from ViewModel
     val currentCustomer by quotationViewModel.newQuoteCustomer.collectAsState()
+    val siteName by quotationViewModel.newQuoteSiteName.collectAsState()
+    val siteAddress by quotationViewModel.newQuoteSiteAddress.collectAsState()
     val currentProjectType by quotationViewModel.newQuoteProjectType.collectAsState()
     val currentCategory by quotationViewModel.newQuoteCategory.collectAsState()
     val currentMaterial by quotationViewModel.newQuoteMaterial.collectAsState()
@@ -304,6 +341,10 @@ fun NewQuotationScreen(
     val quoteItems by quotationViewModel.newQuoteItems.collectAsState()
     val discount by quotationViewModel.newQuoteDiscount.collectAsState()
     val gstRate by quotationViewModel.newQuoteGstRate.collectAsState()
+    val transport by quotationViewModel.newQuoteTransport.collectAsState()
+    val installation by quotationViewModel.newQuoteInstallation.collectAsState()
+    val extraCharges by quotationViewModel.newQuoteExtraCharges.collectAsState()
+    val advance by quotationViewModel.newQuoteAdvance.collectAsState()
     val termsAndConditions by quotationViewModel.newQuoteTerms.collectAsState()
     val warranty by quotationViewModel.newQuoteWarranty.collectAsState()
     val quoteNumber by quotationViewModel.newQuoteNumber.collectAsState()
@@ -314,10 +355,10 @@ fun NewQuotationScreen(
 
     // Master Dropdown items
     val masterData by quotationViewModel.allMasterData.collectAsState()
-    val projectTypes = masterData.filter { it.type == "PROJECT_TYPE" }.map { it.value }
-    val categories = masterData.filter { it.type == "CATEGORY" }.map { it.value }
-    val materials = masterData.filter { it.type == "MATERIAL" }.map { it.value }
-    val finishes = masterData.filter { it.type == "FINISH_TYPE" }.map { it.value }
+    val projectTypes = masterData.filter { it.masterType == "PROJECT_TYPE" }.map { it.name }
+    val categories = masterData.filter { it.masterType == "CATEGORY" || it.masterType == "PROJECT_CATEGORY" }.map { it.name }.distinct()
+    val materials = masterData.filter { it.masterType == "MATERIAL" || it.masterType == "MATERIAL_TYPE" }.map { it.name }.distinct()
+    val finishes = masterData.filter { it.masterType == "FINISH_TYPE" }.map { it.name }
     val templates by quotationViewModel.allTemplates.collectAsState()
 
     // Dialog state for completed save
@@ -327,38 +368,134 @@ fun NewQuotationScreen(
     // Prevent accidental exit using system back button
     var showDiscardDialog by remember { mutableStateOf(false) }
 
+    val performSaveQuotation = {
+        val specSummary = buildString {
+            quoteItems.forEachIndexed { idx, item ->
+                val (userDesc, specs) = parseItemSpecs(item.description)
+                appendLine("Item ${idx + 1} [${item.itemName}]:")
+                appendLine("  Material: ${item.material}")
+                when (item.material) {
+                    "Plywood" -> {
+                        if (specs.thickness.isNotBlank()) appendLine("  Thickness: ${specs.thickness}")
+                        if (specs.grade.isNotBlank()) appendLine("  Grade: ${specs.grade}")
+                    }
+                    "Aluminium" -> {
+                        if (specs.profileSeries.isNotBlank()) appendLine("  Profile Series: ${specs.profileSeries}")
+                        if (specs.profileColour.isNotBlank()) appendLine("  Profile Colour: ${specs.profileColour}")
+                        if (specs.glassType.isNotBlank()) appendLine("  Glass Type: ${specs.glassType}")
+                    }
+                    "Glass" -> {
+                        if (specs.glassType.isNotBlank()) appendLine("  Glass Type: ${specs.glassType}")
+                        if (specs.glassThickness.isNotBlank()) appendLine("  Glass Thickness: ${specs.glassThickness}")
+                    }
+                    "ACP" -> {
+                        if (specs.acpColour.isNotBlank()) appendLine("  ACP Colour: ${specs.acpColour}")
+                    }
+                    "WPC" -> {
+                        if (specs.thickness.isNotBlank()) appendLine("  Thickness: ${specs.thickness}")
+                    }
+                }
+                if (specs.width.isNotBlank() || specs.height.isNotBlank() || specs.depth.isNotBlank()) {
+                    val dimStr = buildString {
+                        if (specs.width.isNotBlank()) append("W:${specs.width}ft")
+                        if (specs.height.isNotBlank()) {
+                            if (length > 0) append(" x ")
+                            append("H:${specs.height}ft")
+                        }
+                        if (specs.depth.isNotBlank()) {
+                            if (length > 0) append(" x ")
+                            append("D:${specs.depth}ft")
+                        }
+                    }
+                    appendLine("  Dimensions: $dimStr")
+                }
+                appendLine("  Quantity: ${item.quantity} ${item.unit}")
+                appendLine()
+            }
+        }
+        quotationViewModel.selectFinish(specSummary)
+
+        // Copy ALL reference design images
+        quoteItems.forEachIndexed { index, item ->
+            val (desc, specs) = parseItemSpecs(item.description)
+            var modified = false
+            var updatedSpecs = specs
+            val safeQuoteNum = quoteNumber.replace("/", "_")
+            if (specs.designImageUri.isNotBlank() && specs.designImageUri.contains("temp_des_")) {
+                val file = File(context.filesDir, File(specs.designImageUri).name)
+                if (file.exists()) {
+                    try {
+                        val destFile = File(context.filesDir, "design_${safeQuoteNum}_${index}.jpg")
+                        file.copyTo(destFile, overwrite = true)
+                        file.delete()
+                        updatedSpecs = updatedSpecs.copy(designImageUri = destFile.absolutePath)
+                        modified = true
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+            if (specs.laminateImageUri.isNotBlank() && specs.laminateImageUri.contains("temp_lam_")) {
+                val file = File(context.filesDir, File(specs.laminateImageUri).name)
+                if (file.exists()) {
+                    try {
+                        val destFile = File(context.filesDir, "laminate_${safeQuoteNum}_${index}.jpg")
+                        file.copyTo(destFile, overwrite = true)
+                        file.delete()
+                        updatedSpecs = updatedSpecs.copy(laminateImageUri = destFile.absolutePath)
+                        modified = true
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+            if (modified) {
+                val newDesc = serializeItemSpecs(desc, updatedSpecs)
+                quotationViewModel.updateQuoteItem(index, item.copy(description = newDesc))
+            }
+        }
+
+        quotationViewModel.saveQuotation { id ->
+            savedQuotationId = id
+        }
+    }
+
+
     BackHandler(enabled = true) {
         if (activeStep > 1) {
             activeStep--
         } else {
-            showDiscardDialog = true
+            if (currentCustomer != null || quoteItems.isNotEmpty()) {
+                showDiscardDialog = true
+            } else {
+                quotationViewModel.startNewQuotation()
+                onSuccessReturn()
+            }
         }
     }
-
     if (showDiscardDialog) {
-        AlertDialog(
+        com.example.ui.components.PremiumDialog(
             onDismissRequest = { showDiscardDialog = false },
-            title = { Text("Discard Quotation?") },
-            text = { Text("Are you sure you want to exit the quotation wizard? All progress on this quotation will be discarded.") },
-            confirmButton = {
-                TextButton(
+            title = "Discard Quotation?",
+            actions = {
+                com.example.ui.components.PremiumTextButton(onClick = { showDiscardDialog = false }) {
+                    Text("Continue Editing")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                com.example.ui.components.PremiumPrimaryButton(
                     onClick = {
                         showDiscardDialog = false
                         quotationViewModel.startNewQuotation()
                         onSuccessReturn()
                     }
                 ) {
-                    Text("Discard", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDiscardDialog = false }) {
-                    Text("Continue Editing")
+                    Text("Discard")
                 }
             }
-        )
+        ) {
+            Text("Are you sure you want to exit the quotation wizard? All progress on this quotation will be discarded.")
+        }
     }
-
     Scaffold { innerPadding ->
         Column(
             modifier = Modifier
@@ -371,15 +508,24 @@ fun NewQuotationScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(bottom = 12.dp)
             ) {
-                if (activeStep > 1) {
-                    IconButton(onClick = { activeStep-- }) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                IconButton(onClick = {
+                    if (activeStep > 1) {
+                        activeStep--
+                    } else {
+                        if (currentCustomer != null || quoteItems.isNotEmpty()) {
+                            showDiscardDialog = true
+                        } else {
+                            onSuccessReturn()
+                        }
                     }
+                }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
                 Text(
                     text = when (activeStep) {
-                        1 -> "Configure Quotation"
-                        else -> "Review & Save"
+                        1 -> "Project Details"
+                        2 -> "Items & Specifications"
+                        else -> "Billing & Review"
                     },
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
@@ -387,14 +533,14 @@ fun NewQuotationScreen(
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = "Step $activeStep of 2",
+                    text = "Step $activeStep of 3",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                 )
-            }
 
             // Step Progress Bar
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -402,24 +548,23 @@ fun NewQuotationScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                for (step in 1..2) {
+                for (step in 1..3) {
                     val isActive = step == activeStep
                     val isCompleted = step < activeStep
                     val containerColor = if (isActive) {
-                        MaterialTheme.colorScheme.primary
-                    } else if (isCompleted) {
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    }
+                MaterialTheme.colorScheme.primary
+            } else if (isCompleted) {
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
                     val contentColor = if (isActive) {
-                        MaterialTheme.colorScheme.onPrimary
-                    } else if (isCompleted) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-
+                MaterialTheme.colorScheme.onPrimary
+            } else if (isCompleted) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
                     Box(
                         modifier = Modifier
                             .size(28.dp)
@@ -428,141 +573,67 @@ fun NewQuotationScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         if (isCompleted) {
-                            Icon(
-                                imageVector = Icons.Filled.Check,
-                                contentDescription = "Completed",
-                                modifier = Modifier.size(16.dp),
-                                tint = contentColor
-                            )
-                        } else {
-                            Text(
-                                text = step.toString(),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = contentColor
-                            )
-                        }
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = "Completed",
+                        modifier = Modifier.size(16.dp),
+                        tint = contentColor
+                    )
+                } else {
+                    Text(
+                        text = step.toString(),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = contentColor
+                    )
+                }
+                } // CLOSE BOX HERE
+                
+                if (step < 2) {
+                    val lineColor = if (step < activeStep) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.outlineVariant
                     }
-
-                    if (step < 2) {
-                        val lineColor = if (step < activeStep) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.outlineVariant
-                        }
-                        HorizontalDivider(
-                            modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
-                            color = lineColor,
-                            thickness = 2.dp
-                        )
-                    }
+                    HorizontalDivider(
+                        modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
+                        color = lineColor,
+                        thickness = 2.dp
+                    )
                 }
             }
+        }
 
-            // Central Switch Content
-            Box(modifier = Modifier.weight(1f)) {
-                when (activeStep) {
-                    1 -> WizardStepCustomer(
+        // Central Switch Content
+        Box(modifier = Modifier.weight(1f)) {
+            when (activeStep) {
+                    1 -> WizardStepDetails(
                         customerViewModel = customerViewModel,
                         quotationViewModel = quotationViewModel,
-                        quoteItems = quoteItems,
                         onOpenQuickAdd = { isQuickAddCustomerOpen = true }
+                    )
+                    2 -> WizardStepItems(
+                        quotationViewModel = quotationViewModel,
+                        quoteItems = quoteItems,
+                        currentMaterial = quotationViewModel.newQuoteMaterial.collectAsState().value,
+                        currentFinish = quotationViewModel.newQuoteFinish.collectAsState().value,
+                        currentProjectType = quotationViewModel.newQuoteProjectType.collectAsState().value
                     )
                     
                     else -> WizardStepReview(
+                        quotationViewModel = quotationViewModel,
                         quoteNumber = quoteNumber,
                         customerName = currentCustomer?.customerName ?: "Unknown",
                         customerPhone = currentCustomer?.mobileNumber ?: "",
-                        customerAddress = currentCustomer?.address ?: "",
-                        siteLocation = currentCustomer?.siteLocation ?: "",
                         itemsCount = quoteItems.size,
                         subtotal = subtotal,
                         discount = discount,
-                        gstRate = gstRate,
                         gstAmount = gstAmount,
                         grandTotal = grandTotal,
-                        terms = termsAndConditions,
-                        warranty = warranty,
-                        onDiscountChange = { quotationViewModel.setDiscount(it) },
-                        onGstRateChange = { quotationViewModel.setGstRate(it) },
-                        onTermsChange = { quotationViewModel.setTerms(it) },
-                        onWarrantyChange = { quotationViewModel.setWarranty(it) },
-                        onSave = {
-                            // Consolidate spec summary string from items
-                            val specSummary = buildString {
-                                quoteItems.forEachIndexed { idx, item ->
-                                    val (userDesc, specs) = parseItemSpecs(item.description)
-                                    appendLine("Item ${idx + 1} [${item.itemName}]:")
-                                    appendLine("  Material: ${item.material}")
-                                    when (item.material) {
-                                        "Plywood" -> {
-                                            if (specs.thickness.isNotBlank()) appendLine("  Thickness: ${specs.thickness}")
-                                            if (specs.grade.isNotBlank()) appendLine("  Grade: ${specs.grade}")
-                                        }
-                                        "Aluminium" -> {
-                                            if (specs.profileSeries.isNotBlank()) appendLine("  Profile Series: ${specs.profileSeries}")
-                                            if (specs.profileColour.isNotBlank()) appendLine("  Profile Colour: ${specs.profileColour}")
-                                            if (specs.glassType.isNotBlank()) appendLine("  Glass Type: ${specs.glassType}")
-                                        }
-                                        "Glass" -> {
-                                            if (specs.glassType.isNotBlank()) appendLine("  Glass Type: ${specs.glassType}")
-                                            if (specs.glassThickness.isNotBlank()) appendLine("  Glass Thickness: ${specs.glassThickness}")
-                                        }
-                                        "ACP" -> {
-                                            if (specs.acpColour.isNotBlank()) appendLine("  ACP Colour: ${specs.acpColour}")
-                                        }
-                                        "WPC" -> {
-                                            if (specs.thickness.isNotBlank()) appendLine("  Thickness: ${specs.thickness}")
-                                        }
-                                    }
-                                    if (specs.width.isNotBlank() || specs.height.isNotBlank() || specs.depth.isNotBlank()) {
-                                        val dimStr = buildString {
-                                            if (specs.width.isNotBlank()) append("W:${specs.width}ft")
-                                            if (specs.height.isNotBlank()) {
-                                                if (length > 0) append(" x ")
-                                                append("H:${specs.height}ft")
-                                            }
-                                            if (specs.depth.isNotBlank()) {
-                                                if (length > 0) append(" x ")
-                                                append("D:${specs.depth}ft")
-                                            }
-                                        }
-                                        appendLine("  Dimensions: $dimStr")
-                                    }
-                                    appendLine("  Quantity: ${item.quantity} ${item.unit}")
-                                    appendLine()
-                                }
-                            }
-                            quotationViewModel.selectFinish(specSummary)
-
-                            // Copy reference design image
-                            val firstItemWithDesign = quoteItems.firstOrNull { 
-                                val (_, specs) = parseItemSpecs(it.description)
-                                specs.designImageUri.isNotBlank()
-                            }
-                            firstItemWithDesign?.let { item ->
-                                val (_, specs) = parseItemSpecs(item.description)
-                                val file = File(specs.designImageUri)
-                                if (file.exists()) {
-                                    try {
-                                        val destFile = File(context.filesDir, "design_${quoteNumber.replace("/", "_")}.jpg")
-                                        file.copyTo(destFile, overwrite = true)
-                                    } catch (e: Exception) {
-                                        e.printStackTrace()
-                                    }
-                                }
-                            }
-
-                            // Save
-                            quotationViewModel.saveQuotation { id ->
-                                savedQuotationId = id
-                            }
-                        }
+                        onSave = performSaveQuotation
                     )
-                }
             }
-
-            // Persistent bottom navigation footer
+        }
             Spacer(modifier = Modifier.height(12.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             Spacer(modifier = Modifier.height(12.dp))
@@ -580,35 +651,71 @@ fun NewQuotationScreen(
                             .height(48.dp),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = null)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Back")
+
                     }
                 }
-
                 val nextButtonWeight = if (activeStep > 1) 1f else 2f
-                val isNextEnabled = when (activeStep) {
-                    1 -> currentCustomer != null && quoteItems.isNotEmpty()
-                    else -> true
+                val step1Error = when {
+                    currentCustomer == null -> "Select a customer to continue"
+                    siteName.isBlank() -> "Enter Site Name to continue"
+                    siteAddress.isBlank() -> "Enter Site Address to continue"
+                    else -> null
                 }
-
-                Button(
-                    onClick = {
-                        when (activeStep) {
-                            1 -> activeStep = 2
-                            else -> { /* Handled inside WizardStepReview save callback */ }
+                
+                val step2Error = when {
+                    quoteItems.isEmpty() -> "Add at least one item to continue"
+                    else -> null
+                }
+                
+                val step3Error = when {
+                    discount > subtotal -> "Discount cannot exceed subtotal"
+                    gstRate < 0 -> "GST rate cannot be negative"
+                    transport < 0 -> "Transport cannot be negative"
+                    installation < 0 -> "Installation cannot be negative"
+                    extraCharges < 0 -> "Extra charges cannot be negative"
+                    advance < 0 -> "Advance cannot be negative"
+                    else -> null
+                }
+                
+                val validationError = when (activeStep) {
+                    1 -> step1Error
+                    2 -> step2Error
+                    3 -> step3Error
+                    else -> null
+                }
+                
+                val isNextEnabled = validationError == null
+                Column(modifier = Modifier.weight(nextButtonWeight), horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (validationError != null) {
+                        Text(
+                            text = validationError,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(bottom = 2.dp)
+                        )
+                    }
+                    Button(
+                        onClick = {
+                            when (activeStep) {
+                                1 -> activeStep = 2
+                                2 -> activeStep = 3
+                                else -> performSaveQuotation()
+                            }
+                        },
+                        enabled = isNextEnabled,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(text = if (activeStep == 1) "Next to Items" else if (activeStep == 2) "Next to Review" else "Save Quotation")
+                        if (activeStep < 3) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
                         }
-                    },
-                    enabled = isNextEnabled,
-                    modifier = Modifier
-                        .weight(nextButtonWeight)
-                        .height(48.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(text = if (activeStep < 2) "Next to Review" else "Save Quotation")
-                    if (activeStep < 2) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Icon(Icons.Filled.ArrowForward, contentDescription = null)
                     }
                 }
             }
@@ -622,15 +729,14 @@ fun NewQuotationScreen(
             onSave = { newCustomer ->
                 customerViewModel.saveCustomer(newCustomer) { savedId ->
                     quotationViewModel.selectCustomer(newCustomer.copy(customerId = savedId))
+                    isQuickAddCustomerOpen = false
                 }
-                isQuickAddCustomerOpen = false
             }
         )
     }
 
     // Success dialog shown when Saved
     savedQuotationId?.let { id ->
-        
         AlertDialog(
             onDismissRequest = {
                 savedQuotationId = null
@@ -649,6 +755,8 @@ fun NewQuotationScreen(
                 Text(
                     text = "Quotation Saved Successfully",
                     style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -659,13 +767,11 @@ fun NewQuotationScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Quotation Number Card
-                    Card(
-                        colors = CardDefaults.cardColors(
+                    ElevatedCard(
+                        colors = CardDefaults.elevatedCardColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
                         ),
                         shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
@@ -730,7 +836,7 @@ fun NewQuotationScreen(
                                 .height(44.dp),
                             shape = RoundedCornerShape(10.dp)
                         ) {
-                            Icon(Icons.Filled.Launch, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.AutoMirrored.Filled.Launch, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Open PDF")
                         }
@@ -753,7 +859,7 @@ fun NewQuotationScreen(
                                 contentColor = Color.White
                             )
                         ) {
-                            Icon(Icons.Filled.Send, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Send to Customer")
                         }
@@ -795,503 +901,35 @@ fun NewQuotationScreen(
     }
 }
 
-// --- STEP 1: CUSTOMER SELECTION & QUOTATION ITEMS ---
-@OptIn(ExperimentalLayoutApi::class)
+// --- STEP 1: PROJECT DETAILS ---
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun WizardStepCustomer(
+fun WizardStepDetails(
     customerViewModel: com.example.ui.customer.CustomerViewModel,
     quotationViewModel: com.example.ui.quotation.QuotationViewModel,
-    quoteItems: List<QuotationItem>,
     onOpenQuickAdd: () -> Unit
 ) {
     val customers by customerViewModel.customers.collectAsState()
     val searchQuery by customerViewModel.searchQuery.collectAsState()
     val selectedCustomer by quotationViewModel.newQuoteCustomer.collectAsState()
 
-    var siteName by remember { mutableStateOf("") }
-    var siteAddress by remember { mutableStateOf("") }
-
-    // Sync site state with selected customer
-    LaunchedEffect(selectedCustomer) {
-        selectedCustomer?.let {
-            siteName = it.siteLocation
-            siteAddress = it.address
-        }
-    }
-
-    var showItemConfigDialog by remember { mutableStateOf(false) }
-    var editingItemIndex by remember { mutableStateOf<Int?>(null) }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            if (selectedCustomer == null) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Select Customer",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
-
-                        // Search Box
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = { customerViewModel.searchQuery.value = it },
-                            label = { Text("Search Customer (Name, Phone...)") },
-                            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            trailingIcon = {
-                                if (searchQuery.isNotEmpty()) {
-                                    IconButton(onClick = { customerViewModel.searchQuery.value = "" }) {
-                                        Icon(Icons.Filled.Close, contentDescription = "Clear")
-                                    }
-                                }
-                            }
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Customers list
-                        val displayList = customers.take(4) // Show top 4 matching
-                        if (displayList.isEmpty()) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    "No customers found. Click 'Add Customer Inline' below.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        } else {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                displayList.forEach { cust ->
-                                    Card(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                quotationViewModel.selectCustomer(cust)
-                                            },
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
-                                        ),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(12.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    text = cust.customerName,
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 14.sp
-                                                )
-                                                Text(
-                                                    text = "Phone: ${cust.mobileNumber}",
-                                                    fontSize = 12.sp,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
-                                            Icon(
-                                                imageVector = Icons.Filled.AddCircle,
-                                                contentDescription = "Select",
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Inline Add Customer Button
-                        Button(
-                            onClick = onOpenQuickAdd,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        ) {
-                            Icon(Icons.Filled.PersonAdd, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Add Customer (Inline)")
-                        }
-                    }
-                }
-            } else {
-                // Selected Customer Elegantly
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = selectedCustomer!!.customerName,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 18.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = "Phone: ${selectedCustomer!!.mobileNumber}",
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        OutlinedButton(
-                            onClick = { quotationViewModel.startNewQuotation() },
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            modifier = Modifier.height(32.dp)
-                        ) {
-                            Text("Change", fontSize = 11.sp)
-                        }
-                    }
-                }
-
-                // Site Details Section
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(
-                            text = "Site Location Details",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        OutlinedTextField(
-                            value = siteName,
-                            onValueChange = {
-                                siteName = it
-                                selectedCustomer?.let { cust ->
-                                    val updated = cust.copy(siteLocation = it)
-                                    quotationViewModel.selectCustomer(updated)
-                                    customerViewModel.updateCustomer(updated)
-                                }
-                            },
-                            label = { Text("Site Name *") },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
-                        )
-
-                        OutlinedTextField(
-                            value = siteAddress,
-                            onValueChange = {
-                                siteAddress = it
-                                selectedCustomer?.let { cust ->
-                                    val updated = cust.copy(address = it)
-                                    quotationViewModel.selectCustomer(updated)
-                                    customerViewModel.updateCustomer(updated)
-                                }
-                            },
-                            label = { Text("Site Address *") },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            minLines = 2
-                        )
-                    }
-                }
-
-                // Clean Item List Title & Content
-                Text(
-                    text = "Quotation Items",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-
-                if (quoteItems.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(150.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Filled.LibraryAdd,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
-                                modifier = Modifier.size(40.dp)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "No items added yet.",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "Use the '+' button below to add your first item.",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        quoteItems.forEachIndexed { index, item ->
-                            val (userDesc, specs) = parseItemSpecs(item.description)
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                            ) {
-                                Column(modifier = Modifier.padding(12.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.Top
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = item.itemName,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 15.sp,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            if (userDesc.isNotBlank()) {
-                                                Text(
-                                                    text = userDesc,
-                                                    fontSize = 11.sp,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    maxLines = 2,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                        }
-                                        Text(
-                                            text = "₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(item.amount)}",
-                                            fontWeight = FontWeight.ExtraBold,
-                                            fontSize = 15.sp,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    // Specs chips row
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .horizontalScroll(rememberScrollState()),
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        // Material Badge
-                                        if (item.material.isNotBlank()) {
-                                            SpecTagChip(label = item.material, color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f))
-                                        }
-                                        if (specs.width.isNotBlank() && specs.height.isNotBlank()) {
-                                            val sizeLabel = if (specs.depth.isNotBlank()) {
-                                                "${specs.width}x${specs.height}x${specs.depth} Ft"
-                                            } else {
-                                                "${specs.width}x${specs.height} Ft"
-                                            }
-                                            SpecTagChip(label = sizeLabel, color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f))
-                                        }
-                                        
-                                        // Material specific specs
-                                        when (item.material) {
-                                            "Plywood" -> {
-                                                if (specs.thickness.isNotBlank()) {
-                                                    SpecTagChip(label = "Thick: ${specs.thickness}", color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f))
-                                                }
-                                                if (specs.grade.isNotBlank()) {
-                                                    SpecTagChip(label = "Grade: ${specs.grade}", color = MaterialTheme.colorScheme.surfaceVariant)
-                                                }
-                                            }
-                                            "Aluminium" -> {
-                                                if (specs.profileSeries.isNotBlank()) {
-                                                    SpecTagChip(label = "Series: ${specs.profileSeries}", color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f))
-                                                }
-                                                if (specs.profileColour.isNotBlank()) {
-                                                    SpecTagChip(label = "Color: ${specs.profileColour}", color = MaterialTheme.colorScheme.surfaceVariant)
-                                                }
-                                                if (specs.glassType.isNotBlank()) {
-                                                    SpecTagChip(label = "Glass: ${specs.glassType}", color = MaterialTheme.colorScheme.surfaceVariant)
-                                                }
-                                            }
-                                            "Glass" -> {
-                                                if (specs.glassType.isNotBlank()) {
-                                                    SpecTagChip(label = "Type: ${specs.glassType}", color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f))
-                                                }
-                                                if (specs.glassThickness.isNotBlank()) {
-                                                    SpecTagChip(label = "Thick: ${specs.glassThickness}", color = MaterialTheme.colorScheme.surfaceVariant)
-                                                }
-                                            }
-                                            "ACP" -> {
-                                                if (specs.acpColour.isNotBlank()) {
-                                                    SpecTagChip(label = "Color: ${specs.acpColour}", color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f))
-                                                }
-                                            }
-                                            "WPC" -> {
-                                                if (specs.thickness.isNotBlank()) {
-                                                    SpecTagChip(label = "Thick: ${specs.thickness}", color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f))
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    if (specs.designImageUri.isNotBlank()) {
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Column {
-                                            Text("Reference Image", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            AsyncImage(
-                                                model = File(specs.designImageUri),
-                                                contentDescription = "Reference Preview",
-                                                modifier = Modifier
-                                                    .size(60.dp)
-                                                    .clip(RoundedCornerShape(6.dp))
-                                                    .background(MaterialTheme.colorScheme.outlineVariant),
-                                                contentScale = ContentScale.Crop
-                                            )
-                                        }
-                                    }
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                            Column {
-                                                Text("Quantity", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                Text("${item.quantity} ${item.unit}", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                            }
-                                            Column {
-                                                Text("Rate", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                Text("₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(item.rate)}", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                            }
-                                        }
-
-                                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                            IconButton(
-                                                onClick = {
-                                                    editingItemIndex = index
-                                                    showItemConfigDialog = true
-                                                },
-                                                modifier = Modifier.size(36.dp)
-                                            ) {
-                                                Icon(Icons.Filled.Edit, contentDescription = "Edit Item", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                                            }
-
-                                            IconButton(
-                                                onClick = { quotationViewModel.duplicateQuoteItem(index) },
-                                                modifier = Modifier.size(36.dp)
-                                            ) {
-                                                Icon(Icons.Filled.ContentCopy, contentDescription = "Duplicate Item", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(18.dp))
-                                            }
-
-                                            IconButton(
-                                                onClick = { quotationViewModel.removeQuoteItem(index) },
-                                                modifier = Modifier.size(36.dp)
-                                            ) {
-                                                Icon(Icons.Filled.Delete, contentDescription = "Delete Item", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(80.dp)) // padding for FAB
-        }
-
-        // Floating Action Button overlay for adding item directly
-        if (selectedCustomer != null) {
-            FloatingActionButton(
-                onClick = {
-                    editingItemIndex = null
-                    showItemConfigDialog = true
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = "Add Item")
-            }
-        }
-    }
-
-    if (showItemConfigDialog) {
-        ItemConfigDialog(
-            itemIndex = editingItemIndex,
-            currentItems = quoteItems,
-            onDismiss = { showItemConfigDialog = false },
-            onSave = { updatedOrNewItem ->
-                if (editingItemIndex == null) {
-                    quotationViewModel.addQuoteItem(updatedOrNewItem)
-                } else {
-                    quotationViewModel.updateQuoteItem(editingItemIndex!!, updatedOrNewItem)
-                }
-                showItemConfigDialog = false
-            }
-        )
-    }
-}
-
-// --- STEP 2: PROJECT SELECTION ---
-@Composable
-fun WizardStepConfig(
-    templates: List<QuotationTemplate>,
-    projectTypes: List<String>,
-    materials: List<String>,
-    currentTemplate: QuotationTemplate?,
-    currentMaterial: String,
-    currentProjectType: String,
-    onSelectTemplate: (QuotationTemplate?) -> Unit,
-    onSelectMaterial: (String) -> Unit,
-    onSelectProjectType: (String) -> Unit
-) {
-    var expandedTemplate by remember { mutableStateOf(false) }
-    var expandedProjectType by remember { mutableStateOf(false) }
-    var expandedMaterial by remember { mutableStateOf(false) }
+    val siteName by quotationViewModel.newQuoteSiteName.collectAsState()
+    val siteAddress by quotationViewModel.newQuoteSiteAddress.collectAsState()
+    val projectName by quotationViewModel.newQuoteProjectName.collectAsState()
+    val dateMillis by quotationViewModel.newQuoteDate.collectAsState()
+    val validityDays by quotationViewModel.newQuoteValidityDays.collectAsState()
+    
+    val currentProjectType by quotationViewModel.newQuoteProjectType.collectAsState()
+    val currentCategory by quotationViewModel.newQuoteCategory.collectAsState()
+    val currentMaterial by quotationViewModel.newQuoteMaterial.collectAsState()
+    val currentFinish by quotationViewModel.newQuoteFinish.collectAsState()
+    
+    val allMasterData by quotationViewModel.allMasterData.collectAsState()
+    
+    val projectTypes = allMasterData.filter { it.masterType == "PROJECT_TYPE" }.map { it.name }.ifEmpty { listOf("Modular Kitchen", "Wardrobe", "Living Room TV Unit", "Full Home Interior") }
+    val categories = allMasterData.filter { it.masterType == "CATEGORY" || it.masterType == "PROJECT_CATEGORY" }.map { it.name }.distinct().ifEmpty { listOf("Premium", "Standard", "Economy") }
+    val materials = allMasterData.filter { it.masterType == "MATERIAL" || it.masterType == "MATERIAL_TYPE" }.map { it.name }.distinct().ifEmpty { listOf("BWP Plywood", "MDF (Exterior Grade)", "HDF", "Particle Board", "Aluminium Section Framework") }
+    val finishes = allMasterData.filter { it.masterType == "FINISH_TYPE" }.map { it.name }.ifEmpty { listOf("Laminate", "Acrylic", "PU Paint", "Veneer", "Glass") }
 
     Column(
         modifier = Modifier
@@ -1299,154 +937,180 @@ fun WizardStepConfig(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text(
-                    text = "Project Scope",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-
-                // Project Preset (Optional)
-                Column {
+        // --- CUSTOMER SELECTION ---
+        if (selectedCustomer == null) {
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        "Project Preset (Optional)",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 6.dp)
+                        text = "Select Customer",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 12.dp)
                     )
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        OutlinedTextField(
-                            value = currentTemplate?.name ?: "No Preset Selected (Custom)",
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .clickable { expandedTemplate = true }
-                        )
-                        DropdownMenu(
-                            expanded = expandedTemplate,
-                            onDismissRequest = { expandedTemplate = false },
-                            modifier = Modifier.fillMaxWidth(0.9f)
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("No Preset (Custom from scratch)") },
-                                onClick = {
-                                    onSelectTemplate(null)
-                                    expandedTemplate = false
+
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { customerViewModel.searchQuery.value = it },
+                        label = { Text("Search Customer (Name, Phone...)") },
+                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { customerViewModel.searchQuery.value = "" }) {
+                                    Icon(Icons.Filled.Close, contentDescription = "Clear")
                                 }
+                            }
+                        }
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val displayList = customers.take(4)
+                    if (displayList.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "No customers found. Click 'Add Customer Inline' below.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
                             )
-                            templates.forEach { tmpl ->
-                                DropdownMenuItem(
-                                    text = { Text(tmpl.name) },
-                                    onClick = {
-                                        onSelectTemplate(tmpl)
-                                        expandedTemplate = false
+                        }
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            displayList.forEach { cust ->
+                                ElevatedCard(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { quotationViewModel.selectCustomer(cust) },
+                                    colors = CardDefaults.elevatedCardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(text = cust.customerName, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                            Text(text = "Phone: ${cust.mobileNumber}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                        Icon(imageVector = Icons.Filled.AddCircle, contentDescription = "Select", tint = MaterialTheme.colorScheme.primary)
                                     }
-                                )
+                                }
                             }
                         }
                     }
-                }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                // Product Type (Mandatory)
-                Column {
-                    Text(
-                        "Product Type *",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 6.dp)
-                    )
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        val displayVal = currentProjectType.ifEmpty { "Select Product Type" }
-                        OutlinedTextField(
-                            value = displayVal,
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
+                    Button(
+                        onClick = onOpenQuickAdd,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                         )
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .clickable { expandedProjectType = true }
-                        )
-                        DropdownMenu(
-                            expanded = expandedProjectType,
-                            onDismissRequest = { expandedProjectType = false }
-                        ) {
-                            val list = if (projectTypes.isEmpty()) listOf("Modular Kitchen", "Wardrobe", "Living Room TV Unit", "Full Home Interior") else projectTypes
-                            list.forEach { type ->
-                                DropdownMenuItem(
-                                    text = { Text(type) },
-                                    onClick = {
-                                        onSelectProjectType(type)
-                                        expandedProjectType = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Material Type (Mandatory)
-                Column {
-                    Text(
-                        "Material Type *",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 6.dp)
-                    )
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        val displayVal = currentMaterial.ifEmpty { "Select Material Type" }
-                        OutlinedTextField(
-                            value = displayVal,
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .clickable { expandedMaterial = true }
-                        )
-                        DropdownMenu(
-                            expanded = expandedMaterial,
-                            onDismissRequest = { expandedMaterial = false }
-                        ) {
-                            val list = if (materials.isEmpty()) listOf("BWP Plywood", "MDF (Exterior Grade)", "HDF", "Particle Board", "Aluminium Section Framework") else materials
-                            list.forEach { mat ->
-                                DropdownMenuItem(
-                                    text = { Text(mat) },
-                                    onClick = {
-                                        onSelectMaterial(mat)
-                                        expandedMaterial = false
-                                    }
-                                )
-                            }
-                        }
+                    ) {
+                        Icon(Icons.Filled.PersonAdd, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Add Customer (Inline)")
                     }
                 }
             }
+        } else {
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f))
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = selectedCustomer!!.customerName, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = MaterialTheme.colorScheme.primary)
+                        Text(text = "Phone: ${selectedCustomer!!.mobileNumber}", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    OutlinedButton(
+                        onClick = { quotationViewModel.startNewQuotation() }, // Needs to clear customer really, but startNewQuotation works for now
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        Text("Change", fontSize = 11.sp)
+                    }
+                }
+            }
+
+            // --- SITE & PROJECT DETAILS ---
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(text = "Project & Site Details", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
+                    OutlinedTextField(
+                        value = projectName,
+                        onValueChange = { quotationViewModel.updateProjectName(it) },
+                        label = { Text("Project Name") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    
+                    val dateStr = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date(dateMillis))
+                    OutlinedTextField(
+                        value = dateStr,
+                        onValueChange = { },
+                        label = { Text("Quotation Date") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        readOnly = true,
+                        trailingIcon = { Icon(Icons.Filled.DateRange, contentDescription = null) }
+                    )
+
+                    OutlinedTextField(
+                        value = validityDays.toString(),
+                        onValueChange = { quotationViewModel.updateValidityDays(it.toIntOrNull() ?: 30) },
+                        label = { Text("Validity (Days)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                    )
+
+                    OutlinedTextField(
+                        value = siteName,
+                        onValueChange = { quotationViewModel.updateSiteDetails(it, siteAddress) },
+                        label = { Text("Site Name *") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = siteAddress,
+                        onValueChange = { quotationViewModel.updateSiteDetails(siteName, it) },
+                        label = { Text("Site Address *") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        minLines = 2
+                    )
+                }
+            }
+
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -1485,7 +1149,6 @@ fun WizardStepItems(
                 Spacer(modifier = Modifier.width(6.dp))
                 Text("Add Item", fontSize = 13.sp)
             }
-
             OutlinedButton(
                 onClick = { showSuggestionsDialog = true },
                 modifier = Modifier.weight(1f),
@@ -1496,33 +1159,60 @@ fun WizardStepItems(
                 Text("Suggestions", fontSize = 13.sp)
             }
         }
-
         if (quoteItems.isEmpty()) {
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Filled.LibraryAdd,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
-                        modifier = Modifier.size(48.dp)
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "Your quotation is empty.",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Click 'Add Item' or load suggestions to begin.",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                    )
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 40.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(80.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                    shape = RoundedCornerShape(24.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.LibraryAdd,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                modifier = Modifier.size(40.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
+                            text = "Your quotation is empty.",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Click 'Add Item' or load suggestions to begin.",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center,
+                            lineHeight = 20.sp
+                        )
+                    }
                 }
             }
         } else {
@@ -1532,160 +1222,31 @@ fun WizardStepItems(
                     .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(quoteItems.size) { index ->
+                items(quoteItems.size, key = { quoteItems[it].id }) { index ->
                     val item = quoteItems[index]
-                    val (userDesc, specs) = parseItemSpecs(item.description)
-                    
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.Top
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = item.itemName,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    if (userDesc.isNotBlank()) {
-                                        Text(
-                                            text = userDesc,
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                }
-                                Text(
-                                    text = "₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(item.amount)}",
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 15.sp,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            // Specs chips row
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                if (specs.width.isNotBlank() && specs.height.isNotBlank()) {
-                                    val sizeLabel = if (specs.depth.isNotBlank()) {
-                                        "${specs.width}x${specs.height}x${specs.depth} Ft"
-                                    } else {
-                                        "${specs.width}x${specs.height} Ft"
-                                    }
-                                    SpecTagChip(label = sizeLabel, color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
-                                }
-                                if (specs.doorType.isNotBlank()) {
-                                    SpecTagChip(label = specs.doorType, color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f))
-                                }
-                                if (specs.finish.isNotBlank()) {
-                                    SpecTagChip(label = specs.finish, color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f))
-                                }
-                                if (specs.hardware.isNotBlank()) {
-                                    SpecTagChip(label = specs.hardware, color = MaterialTheme.colorScheme.surfaceVariant)
-                                }
-                            }
-
-                            // Visual Previews (Laminate & Design Reference Images)
-                            if (specs.laminateImageUri.isNotBlank() || specs.designImageUri.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    if (specs.laminateImageUri.isNotBlank()) {
-                                        Column {
-                                            Text("Laminate Preview", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            AsyncImage(
-                                                model = File(specs.laminateImageUri),
-                                                contentDescription = "Laminate Preview",
-                                                modifier = Modifier
-                                                    .size(60.dp)
-                                                    .clip(RoundedCornerShape(6.dp))
-                                                    .background(MaterialTheme.colorScheme.outlineVariant),
-                                                contentScale = ContentScale.Crop
-                                            )
-                                        }
-                                    }
-                                    if (specs.designImageUri.isNotBlank()) {
-                                        Column {
-                                            Text("Design Ref", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            AsyncImage(
-                                                model = File(specs.designImageUri),
-                                                contentDescription = "Design Preview",
-                                                modifier = Modifier
-                                                    .size(60.dp)
-                                                    .clip(RoundedCornerShape(6.dp))
-                                                    .background(MaterialTheme.colorScheme.outlineVariant),
-                                                contentScale = ContentScale.Crop
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                    Column {
-                                        Text("Quantity", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        Text("${item.quantity} ${item.unit}", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                    }
-                                    Column {
-                                        Text("Rate", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        Text("₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(item.rate)}", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                    }
-                                }
-
-                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    IconButton(
-                                        onClick = {
-                                            editingItemIndex = index
-                                            showItemConfigDialog = true
-                                        },
-                                        modifier = Modifier.size(36.dp)
-                                    ) {
-                                        Icon(Icons.Filled.Edit, contentDescription = "Edit Item", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                                    }
-
-                                    IconButton(
-                                        onClick = { quotationViewModel.removeQuoteItem(index) },
-                                        modifier = Modifier.size(36.dp)
-                                    ) {
-                                        Icon(Icons.Filled.Delete, contentDescription = "Delete Item", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    QuotationItemCard(
+                        item = item,
+                        index = index,
+                        modifier = Modifier.animateItem(),
+                        onEdit = {
+                            editingItemIndex = index
+                            showItemConfigDialog = true
+                        },
+                        onDuplicate = { quotationViewModel.duplicateQuoteItem(index) },
+                        onMoveUp = if (index > 0) { { quotationViewModel.moveQuoteItemUp(index) } } else null,
+                        onMoveDown = if (index < quoteItems.size - 1) { { quotationViewModel.moveQuoteItemDown(index) } } else null,
+                        onDelete = { quotationViewModel.removeQuoteItem(index) }
+                    )
                 }
             }
         }
     }
 
-    // Item Configuration / Input Dialog
     if (showItemConfigDialog) {
+        val masterDataVal = quotationViewModel.allMasterData.collectAsState().value
+        val finishes = masterDataVal
+            .filter { it.masterType == "FINISH_TYPE" }
+            .map { it.name }
         ItemConfigDialog(
             itemIndex = editingItemIndex,
             currentItems = quoteItems,
@@ -1697,21 +1258,12 @@ fun WizardStepItems(
                     quotationViewModel.updateQuoteItem(editingItemIndex!!, updatedOrNewItem)
                 }
                 showItemConfigDialog = false
-            }
-        )
-    }
-
-    // Smart Suggestions Dialog
-    if (showSuggestionsDialog) {
-        SmartSuggestionsDialog(
-            selectedProduct = currentProjectType,
-            selectedMaterial = currentMaterial,
-            selectedFinish = currentFinish,
-            specificationSummary = "", // simplified
-            onAddItems = { suggestions ->
-                suggestions.forEach { quotationViewModel.addQuoteItem(it) }
             },
-            onDismiss = { showSuggestionsDialog = false }
+            calculatePreview = { w, h, d, q, u, r -> quotationViewModel.previewItemCalculation(w, h, d, q, u, r) },
+            finishes = finishes,
+            allMasterData = masterDataVal,
+            projectType = currentProjectType,
+            category = currentFinish
         )
     }
 }
@@ -1741,72 +1293,18 @@ fun SpecDropdownField(
     options: List<String>,
     modifier: Modifier = Modifier
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    Box(modifier = modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(label) },
-            trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
-        )
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .clickable { expanded = true }
-        )
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option) },
-                    onClick = {
-                        onValueChange(option)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
-
-fun calculateQuantity(width: Double, height: Double, qtyCount: Double, unit: String): Double {
-    val u = unit.trim().lowercase(Locale.US)
-    return when {
-        u == "nos" || u.contains("nos") || u == "pcs" || u.contains("piece") -> {
-            qtyCount
-        }
-        u == "sq.ft" || u.contains("sq.ft") || u.contains("sqft") || u == "sft" -> {
-            width * height * qtyCount
-        }
-        u == "running feet" || u.contains("run") || u.contains("rft") || u == "meter" || u.contains("meter") || u == "mtr" || u.contains("mtr") -> {
-            width * qtyCount
-        }
-        u == "sq.m" || u.contains("sq.m") || u.contains("sqm") || u.contains("square meter") -> {
-            width * height * 0.09290304 * qtyCount
-        }
-        u == "bundle" || u.contains("bundle") -> {
-            qtyCount
-        }
-        u == "sheet" || u.contains("sheet") -> {
-            qtyCount
-        }
-        u == "kg" || u.contains("kg") || u.contains("kilogram") -> {
-            qtyCount
-        }
-        else -> {
-            qtyCount
-        }
-    }
+    com.example.ui.components.PremiumDropdown(
+        value = value,
+        onValueChange = onValueChange,
+        label = label,
+        options = options,
+        modifier = modifier
+    )
 }
 
 fun isDimensionUnit(unit: String): Boolean {
     val u = unit.trim().lowercase(Locale.US)
-    return u.contains("sq") || u.contains("sft") || u.contains("rft") || u.contains("run") || u.contains("feet") || u.contains("meter") || u.contains("mtr")
+    return u.contains("sq") || u.contains("sft") || u.contains("rft") || u.contains("r.ft") || u.contains("run") || u.contains("feet") || u.contains("meter") || u.contains("mtr") || u.contains("cu") || u.contains("cft") || u.contains("cum")
 }
 
 fun isAreaUnit(unit: String): Boolean {
@@ -1814,34 +1312,667 @@ fun isAreaUnit(unit: String): Boolean {
     return u.contains("sq") || u.contains("sft")
 }
 
+// Smart Product Template System
+data class DimensionPreset(
+    val label: String,
+    val width: String,
+    val height: String,
+    val depth: String
+)
+
+data class InteriorItemTemplate(
+    val name: String,
+    val category: String,
+    val material: String,
+    val grade: String = "",
+    val finish: String = "",
+    val thickness: String = "",
+    val unit: String = "Sq.Ft",
+    val suggestedHardware: List<String> = emptyList(),
+    val defaultNotes: String = "",
+    val dimensionPresets: List<DimensionPreset> = emptyList()
+)
+
+fun getBuiltInTemplates(): List<InteriorItemTemplate> {
+    return listOf(
+        InteriorItemTemplate(
+            name = "Wardrobe",
+            category = "Wardrobes",
+            material = "Plywood",
+            grade = "BWP",
+            finish = "High Gloss Laminate",
+            thickness = "18 mm",
+            unit = "Sq.Ft",
+            suggestedHardware = listOf("Soft Close Hinges", "Telescopic Channels", "Handles", "Magnetic Catchers", "Adjustable Legs"),
+            defaultNotes = "Premium grade BWP wardrobe with Laminate finish, soft close hinges and premium handles.",
+            dimensionPresets = listOf(
+                DimensionPreset("6’ × 7’", "72", "84", "24"),
+                DimensionPreset("7’ × 7’", "84", "84", "24"),
+                DimensionPreset("8’ × 7’", "96", "84", "24")
+            )
+        ),
+        InteriorItemTemplate(
+            name = "Modular Kitchen",
+            category = "Modular Kitchen",
+            material = "Plywood",
+            grade = "BWP",
+            finish = "Acrylic finish",
+            thickness = "18 mm",
+            unit = "Sq.Ft",
+            suggestedHardware = listOf("Tandem Box", "Lift-up Stay", "Corner Basket", "Bottle Pullout", "Cutlery Tray"),
+            defaultNotes = "Modern Modular Kitchen with BWR/BWP plywood carcasses, premium acrylic shutters, and tandem drawers.",
+            dimensionPresets = listOf(
+                DimensionPreset("Straight (8’ L)", "96", "34", "24"),
+                DimensionPreset("L Shape (10’ × 6’)", "192", "34", "24"),
+                DimensionPreset("U Shape (8’ × 8’ × 6’)", "264", "34", "24"),
+                DimensionPreset("Island (6’ × 3’)", "72", "34", "36")
+            )
+        ),
+        InteriorItemTemplate(
+            name = "TV Unit",
+            category = "Living Room",
+            material = "MDF",
+            grade = "Standard MDF",
+            finish = "PU Paint",
+            thickness = "18 mm",
+            unit = "Sq.Ft",
+            suggestedHardware = listOf("Cable Manager", "LED Profile", "Wall Hanging Brackets"),
+            defaultNotes = "Sleek wall-mounted TV Unit with PU Painted finish and provision for concealed LED profile lighting.",
+            dimensionPresets = listOf(
+                DimensionPreset("Compact (5’ × 4’)", "60", "48", "16"),
+                DimensionPreset("Standard (6’ × 5’)", "72", "60", "16"),
+                DimensionPreset("Grand (8’ × 6’)", "96", "72", "18")
+            )
+        ),
+        InteriorItemTemplate(
+            name = "Crockery Unit",
+            category = "Dining Room",
+            material = "Plywood",
+            grade = "BWR",
+            finish = "Laminate",
+            thickness = "18 mm",
+            unit = "Sq.Ft",
+            suggestedHardware = listOf("Soft Close Hinges", "Magnetic Catchers", "Glass Shelf Brackets", "LED Profile"),
+            defaultNotes = "Elegant Crockery Unit with glass shutters, LED profiles, and premium drawers.",
+            dimensionPresets = listOf(
+                DimensionPreset("Slim (3’ × 7’)", "36", "84", "16"),
+                DimensionPreset("Standard (4’ × 7’)", "48", "84", "16"),
+                DimensionPreset("Wide (6’ × 7’)", "72", "84", "18")
+            )
+        ),
+        InteriorItemTemplate(
+            name = "Loft",
+            category = "Bedroom",
+            material = "Plywood",
+            grade = "MR",
+            finish = "Laminate",
+            thickness = "18 mm",
+            unit = "Sq.Ft",
+            suggestedHardware = listOf("Gas Springs", "Hinges", "Handles"),
+            defaultNotes = "Bedroom loft extension over wardrobe, using MR grade plywood and laminate shutters.",
+            dimensionPresets = listOf(
+                DimensionPreset("6’ L × 2’ H", "72", "24", "24"),
+                DimensionPreset("8’ L × 2’ H", "96", "24", "24"),
+                DimensionPreset("10’ L × 2’ H", "120", "24", "24")
+            )
+        ),
+        InteriorItemTemplate(
+            name = "Shoe Rack",
+            category = "Foyer",
+            material = "Plywood",
+            grade = "Commercial Ply",
+            finish = "Laminate",
+            thickness = "18 mm",
+            unit = "Sq.Ft",
+            suggestedHardware = listOf("Shoe Rack Pivot Drawer Fittings", "Handles", "Air Vents"),
+            defaultNotes = "Functional Shoe Rack with multi-level inclined shelves, ventilation grilles, and cushioned seating top.",
+            dimensionPresets = listOf(
+                DimensionPreset("Compact (2’ × 3’)", "24", "36", "12"),
+                DimensionPreset("Standard (3’ × 3’)", "36", "36", "14"),
+                DimensionPreset("Large (4’ × 4’)", "48", "48", "14")
+            )
+        ),
+        InteriorItemTemplate(
+            name = "Study Table",
+            category = "Kids Room",
+            material = "MDF",
+            grade = "HDMR",
+            finish = "Laminate",
+            thickness = "18 mm",
+            unit = "Sq.Ft",
+            suggestedHardware = listOf("Keyboard Tray", "Telescopic Drawer Runners", "Wire Manager Grommets"),
+            defaultNotes = "Ergonomic Study Table with smooth edge-banded desktop, cable wire manager, and file storage drawer.",
+            dimensionPresets = listOf(
+                DimensionPreset("Compact (3’ × 2.5’)", "36", "30", "24"),
+                DimensionPreset("Standard (4’ × 2.5’)", "48", "30", "24"),
+                DimensionPreset("Executive (5’ × 2.5’)", "60", "30", "30")
+            )
+        ),
+        InteriorItemTemplate(
+            name = "Office Table",
+            category = "Office",
+            material = "Particle Board",
+            grade = "Prelam",
+            finish = "Laminate",
+            thickness = "25 mm",
+            unit = "Sq.Ft",
+            suggestedHardware = listOf("Central Lock System", "Cable Manager Spine", "Soft Closing Drawer Slides"),
+            defaultNotes = "Heavy duty executive Office Table with 25mm thick prelam board, side credenza, and multi-lock drawers.",
+            dimensionPresets = listOf(
+                DimensionPreset("Manager (5’ × 2.5’)", "60", "30", "30"),
+                DimensionPreset("Director (6’ × 3’)", "72", "30", "36"),
+                DimensionPreset("Conference (8’ × 4’)", "96", "30", "48")
+            )
+        ),
+        InteriorItemTemplate(
+            name = "Reception Counter",
+            category = "Commercial",
+            material = "Plywood",
+            grade = "BWR",
+            finish = "Acrylic",
+            thickness = "18 mm",
+            unit = "Sq.Ft",
+            suggestedHardware = listOf("Keyboard Tray", "Glass Top Spacers", "LED Strip Profile", "Lockable Cash Drawer"),
+            defaultNotes = "Gleaming Reception Desk with dual-level counter, acrylic finish frontage, accent LED lighting, and cash drawers.",
+            dimensionPresets = listOf(
+                DimensionPreset("Straight (5’ L)", "60", "42", "24"),
+                DimensionPreset("Curved (6’ L)", "72", "42", "30"),
+                DimensionPreset("L-Shape (6’ × 4’)", "72", "42", "48")
+            )
+        ),
+        InteriorItemTemplate(
+            name = "Bed Cot",
+            category = "Bedroom",
+            material = "Plywood",
+            grade = "Commercial Ply",
+            finish = "Laminate",
+            thickness = "18 mm",
+            unit = "Piece",
+            suggestedHardware = listOf("Hydraulic Bed Lift Mechanism", "Corner Brackets", "Headboard Cushion Fittings"),
+            defaultNotes = "Spacious Bed Cot with premium hydraulic storage lift-up mechanism and soft upholstered headboard.",
+            dimensionPresets = listOf(
+                DimensionPreset("Single (3’ × 6’)", "36", "18", "72"),
+                DimensionPreset("Queen Size (5’ × 6.5’)", "60", "18", "78"),
+                DimensionPreset("King Size (6’ × 6.5’)", "72", "18", "78")
+            )
+        ),
+        InteriorItemTemplate(
+            name = "Vanity Unit",
+            category = "Bathroom",
+            material = "Plywood",
+            grade = "Marine Ply",
+            finish = "PU Paint",
+            thickness = "18 mm",
+            unit = "Sq.Ft",
+            suggestedHardware = listOf("Rust-proof SS Hinges", "Soft Close Runners", "Concealed L-brackets"),
+            defaultNotes = "Waterproof Bathroom Vanity Unit using 100% Marine Grade Plywood, premium PU Paint finish, and stainless steel rust-proof hinges.",
+            dimensionPresets = listOf(
+                DimensionPreset("Compact (2’ × 1.5’ H)", "24", "18", "20"),
+                DimensionPreset("Standard (3’ × 2’ H)", "36", "24", "22"),
+                DimensionPreset("Double Sink (5’ × 2’ H)", "60", "24", "22")
+            )
+        ),
+        InteriorItemTemplate(
+            name = "Wall Panelling",
+            category = "Living Room",
+            material = "MDF",
+            grade = "HDF",
+            finish = "Veneer",
+            thickness = "12 mm",
+            unit = "Sq.Ft",
+            suggestedHardware = listOf("Clips", "Adhesive", "LED Strip Profile"),
+            defaultNotes = "Decorative Wall Panelling with rich wood veneer flutes or acoustic charcoal slats and warm lighting.",
+            dimensionPresets = listOf(
+                DimensionPreset("Partial Wall (4’ × 8’)", "48", "96", "2"),
+                DimensionPreset("Full Accent Wall (8’ × 9’)", "96", "108", "2"),
+                DimensionPreset("TV Backdrop (6’ × 7’)", "72", "84", "3")
+            )
+        ),
+        InteriorItemTemplate(
+            name = "False Ceiling",
+            category = "Ceiling",
+            material = "PVC Board",
+            grade = "Standard",
+            finish = "Matt",
+            thickness = "12 mm",
+            unit = "Sq.Ft",
+            suggestedHardware = listOf("GI Channels", "Suspended Hanger Wires", "LED COB Spotlight Clips"),
+            defaultNotes = "Seamless Gypsum / PVC False Ceiling with indirect cove light borders and recessed spotlight provisioning.",
+            dimensionPresets = listOf(
+                DimensionPreset("Room Border (10’ × 10’)", "120", "120", "6"),
+                DimensionPreset("Standard Grid (12’ × 12’)", "144", "144", "6"),
+                DimensionPreset("Lobby Ceiling (15’ × 6’)", "180", "72", "6")
+            )
+        ),
+        InteriorItemTemplate(
+            name = "Aluminium Partition",
+            category = "Office",
+            material = "Aluminium",
+            grade = "Standard",
+            finish = "Anodized",
+            thickness = "18 mm",
+            unit = "Sq.Ft",
+            suggestedHardware = listOf("Floor Spring", "D-Handle", "Door Closer", "Profile Glazing Gaskets"),
+            defaultNotes = "Sturdy commercial Aluminium Partition framed in Anodized Silver/Black, including 5mm glass infills.",
+            dimensionPresets = listOf(
+                DimensionPreset("Small Partition (4’ × 8’)", "48", "96", "2"),
+                DimensionPreset("Office Cubicle (6’ × 8’)", "72", "96", "2"),
+                DimensionPreset("Main Cabin (10’ × 8’)", "120", "96", "2.5")
+            )
+        ),
+        InteriorItemTemplate(
+            name = "Aluminium Sliding Door",
+            category = "Living Room",
+            material = "Aluminium",
+            grade = "Slim",
+            finish = "Powder Coating",
+            thickness = "18 mm",
+            unit = "Sq.Ft",
+            suggestedHardware = listOf("Heavy-duty Nylon Rollers", "Touch Lock", "Interlock Rails", "Wool Pile Weatherstripping"),
+            defaultNotes = "Slim-line powder coated 3-track Aluminium Sliding Door with premium double-glazed acoustic glass panels.",
+            dimensionPresets = listOf(
+                DimensionPreset("2-Track Small (5’ × 7’)", "60", "84", "3"),
+                DimensionPreset("3-Track Standard (8’ × 7’)", "96", "84", "4"),
+                DimensionPreset("Balcony Jumbo (10’ × 8’)", "120", "96", "4.5")
+            )
+        ),
+        InteriorItemTemplate(
+            name = "Glass Partition",
+            category = "Bathroom",
+            material = "Glass",
+            grade = "Toughened",
+            finish = "Frosted",
+            thickness = "10 mm",
+            unit = "Sq.Ft",
+            suggestedHardware = listOf("Shower Hinge", "SS Glass Connectors", "Water Barrier Profile", "Towel Bar Handle"),
+            defaultNotes = "Minimalist floor-to-ceiling Frameless Toughened Glass Partition with frosted stripes or sandblasted film.",
+            dimensionPresets = listOf(
+                DimensionPreset("Shower Partition (3’ × 7’)", "36", "84", "0.5"),
+                DimensionPreset("Office Glass Wall (6’ × 8’)", "72", "96", "0.5"),
+                DimensionPreset("Entrance Glazing (8’ × 8’)", "96", "96", "0.5")
+            )
+        )
+    )
+}
+
+fun getCustomItemTemplates(masterData: List<com.example.data.MasterEntity>): List<InteriorItemTemplate> {
+    return masterData.filter { it.masterType == "ITEM_TEMPLATE" }.mapNotNull { md ->
+        try {
+            val name = md.name
+            val extraJson = md.description
+            if (extraJson.startsWith("{") && extraJson.endsWith("}")) {
+                val json = org.json.JSONObject(extraJson)
+                val cat = json.optString("category", "General")
+                val mat = json.optString("material", "Plywood")
+                val grd = json.optString("grade", "")
+                val fin = json.optString("finish", "")
+                val thk = json.optString("thickness", "")
+                val unt = json.optString("unit", "Sq.Ft")
+                val hwStr = json.optString("hardware", "")
+                val hwList = if (hwStr.isBlank()) emptyList() else hwStr.split(",").map { it.trim() }
+                val dNotes = json.optString("notes", "")
+                
+                val presets = mutableListOf<DimensionPreset>()
+                val presetsArr = json.optJSONArray("presets")
+                if (presetsArr != null) {
+                    for (i in 0 until presetsArr.length()) {
+                        val pObj = presetsArr.getJSONObject(i)
+                        presets.add(
+                            DimensionPreset(
+                                label = pObj.optString("label", "Preset"),
+                                width = pObj.optString("width", ""),
+                                height = pObj.optString("height", ""),
+                                depth = pObj.optString("depth", "")
+                            )
+                        )
+                    }
+                }
+                InteriorItemTemplate(
+                    name = name,
+                    category = cat,
+                    material = mat,
+                    grade = grd,
+                    finish = fin,
+                    thickness = thk,
+                    unit = unt,
+                    suggestedHardware = hwList,
+                    defaultNotes = dNotes,
+                    dimensionPresets = presets
+                )
+            } else {
+                InteriorItemTemplate(
+                    name = name,
+                    category = "General",
+                    material = "Plywood",
+                    unit = "Sq.Ft"
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+}
+
+// Helper functions for Material Intelligence
+fun resolveMaterialType(material: String): String {
+    val mLower = material.lowercase(Locale.US)
+    return when {
+        mLower.contains("plywood") || mLower.contains("ply") -> "plywood"
+        mLower.contains("mdf") || mLower.contains("hdhmr") || mLower.contains("hdf") -> "mdf"
+        mLower.contains("particle") -> "particle"
+        mLower.contains("acp") -> "acp"
+        mLower.contains("aluminium") || mLower.contains("aluminum") -> "aluminium"
+        mLower.contains("glass") -> "glass"
+        mLower.contains("edge band") || mLower.contains("edgeband") -> "edgeband"
+        mLower.contains("hinge") -> "hinges"
+        mLower.contains("handle") -> "handles"
+        mLower.contains("profile") -> "profile"
+        else -> "other"
+    }
+}
+
+data class MaterialRule(
+    val material: String,
+    val allowedGrades: List<String>,
+    val allowedFinishes: List<String>,
+    val allowedThicknesses: List<String>,
+    val defaultGrade: String = "",
+    val defaultFinish: String = "",
+    val defaultThickness: String = "",
+    val recommendedUnit: String = "Sq.Ft",
+    val recommendedHardware: List<String> = emptyList(),
+    val recommendedBrand: String = ""
+)
+
+fun getMaterialRules(allMasterData: List<com.example.data.MasterEntity>): List<MaterialRule> {
+    val defaultRules = listOf(
+        MaterialRule(
+            material = "Plywood",
+            allowedGrades = listOf("MR", "BWR", "BWP", "Marine Ply", "Commercial Ply"),
+            allowedFinishes = listOf("Laminate", "Veneer", "PU", "Acrylic", "Membrane"),
+            allowedThicknesses = listOf("6 mm", "9 mm", "12 mm", "16 mm", "18 mm", "25 mm"),
+            defaultGrade = "BWP",
+            defaultFinish = "Laminate",
+            defaultThickness = "18 mm",
+            recommendedUnit = "Sq.Ft",
+            recommendedHardware = listOf("Soft Close Hinges", "Telescopic Channels", "Handles", "Magnetic Catchers"),
+            recommendedBrand = "CenturyPly"
+        ),
+        MaterialRule(
+            material = "BWP Plywood",
+            allowedGrades = listOf("MR", "BWR", "BWP", "Marine Ply", "Commercial Ply"),
+            allowedFinishes = listOf("Laminate", "Veneer", "PU", "Acrylic", "Membrane"),
+            allowedThicknesses = listOf("6 mm", "9 mm", "12 mm", "16 mm", "18 mm", "25 mm"),
+            defaultGrade = "BWP",
+            defaultFinish = "Laminate",
+            defaultThickness = "18 mm",
+            recommendedUnit = "Sq.Ft",
+            recommendedHardware = listOf("Soft Close Hinges", "Telescopic Channels", "Handles", "Magnetic Catchers"),
+            recommendedBrand = "CenturyPly"
+        ),
+        MaterialRule(
+            material = "MDF",
+            allowedGrades = listOf("Standard MDF", "HDMR", "HDF", "Exterior MDF"),
+            allowedFinishes = listOf("Laminate", "Veneer", "PU", "Acrylic", "Membrane"),
+            allowedThicknesses = listOf("6 mm", "9 mm", "12 mm", "17 mm", "18 mm", "25 mm"),
+            defaultGrade = "HDMR",
+            defaultFinish = "Laminate",
+            defaultThickness = "18 mm",
+            recommendedUnit = "Sq.Ft",
+            recommendedHardware = listOf("Cable Manager", "LED Profile", "Wall Hanging Brackets")
+        ),
+        MaterialRule(
+            material = "MDF (Exterior Grade)",
+            allowedGrades = listOf("Standard MDF", "HDMR", "HDF", "Exterior MDF"),
+            allowedFinishes = listOf("Laminate", "Veneer", "PU", "Acrylic", "Membrane"),
+            allowedThicknesses = listOf("6 mm", "9 mm", "12 mm", "17 mm", "18 mm", "25 mm"),
+            defaultGrade = "HDMR",
+            defaultFinish = "Laminate",
+            defaultThickness = "18 mm",
+            recommendedUnit = "Sq.Ft",
+            recommendedHardware = listOf("Cable Manager", "LED Profile", "Wall Hanging Brackets")
+        ),
+        MaterialRule(
+            material = "HDF",
+            allowedGrades = listOf("Standard MDF", "HDMR", "HDF", "Exterior MDF"),
+            allowedFinishes = listOf("Laminate", "Veneer", "PU", "Acrylic", "Membrane"),
+            allowedThicknesses = listOf("6 mm", "9 mm", "12 mm", "17 mm", "18 mm", "25 mm"),
+            defaultGrade = "HDF",
+            defaultFinish = "Laminate",
+            defaultThickness = "18 mm",
+            recommendedUnit = "Sq.Ft",
+            recommendedHardware = listOf("Cable Manager", "LED Profile", "Wall Hanging Brackets")
+        ),
+        MaterialRule(
+            material = "Particle Board",
+            allowedGrades = listOf("Standard", "Prelam", "Moisture Resistant"),
+            allowedFinishes = listOf("Laminate", "Veneer", "PU"),
+            allowedThicknesses = listOf("9 mm", "12 mm", "18 mm", "25 mm"),
+            defaultGrade = "Prelam",
+            defaultFinish = "Laminate",
+            defaultThickness = "18 mm",
+            recommendedUnit = "Sq.Ft"
+        ),
+        MaterialRule(
+            material = "ACP",
+            allowedGrades = listOf("3mm", "4mm", "6mm"),
+            allowedFinishes = listOf("Matt", "Gloss", "PVDF", "Metallic"),
+            allowedThicknesses = listOf("3 mm", "4 mm", "6 mm"),
+            defaultGrade = "4mm",
+            defaultFinish = "Matt",
+            defaultThickness = "4 mm",
+            recommendedUnit = "Sq.Ft"
+        ),
+        MaterialRule(
+            material = "Aluminium Composite Panel (ACP)",
+            allowedGrades = listOf("3mm", "4mm", "6mm"),
+            allowedFinishes = listOf("Matt", "Gloss", "PVDF", "Metallic"),
+            allowedThicknesses = listOf("3 mm", "4 mm", "6 mm"),
+            defaultGrade = "4mm",
+            defaultFinish = "Matt",
+            defaultThickness = "4 mm",
+            recommendedUnit = "Sq.Ft"
+        ),
+        MaterialRule(
+            material = "Aluminium",
+            allowedGrades = listOf("Slim", "Standard", "Heavy", "Modular"),
+            allowedFinishes = listOf("Powder Coating", "Anodized", "PVDF", "Matt", "Gloss"),
+            allowedThicknesses = listOf("1 mm", "1.5 mm", "2 mm", "3 mm"),
+            defaultGrade = "Standard",
+            defaultFinish = "Powder Coating",
+            defaultThickness = "1.5 mm",
+            recommendedUnit = "R.Ft",
+            recommendedHardware = listOf("Nylon Rollers", "Floor Springs", "D-Handles")
+        ),
+        MaterialRule(
+            material = "Aluminium Section Framework",
+            allowedGrades = listOf("Slim", "Standard", "Heavy", "Modular"),
+            allowedFinishes = listOf("Powder Coating", "Anodized", "PVDF", "Matt", "Gloss"),
+            allowedThicknesses = listOf("1 mm", "1.5 mm", "2 mm", "3 mm"),
+            defaultGrade = "Standard",
+            defaultFinish = "Powder Coating",
+            defaultThickness = "1.5 mm",
+            recommendedUnit = "R.Ft",
+            recommendedHardware = listOf("Nylon Rollers", "Floor Springs", "D-Handles")
+        ),
+        MaterialRule(
+            material = "Glass",
+            allowedGrades = listOf("Clear", "Frosted", "Toughened", "Lacquered", "Fluted"),
+            allowedFinishes = listOf("Clear", "Frosted", "Tinted", "Etched", "Toughened"),
+            allowedThicknesses = listOf("5 mm", "8 mm", "10 mm", "12 mm"),
+            defaultGrade = "Toughened",
+            defaultFinish = "Clear",
+            defaultThickness = "8 mm",
+            recommendedUnit = "Sq.Ft",
+            recommendedHardware = listOf("Shower Hinges", "SS Connectors", "Water Barriers")
+        )
+    )
+
+    val customRules = allMasterData.filter { it.masterType == "MATERIAL_RULE" }.mapNotNull { md ->
+        try {
+            val matName = md.name
+            val json = org.json.JSONObject(md.description)
+            
+            val allowedGradesArr = json.optJSONArray("allowedGrades")
+            val allowedGrades = if (allowedGradesArr != null) {
+                (0 until allowedGradesArr.length()).map { allowedGradesArr.getString(it) }
+            } else {
+                emptyList()
+            }
+            val allowedFinishesArr = json.optJSONArray("allowedFinishes")
+            val allowedFinishes = if (allowedFinishesArr != null) {
+                (0 until allowedFinishesArr.length()).map { allowedFinishesArr.getString(it) }
+            } else {
+                emptyList()
+            }
+            val allowedThicknessesArr = json.optJSONArray("allowedThicknesses")
+            val allowedThicknesses = if (allowedThicknessesArr != null) {
+                (0 until allowedThicknessesArr.length()).map { allowedThicknessesArr.getString(it) }
+            } else {
+                emptyList()
+            }
+            val recommendedHardwareArr = json.optJSONArray("recommendedHardware")
+            val recommendedHardware = if (recommendedHardwareArr != null) {
+                (0 until recommendedHardwareArr.length()).map { recommendedHardwareArr.getString(it) }
+            } else {
+                emptyList()
+            }
+            MaterialRule(
+                material = matName,
+                allowedGrades = allowedGrades,
+                allowedFinishes = allowedFinishes,
+                allowedThicknesses = allowedThicknesses,
+                defaultGrade = json.optString("defaultGrade", ""),
+                defaultFinish = json.optString("defaultFinish", ""),
+                defaultThickness = json.optString("defaultThickness", ""),
+                recommendedUnit = json.optString("recommendedUnit", "Sq.Ft"),
+                recommendedHardware = recommendedHardware,
+                recommendedBrand = json.optString("recommendedBrand", "")
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+    return customRules + defaultRules
+}
+
+fun getGradesForMaterial(material: String, allMasterData: List<com.example.data.MasterEntity> = emptyList()): List<String> {
+    val rules = getMaterialRules(allMasterData)
+    val matched = rules.find { it.material.equals(material, ignoreCase = true) || resolveMaterialType(it.material) == resolveMaterialType(material) }
+    if (matched != null && matched.allowedGrades.isNotEmpty()) {
+        return matched.allowedGrades
+    }
+    return when (resolveMaterialType(material)) {
+        "plywood" -> listOf("MR", "BWR", "BWP", "Marine Ply", "Commercial Ply")
+        "mdf" -> listOf("Standard MDF", "HDMR", "HDF", "Exterior MDF")
+        "particle" -> listOf("Standard", "Prelam", "Moisture Resistant")
+        "acp" -> listOf("3mm", "4mm", "6mm")
+        "aluminium" -> listOf("Slim", "Standard", "Heavy", "Modular")
+        "glass" -> listOf("Clear", "Frosted", "Toughened", "Lacquered", "Fluted")
+        else -> emptyList()
+    }
+}
+
+fun getFinishesForMaterial(material: String, masterFinishes: List<String>, allMasterData: List<com.example.data.MasterEntity> = emptyList()): List<String> {
+    val rules = getMaterialRules(allMasterData)
+    val matched = rules.find { it.material.equals(material, ignoreCase = true) || resolveMaterialType(it.material) == resolveMaterialType(material) }
+    if (matched != null && matched.allowedFinishes.isNotEmpty()) {
+        return matched.allowedFinishes
+    }
+    return when (resolveMaterialType(material)) {
+        "plywood" -> listOf("Laminate", "Veneer", "PU", "Acrylic", "Membrane")
+        "aluminium" -> listOf("Powder Coating", "Anodized", "PVDF", "Matt", "Gloss")
+        "glass" -> listOf("Clear", "Frosted", "Tinted", "Etched", "Toughened")
+        "mdf" -> listOf("Laminate", "Veneer", "PU", "Acrylic", "Membrane")
+        "particle" -> listOf("Laminate", "Veneer", "PU")
+        "other" -> masterFinishes.ifEmpty { listOf("Laminate", "PU", "Acrylic") }
+        else -> emptyList()
+    }
+}
+
+fun getThicknessOptionsForMaterial(material: String, allMasterData: List<com.example.data.MasterEntity> = emptyList()): List<String> {
+    val rules = getMaterialRules(allMasterData)
+    val matched = rules.find { it.material.equals(material, ignoreCase = true) || resolveMaterialType(it.material) == resolveMaterialType(material) }
+    if (matched != null && matched.allowedThicknesses.isNotEmpty()) {
+        return matched.allowedThicknesses
+    }
+    return when (resolveMaterialType(material)) {
+        "plywood" -> listOf("6 mm", "9 mm", "12 mm", "16 mm", "18 mm", "25 mm")
+        "acp" -> listOf("3 mm", "4 mm", "6 mm")
+        "glass" -> listOf("5 mm", "8 mm", "10 mm", "12 mm")
+        "mdf" -> listOf("6 mm", "9 mm", "12 mm", "17 mm", "18 mm", "25 mm")
+        "particle" -> listOf("9 mm", "12 mm", "18 mm", "25 mm")
+        else -> emptyList()
+    }
+}
+
+fun getRecommendedUnitForMaterial(material: String, allMasterData: List<com.example.data.MasterEntity> = emptyList()): String {
+    val rules = getMaterialRules(allMasterData)
+    val matched = rules.find { it.material.equals(material, ignoreCase = true) || resolveMaterialType(it.material) == resolveMaterialType(material) }
+    if (matched != null) {
+        return matched.recommendedUnit
+    }
+    return when (resolveMaterialType(material)) {
+        "plywood", "mdf", "particle", "acp", "glass" -> "Sq.Ft"
+        "edgeband", "profile", "aluminium" -> "R.Ft"
+        "hinges", "handles", "other" -> "Piece"
+        else -> "Piece"
+    }
+}
+
+fun getRecommendedHardware(itemName: String, projectType: String = "", category: String = ""): List<String> {
+    val combined = "$itemName $projectType $category".lowercase(Locale.US)
+    return when {
+        combined.contains("wardrobe") -> listOf("Soft Close Hinges", "Telescopic Channels", "Handles", "Magnetic Catchers", "Adjustable Legs")
+        combined.contains("kitchen") -> listOf("Tandem Box", "Lift-up Stay", "Corner Basket", "Bottle Pullout", "Cutlery Tray")
+        combined.contains("tv unit") || combined.contains("tv-unit") || combined.contains("television") -> listOf("Cable Manager", "LED Profile", "Wall Hanging Brackets")
+        else -> emptyList()
+    }
+}
+
 // --- ITEM CONFIGURATION FORM DIALOG ---
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ItemConfigDialog(
     itemIndex: Int?,
     currentItems: List<QuotationItem>,
     onDismiss: () -> Unit,
-    onSave: (QuotationItem) -> Unit
+    onSave: (QuotationItem) -> Unit,
+    calculatePreview: (String, String, String, Double, String, Double) -> Pair<Double, Double> = { _, _, _, _, _, _ -> Pair(0.0, 0.0) },
+    finishes: List<String> = emptyList(),
+    allMasterData: List<com.example.data.MasterEntity> = emptyList(),
+    projectType: String = "",
+    category: String = ""
 ) {
     val context = LocalContext.current
 
     // Properties
     var itemName by remember { mutableStateOf("") }
     var userDescription by remember { mutableStateOf("") }
-    
+    var selectedTemplateName by remember { mutableStateOf("") }
+
     // Material selection
     var material by remember { mutableStateOf("Plywood") }
-    
+    var finish by remember { mutableStateOf("") }
+
+    val dbMaterials = allMasterData.filter { it.masterType == "MATERIAL" || it.masterType == "MATERIAL_TYPE" }.map { it.name }.distinct()
+    val defaultMaterials = listOf("Plywood", "Particle Board", "MDF", "HDHMR", "WPC", "Aluminium", "ACP", "Glass", "PVC Board", "Hardware")
+    val materialsList = (defaultMaterials + dbMaterials).distinct()
+
     // Material specific properties
     var profileSeries by remember { mutableStateOf("") }
     var profileColour by remember { mutableStateOf("") }
     var glassType by remember { mutableStateOf("") }
     var glassThickness by remember { mutableStateOf("") }
     var acpColour by remember { mutableStateOf("") }
-    var thickness by remember { mutableStateOf("") } // Used for Plywood & WPC
+    var thickness by remember { mutableStateOf("") }
     var grade by remember { mutableStateOf("") }
     var brand by remember { mutableStateOf("") }
     var hardware by remember { mutableStateOf("") }
-    
+    var cncDesign by remember { mutableStateOf("") }
+
     // Common properties
     var widthStr by remember { mutableStateOf("") }
     var heightStr by remember { mutableStateOf("") }
@@ -1849,30 +1980,36 @@ fun ItemConfigDialog(
     var unit by remember { mutableStateOf("Sq.Ft") }
     var quantityStr by remember { mutableStateOf("1.0") }
     var rateStr by remember { mutableStateOf("") }
-    
-    // Reference design image path
+
     var designPath by remember { mutableStateOf("") }
 
-    // Launcher for reference image
     val designLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
             val copied = copyUriToInternalStorage(context, it, "temp_des_${System.currentTimeMillis()}.jpg")
-            copied?.let { designPath = it }
+            if (copied != null) {
+                if (designPath.isNotEmpty() && designPath != copied) {
+                    val oldFile = java.io.File(context.filesDir, java.io.File(designPath).name)
+                    if (oldFile.exists() && oldFile.name.startsWith("temp_des_")) {
+                        oldFile.delete()
+                    }
+                }
+                designPath = copied
+
+            }
         }
     }
-
-    // Load values if we are editing an existing item
     LaunchedEffect(itemIndex) {
         if (itemIndex != null && itemIndex in currentItems.indices) {
             val existing = currentItems[itemIndex]
             itemName = existing.itemName
             unit = existing.unit
             rateStr = existing.rate.toString()
-            material = if (existing.material.isNotBlank()) existing.material else "Plywood"
 
             val (desc, specs) = parseItemSpecs(existing.description)
             userDescription = desc
-            
+            material = existing.material
+            finish = specs.finish.ifBlank { existing.finish }
+
             profileSeries = specs.profileSeries
             profileColour = specs.profileColour
             glassType = specs.glassType
@@ -1880,688 +2017,821 @@ fun ItemConfigDialog(
             acpColour = specs.acpColour
             thickness = specs.thickness
             grade = specs.grade
+            cncDesign = specs.cncDesign
             brand = specs.brand
             hardware = specs.hardware
-            
             widthStr = specs.width
             heightStr = specs.height
             depthStr = specs.depth
             designPath = specs.designImageUri
+            quantityStr = if (existing.quantity % 1.0 == 0.0) existing.quantity.toInt().toString() else existing.quantity.toString()
 
-            // Reconstruct the Number of Units / count from the saved total quantity
-            val w = specs.width.toDoubleOrNull() ?: 1.0
-            val h = specs.height.toDoubleOrNull() ?: 1.0
-            val uLower = existing.unit.trim().lowercase(Locale.US)
-            val numUnits = when {
-                uLower == "sq.ft" || uLower.contains("sq.ft") || uLower.contains("sqft") || uLower == "sft" -> {
-                    val area = w * h
-                    if (area > 0) existing.quantity / area else existing.quantity
-                }
-                uLower == "running feet" || uLower.contains("run") || uLower.contains("rft") -> {
-                    if (w > 0) existing.quantity / w else existing.quantity
-                }
-                uLower == "sq.m" || uLower.contains("sq.m") || uLower.contains("sqm") || uLower.contains("square meter") -> {
-                    val areaM = w * h * 0.09290304
-                    if (areaM > 0) existing.quantity / areaM else existing.quantity
-                }
-                else -> {
-                    existing.quantity
-                }
-            }
-            quantityStr = if (numUnits % 1.0 == 0.0) {
-                String.format(Locale.US, "%.0f", numUnits)
-            } else {
-                String.format(Locale.US, "%.2f", numUnits)
+            val builtIn = getBuiltInTemplates()
+            val custom = getCustomItemTemplates(allMasterData)
+            val allItemTemplates = builtIn + custom
+            if (allItemTemplates.any { it.name.equals(existing.itemName, ignoreCase = true) }) {
+                selectedTemplateName = allItemTemplates.first { it.name.equals(existing.itemName, ignoreCase = true) }.name
+                selectedTemplateName = ""
+
+    // Calculations
             }
         }
     }
+    val wFeet = com.example.engine.QuotationCalculationEngine.parseDimensionToFeet(widthStr)
+    val hFeet = com.example.engine.QuotationCalculationEngine.parseDimensionToFeet(heightStr)
+    val dFeet = com.example.engine.QuotationCalculationEngine.parseDimensionToFeet(depthStr)
+    
+    val qtyVal = quantityStr.toDoubleOrNull() ?: 0.0
+    val rateVal = rateStr.toDoubleOrNull() ?: 0.0
+    val uLower = unit.trim().lowercase(Locale.US)
+    
+    val isVolumeBased = uLower.contains("cu") || uLower.contains("cubic") || uLower.contains("cft") || uLower.contains("cum")
+    val isAreaBased = !isVolumeBased && (uLower.contains("sq") || uLower.contains("sft") || uLower.contains("square"))
+    val isLinearBased = !isVolumeBased && !isAreaBased && (uLower.contains("rft") || uLower.contains("run") || uLower.contains("meter") || uLower.contains("mtr") || uLower == "r.m" || uLower == "rm")
+    val isCountBased = uLower == "nos" || uLower == "pcs" || uLower.contains("nos") || uLower.contains("pcs") || uLower.contains("set")
+    val isLumpSum = uLower == "lumpsum" || uLower.contains("lump") || uLower == "l.s" || uLower == "ls"
 
-    // Unused recompute function
-    fun recomputeQuantity() {
-        // Calculation logic is now fully dynamic and verified on save
-    }
+    val previewValues = calculatePreview(widthStr, heightStr, depthStr, qtyVal, unit, rateVal)
+    val totalBillableQty = previewValues.first
+    val calculatedAmount = previewValues.second
 
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.9f),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (itemIndex == null) "Configure New Item" else "Edit Item Config",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.primary
+    com.example.ui.components.PremiumDialog(
+        onDismissRequest = onDismiss,
+        title = if (itemIndex == null) "Configure Item" else "Edit Item",
+        modifier = Modifier.fillMaxWidth(),
+        actions = {
+            com.example.ui.components.PremiumTextButton(onClick = onDismiss) { Text("Cancel", fontWeight = FontWeight.SemiBold) }
+            Spacer(modifier = Modifier.width(8.dp))
+            com.example.ui.components.PremiumPrimaryButton(
+                onClick = {
+                    if (itemName.isBlank()) {
+                        Toast.makeText(context, "Item Name is required", Toast.LENGTH_SHORT).show()
+                        return@PremiumPrimaryButton
+                    }
+                    if (qtyVal < 0 || rateVal < 0) {
+                        Toast.makeText(context, "Values cannot be negative", Toast.LENGTH_SHORT).show()
+                        return@PremiumPrimaryButton
+                    }
+                    if (qtyVal == 0.0) {
+                        Toast.makeText(context, "Quantity must be greater than 0", Toast.LENGTH_SHORT).show()
+                        return@PremiumPrimaryButton
+                    }
+                    if (material.isBlank()) {
+                        Toast.makeText(context, "Material is required", Toast.LENGTH_SHORT).show()
+                        return@PremiumPrimaryButton
+                    }
+                    if (wFeet < 0 || hFeet < 0 || dFeet < 0) {
+                        Toast.makeText(context, "Dimensions cannot be negative", Toast.LENGTH_SHORT).show()
+                        return@PremiumPrimaryButton
+                    }
+                    if (isAreaBased && (wFeet <= 0.0 || hFeet <= 0.0)) {
+                        Toast.makeText(context, "Width and Height are required for $unit", Toast.LENGTH_SHORT).show()
+                        return@PremiumPrimaryButton
+                    }
+                    if (isLinearBased && wFeet <= 0.0) {
+                        Toast.makeText(context, "Width (Length) is required for $unit", Toast.LENGTH_SHORT).show()
+                        return@PremiumPrimaryButton
+                    }
+                    if (isVolumeBased && (wFeet <= 0.0 || hFeet <= 0.0 || dFeet <= 0.0)) {
+                        Toast.makeText(context, "Width, Height, and Depth are required for $unit", Toast.LENGTH_SHORT).show()
+                        return@PremiumPrimaryButton
+                    }
+                    val specs = ItemSpecs(
+                        width = widthStr.trim(),
+                        height = heightStr.trim(),
+                        depth = depthStr.trim(),
+                        doorType = "",
+                        finish = finish.trim(),
+                        hardware = hardware.trim(),
+                        brand = brand.trim(),
+                        thickness = thickness.trim(),
+                        colour = "",
+                        laminateImageUri = "",
+                        designImageUri = designPath,
+                        profileSeries = profileSeries.trim(),
+                        profileColour = profileColour.trim(),
+                        glassType = glassType.trim(),
+                        glassThickness = glassThickness.trim(),
+                        acpColour = acpColour.trim(),
+                        grade = grade.trim(),
+                        cncDesign = cncDesign.trim()
                     )
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Filled.Close, contentDescription = "Close")
-                    }
+
+                    val finalDesc = serializeItemSpecs(userDescription.trim(), specs)
+                    val item = QuotationItem(
+                        id = if (itemIndex != null) currentItems[itemIndex].id else 0,
+                        quotationId = 0,
+                        itemName = itemName.trim(),
+                        description = finalDesc,
+                        material = material,
+                        finish = finish.trim(),
+                        quantity = qtyVal,
+                        unit = unit,
+                        rate = rateVal,
+                        amount = calculatedAmount
+                    )
+                    onSave(item)
                 }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-
-                // Scrollable Form organized in logical visual sections
+            ) { Text("Save Item", fontWeight = FontWeight.Bold) }
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // -- Smart Product Template Library Section --
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+            ) {
                 Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Lightbulb,
+                            contentDescription = "Smart Template",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Smart Product Template",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     
-                    // --- SECTION 1: ITEM INFORMATION ---
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Item Information", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                            }
-                            // Item Name
-                            OutlinedTextField(
-                                value = itemName,
-                                onValueChange = { itemName = it },
-                                label = { Text("Item Name * (e.g. Wardrobe, Loft, TV Unit)") },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-
-                            // Description / Notes
-                            OutlinedTextField(
-                                value = userDescription,
-                                onValueChange = { userDescription = it },
-                                label = { Text("Item Custom Notes / Description (Optional)") },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                        }
                     }
+                    Text(
+                        text = "Select an interior template to auto-configure materials, grades, finishes, hardware, and pricing unit in seconds.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
 
-                    // --- SECTION 2: MATERIAL DETAILS ---
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Layers, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Material Details", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                            }
+                    val builtInTemplates = getBuiltInTemplates()
+                    val customTemplates = getCustomItemTemplates(allMasterData)
+                    val allItemTemplates = builtInTemplates + customTemplates
+                    val templateNames = listOf("Custom (No Template)") + allItemTemplates.map { it.name }
 
-                            // Material Selector Dropdown
-                            var expandedMaterial by remember { mutableStateOf(false) }
-                            Box(modifier = Modifier.fillMaxWidth()) {
-                                OutlinedTextField(
-                                    value = material,
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    label = { Text("Material *") },
-                                    trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                Box(modifier = Modifier.matchParentSize().clickable { expandedMaterial = true })
-                                 DropdownMenu(expanded = expandedMaterial, onDismissRequest = { expandedMaterial = false }) {
-                                     listOf("Plywood", "Particle Board", "MDF", "HDHMR", "WPC", "Aluminium", "ACP", "Glass", "PVC Board", "Hardware").forEach { m ->
-                                         DropdownMenuItem(text = { Text(m) }, onClick = {
-                                             material = m
-                                             // Reset all material-specific properties immediately
-                                             thickness = ""
-                                             grade = ""
-                                             profileSeries = ""
-                                             profileColour = ""
-                                             glassType = ""
-                                             glassThickness = ""
-                                             acpColour = ""
-                                             brand = ""
-                                             hardware = ""
-                                             expandedMaterial = false
-                                         })
-                                     }
-                                 }
-                             }
-
-                             // Dynamic fields based on selected material
-                             val mLower = material.lowercase(Locale.US)
-                             when {
-                                 mLower.contains("plywood") -> {
-                                     SpecDropdownField(
-                                         value = thickness,
-                                         onValueChange = { thickness = it },
-                                         label = "Thickness *",
-                                         options = listOf("6 mm", "8 mm", "12 mm", "16 mm", "18 mm", "25 mm")
-                                     )
-                                     SpecDropdownField(
-                                         value = grade,
-                                         onValueChange = { grade = it },
-                                         label = "Grade *",
-                                         options = listOf("MR", "BWR", "BWP", "Marine")
-                                     )
-                                 }
-                                 mLower.contains("particle") -> {
-                                     SpecDropdownField(
-                                         value = thickness,
-                                         onValueChange = { thickness = it },
-                                         label = "Thickness *",
-                                         options = listOf("9 mm", "12 mm", "15 mm", "18 mm", "25 mm")
-                                     )
-                                     SpecDropdownField(
-                                         value = grade,
-                                         onValueChange = { grade = it },
-                                         label = "Grade (Optional)",
-                                         options = listOf("None", "Standard", "Premium", "Pre-laminated")
-                                     )
-                                 }
-                                 mLower.contains("mdf") -> {
-                                     SpecDropdownField(
-                                         value = thickness,
-                                         onValueChange = { thickness = it },
-                                         label = "Thickness *",
-                                         options = listOf("6 mm", "8 mm", "12 mm", "15 mm", "18 mm", "25 mm")
-                                     )
-                                 }
-                                 mLower.contains("hdhmr") -> {
-                                     SpecDropdownField(
-                                         value = thickness,
-                                         onValueChange = { thickness = it },
-                                         label = "Thickness *",
-                                         options = listOf("6 mm", "8 mm", "12 mm", "16 mm", "18 mm", "25 mm")
-                                     )
-                                 }
-                                 mLower.contains("wpc") -> {
-                                     SpecDropdownField(
-                                         value = thickness,
-                                         onValueChange = { thickness = it },
-                                         label = "Thickness *",
-                                         options = listOf("6 mm", "8 mm", "12 mm", "15 mm", "18 mm", "25 mm")
-                                     )
-                                 }
-                                 mLower.contains("pvc") -> {
-                                     SpecDropdownField(
-                                         value = thickness,
-                                         onValueChange = { thickness = it },
-                                         label = "Thickness *",
-                                         options = listOf("6 mm", "8 mm", "12 mm", "15 mm", "18 mm", "25 mm")
-                                     )
-                                 }
-                                 mLower.contains("aluminium") -> {
-                                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                         SpecDropdownField(
-                                             value = profileSeries,
-                                             onValueChange = { profileSeries = it },
-                                             label = "Profile Series *",
-                                             options = listOf("18x40 Series", "20x45 Series", "45x45 Series", "Slim Line", "Heavy Duty"),
-                                             modifier = Modifier.weight(1f)
-                                         )
-                                         SpecDropdownField(
-                                             value = profileColour,
-                                             onValueChange = { profileColour = it },
-                                             label = "Profile Colour *",
-                                             options = listOf("Anodized Silver", "Champagne Gold", "Rose Gold", "Charcoal Grey", "Matt Black", "Glossy White"),
-                                             modifier = Modifier.weight(1f)
-                                         )
-                                     }
-                                     SpecDropdownField(
-                                         value = glassType,
-                                         onValueChange = { glassType = it },
-                                         label = "Glass Type (Optional)",
-                                         options = listOf("None", "Clear Glass", "Frosted Glass", "Tinted Glass", "Fluted Glass")
-                                     )
-                                 }
-                                 mLower.contains("glass") -> {
-                                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                         SpecDropdownField(
-                                             value = glassType,
-                                             onValueChange = { glassType = it },
-                                             label = "Glass Type *",
-                                             options = listOf("Clear Glass", "Frosted Glass", "Tinted Glass", "Fluted Glass", "Lacquered Glass"),
-                                             modifier = Modifier.weight(1f)
-                                         )
-                                         SpecDropdownField(
-                                             value = glassThickness,
-                                             onValueChange = { glassThickness = it },
-                                             label = "Glass Thickness *",
-                                             options = listOf("4 mm", "5 mm", "6 mm", "8 mm", "10 mm", "12 mm"),
-                                             modifier = Modifier.weight(1f)
-                                         )
-                                     }
-                                 }
-                                 mLower.contains("acp") -> {
-                                     SpecDropdownField(
-                                         value = acpColour,
-                                         onValueChange = { acpColour = it },
-                                         label = "ACP Colour *",
-                                         options = listOf("Pure White", "Silver Metallic", "Glossy Red", "Charcoal Grey", "Champagne Gold", "Wood Grain Black")
-                                     )
-                                 }
-                                 mLower.contains("hardware") -> {
-                                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                         OutlinedTextField(
-                                             value = brand,
-                                             onValueChange = { brand = it },
-                                             label = { Text("Brand *") },
-                                             modifier = Modifier.weight(1f),
-                                             shape = RoundedCornerShape(12.dp)
-                                         )
-                                         OutlinedTextField(
-                                             value = hardware,
-                                             onValueChange = { hardware = it },
-                                             label = { Text("Model *") },
-                                             modifier = Modifier.weight(1f),
-                                             shape = RoundedCornerShape(12.dp)
-                                         )
-                                     }
-                                 }
-                             }
-                        }
-                    }
-
-                    // --- SECTION 3: DIMENSIONS & AREA ---
-                    val showDim = isDimensionUnit(unit)
-                    val showArea = isAreaUnit(unit)
-                    if (showDim || showArea) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Straighten, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Dimensions (Feet)", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                                }
-
-                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    if (showDim) {
-                                        // Width (Mandatory)
-                                        OutlinedTextField(
-                                            value = widthStr,
-                                            onValueChange = { widthStr = it },
-                                            label = { Text("Width *") },
-                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                            modifier = Modifier.weight(1f),
-                                            shape = RoundedCornerShape(12.dp)
-                                        )
-                                    }
-                                    if (showArea) {
-                                        // Height (Mandatory)
-                                        OutlinedTextField(
-                                            value = heightStr,
-                                            onValueChange = { heightStr = it },
-                                            label = { Text("Height *") },
-                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                            modifier = Modifier.weight(1f),
-                                            shape = RoundedCornerShape(12.dp)
-                                        )
-                                    }
-                                    if (showDim) {
-                                        // Depth (Optional)
-                                        OutlinedTextField(
-                                            value = depthStr,
-                                            onValueChange = { depthStr = it },
-                                            label = { Text("Depth") },
-                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                            modifier = Modifier.weight(1f),
-                                            shape = RoundedCornerShape(12.dp)
-                                        )
-                                    }
-                                }
-
-                                if (showArea) {
-                                    // Read-only Area Calculation Banner
-                                    val w = widthStr.toDoubleOrNull() ?: 0.0
-                                    val h = heightStr.toDoubleOrNull() ?: 0.0
-                                    val calculatedArea = w * h
-                                    val areaStr = String.format(Locale.US, "%.2f", calculatedArea)
-
-                                    val qtyCountForPreview = quantityStr.toDoubleOrNull() ?: 1.0
-                                    val calculatedQty = calculateQuantity(w, h, qtyCountForPreview, unit)
-                                    val qtyFormatted = if (calculatedQty % 1.0 == 0.0) {
-                                        String.format(Locale.US, "%.0f", calculatedQty)
-                                    } else {
-                                        String.format(Locale.US, "%.2f", calculatedQty)
-                                    }
-
-                                    Card(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-                                        ),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(12.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(
-                                                    imageVector = Icons.Default.AspectRatio,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                Column {
-                                                    Text(
-                                                        text = "Calculated Area",
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                                                    )
-                                                    Text(
-                                                        text = "$areaStr Sq.ft",
-                                                        style = MaterialTheme.typography.titleMedium,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                                    )
-                                                }
-                                            }
-                                            Column(horizontalAlignment = Alignment.End) {
-                                                Text(
-                                                    text = "Total Qty ($unit)",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                                                )
-                                                Text(
-                                                    text = qtyFormatted,
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                                )
-                                            }
-                                        }
+                    com.example.ui.components.PremiumDropdown(
+                        label = "Select Interior Template",
+                        value = if (selectedTemplateName.isEmpty()) "Custom (No Template)" else selectedTemplateName,
+                        options = templateNames,
+                        onValueChange = { tName ->
+                            if (tName == "Custom (No Template)") {
+                                selectedTemplateName = ""
+                            } else {
+                                val selectedTemp = allItemTemplates.find { it.name == tName }
+                                if (selectedTemp != null) {
+                                    selectedTemplateName = selectedTemp.name
+                                    itemName = selectedTemp.name
+                                    material = selectedTemp.material
+                                    grade = selectedTemp.grade
+                                    finish = selectedTemp.finish
+                                    thickness = selectedTemp.thickness
+                                    unit = selectedTemp.unit
+                                    hardware = selectedTemp.suggestedHardware.joinToString(", ")
+                                    if (userDescription.isBlank()) {
+                                        userDescription = selectedTemp.defaultNotes
                                     }
                                 }
                             }
                         }
-                    }
+                    )
 
-                    // --- SECTION 4: PRICING & QUANTITY ---
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.CurrencyRupee, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Pricing", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                            }
-
-                            SpecDropdownField(
-                                value = unit,
-                                onValueChange = { unit = it },
-                                label = "Unit *",
-                                options = listOf("Sq.Ft", "Nos", "Running Feet", "Sq.M", "Bundle", "Sheet", "Kg")
+                    // Dimension Presets
+                    val activeTemplate = allItemTemplates.find { it.name == selectedTemplateName }
+                    if (activeTemplate != null && activeTemplate.dimensionPresets.isNotEmpty()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = "Smart Dimension Presets (Optional):",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                // Quantity (Mandatory)
-                                OutlinedTextField(
-                                    value = quantityStr,
-                                    onValueChange = { quantityStr = it },
-                                    label = { Text("Quantity *") },
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-
-                                // Rate per unit (Mandatory)
-                                OutlinedTextField(
-                                    value = rateStr,
-                                    onValueChange = { rateStr = it },
-                                    label = { Text("Rate (₹/$unit) *") },
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    // --- SECTION 5: REFERENCE IMAGE ---
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Image, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Reference Image (Optional)", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                            }
-
-                            Card(
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(110.dp)
-                                    .clickable { designLauncher.launch("image/*") },
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.1f))
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    if (designPath.isNotBlank()) {
-                                        Box {
-                                            AsyncImage(
-                                                model = File(designPath),
-                                                contentDescription = "Design Preview",
-                                                modifier = Modifier.fillMaxSize(),
-                                                contentScale = ContentScale.Crop
-                                            )
-                                            IconButton(
-                                                onClick = { designPath = "" },
-                                                modifier = Modifier
-                                                    .align(Alignment.TopEnd)
-                                                    .size(24.dp)
-                                                    .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
-                                            ) {
-                                                Icon(Icons.Filled.Close, contentDescription = "Clear", tint = Color.White, modifier = Modifier.size(14.dp))
-                                            }
-                                        }
-                                    } else {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Icon(Icons.Filled.AddPhotoAlternate, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            Text("Pick Reference Image", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                        }
-                                    }
+                                activeTemplate.dimensionPresets.forEach { preset ->
+                                    val isSelected = widthStr == preset.width && heightStr == preset.height && depthStr == preset.depth
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = {
+                                            widthStr = preset.width
+                                            heightStr = preset.height
+                                            depthStr = preset.depth
+                                        },
+                                        label = { Text(preset.label) }
+                                    )
                                 }
+                                FilterChip(
+                                    selected = widthStr.isEmpty() && heightStr.isEmpty(),
+                                    onClick = {
+                                        widthStr = ""
+                                        heightStr = ""
+                                    },
+                                    label = { Text("Custom") }
+                                )
+
                             }
                         }
-                    }
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-
-                // Footer Save Actions
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Cancel")
-                    }
-
-                    Button(
-                        onClick = {
-                            if (itemName.isBlank()) {
-                                Toast.makeText(context, "Please enter an Item Name", Toast.LENGTH_SHORT).show()
-                                return@Button
-                            }
-                            val isDim = isDimensionUnit(unit)
-                            val isArea = isAreaUnit(unit)
-                            
-                            val widthVal = if (isDim) {
-                                val w = widthStr.toDoubleOrNull()
-                                if (w == null || w <= 0.0) {
-                                    Toast.makeText(context, "Width is required and must be greater than 0 for $unit unit", Toast.LENGTH_SHORT).show()
-                                    return@Button
-                                }
-                                w
-                            } else {
-                                1.0
-                            }
-
-                            val heightVal = if (isArea) {
-                                val h = heightStr.toDoubleOrNull()
-                                if (h == null || h <= 0.0) {
-                                    Toast.makeText(context, "Height is required and must be greater than 0 for $unit unit", Toast.LENGTH_SHORT).show()
-                                    return@Button
-                                }
-                                h
-                            } else {
-                                1.0
-                            }
-
-                            val qtyCount = quantityStr.toDoubleOrNull()
-                            if (qtyCount == null || qtyCount <= 0.0) {
-                                Toast.makeText(context, "Please enter a valid Quantity", Toast.LENGTH_SHORT).show()
-                                return@Button
-                            }
-                            val rate = rateStr.toDoubleOrNull()
-                            if (rate == null || rate <= 0.0) {
-                                Toast.makeText(context, "Please enter a valid Rate", Toast.LENGTH_SHORT).show()
-                                return@Button
-                            }
-
-                            // Dynamic Material specific validations
-                            val mLowerValid = material.lowercase(Locale.US)
-                            when {
-                                mLowerValid.contains("plywood") -> {
-                                    if (thickness.isBlank() || grade.isBlank()) {
-                                        Toast.makeText(context, "Thickness and Grade are required for Plywood", Toast.LENGTH_SHORT).show()
-                                        return@Button
-                                    }
-                                }
-                                mLowerValid.contains("particle") -> {
-                                    if (thickness.isBlank()) {
-                                        Toast.makeText(context, "Thickness is required for Particle Board", Toast.LENGTH_SHORT).show()
-                                        return@Button
-                                    }
-                                }
-                                mLowerValid.contains("mdf") -> {
-                                    if (thickness.isBlank()) {
-                                        Toast.makeText(context, "Thickness is required for MDF", Toast.LENGTH_SHORT).show()
-                                        return@Button
-                                    }
-                                }
-                                mLowerValid.contains("hdhmr") -> {
-                                    if (thickness.isBlank()) {
-                                        Toast.makeText(context, "Thickness is required for HDHMR", Toast.LENGTH_SHORT).show()
-                                        return@Button
-                                    }
-                                }
-                                mLowerValid.contains("wpc") -> {
-                                    if (thickness.isBlank()) {
-                                        Toast.makeText(context, "Thickness is required for WPC", Toast.LENGTH_SHORT).show()
-                                        return@Button
-                                    }
-                                }
-                                mLowerValid.contains("pvc") -> {
-                                    if (thickness.isBlank()) {
-                                        Toast.makeText(context, "Thickness is required for PVC Board", Toast.LENGTH_SHORT).show()
-                                        return@Button
-                                    }
-                                }
-                                mLowerValid.contains("aluminium") -> {
-                                    if (profileSeries.isBlank() || profileColour.isBlank()) {
-                                        Toast.makeText(context, "Profile Series and Colour are required for Aluminium", Toast.LENGTH_SHORT).show()
-                                        return@Button
-                                    }
-                                }
-                                mLowerValid.contains("acp") -> {
-                                    if (acpColour.isBlank()) {
-                                        Toast.makeText(context, "ACP Colour is required for ACP", Toast.LENGTH_SHORT).show()
-                                        return@Button
-                                    }
-                                }
-                                mLowerValid.contains("glass") -> {
-                                    if (glassType.isBlank() || glassThickness.isBlank()) {
-                                        Toast.makeText(context, "Glass Type and Thickness are required for Glass", Toast.LENGTH_SHORT).show()
-                                        return@Button
-                                    }
-                                }
-                                mLowerValid.contains("hardware") -> {
-                                    if (brand.isBlank() || hardware.isBlank()) {
-                                        Toast.makeText(context, "Brand and Model are required for Hardware", Toast.LENGTH_SHORT).show()
-                                        return@Button
-                                    }
-                                }
-                            }
-
-                            // Use our precise calculateQuantity function
-                            val qty = calculateQuantity(widthVal, heightVal, qtyCount, unit)
-
-                            val specsObj = ItemSpecs(
-                                width = if (isDim) widthStr else "",
-                                height = if (isArea) heightStr else "",
-                                depth = if (isDim) depthStr else "",
-                                thickness = if (mLowerValid.contains("plywood") || mLowerValid.contains("wpc") || mLowerValid.contains("particle") || mLowerValid.contains("mdf") || mLowerValid.contains("hdhmr") || mLowerValid.contains("pvc")) thickness else "",
-                                profileSeries = if (mLowerValid.contains("aluminium")) profileSeries else "",
-                                profileColour = if (mLowerValid.contains("aluminium")) profileColour else "",
-                                glassType = if (mLowerValid.contains("aluminium") || mLowerValid.contains("glass")) glassType else "",
-                                glassThickness = if (mLowerValid.contains("glass")) glassThickness else "",
-                                acpColour = if (mLowerValid.contains("acp")) acpColour else "",
-                                designImageUri = designPath,
-                                grade = if (mLowerValid.contains("plywood") || mLowerValid.contains("particle")) grade else "",
-                                brand = if (mLowerValid.contains("hardware")) brand else "",
-                                hardware = if (mLowerValid.contains("hardware")) hardware else ""
-                            )
-
-                            val serializedDesc = serializeItemSpecs(userDescription, specsObj)
-
-                            val finalItem = QuotationItem(
-                                id = if (itemIndex != null && itemIndex in currentItems.indices) currentItems[itemIndex].id else 0,
-                                quotationId = if (itemIndex != null && itemIndex in currentItems.indices) currentItems[itemIndex].quotationId else 0,
-                                itemName = itemName,
-                                description = serializedDesc,
-                                material = material,
-                                finish = "",
-                                quantity = qty,
-                                unit = unit,
-                                rate = rate,
-                                amount = qty * rate
-                            )
-
-                            onSave(finalItem)
-                        },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Save Item")
                     }
                 }
             }
+            HorizontalDivider()
+
+            // -- 1. Basic Information --
+            Text("Basic Information", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            
+            com.example.ui.components.PremiumOutlinedTextField(
+                value = itemName,
+                onValueChange = { itemName = it },
+                label = "Item Name *"
+            )
+
+            HorizontalDivider()
+
+            // -- 2. Material & Finish --
+            Text("Material & Finish", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            
+            com.example.ui.components.PremiumDropdown(
+                label = "Material Type *",
+                value = material,
+                options = materialsList,
+                onValueChange = { m ->
+                    val rules = getMaterialRules(allMasterData)
+                    val matchedRule = rules.find { it.material.equals(m, ignoreCase = true) || resolveMaterialType(it.material) == resolveMaterialType(m) }
+                    
+                    material = m
+                    unit = matchedRule?.recommendedUnit ?: getRecommendedUnitForMaterial(m, allMasterData)
+                    
+                    // Auto-update grade
+                    val allowedGrades = getGradesForMaterial(m, allMasterData)
+                    if (matchedRule != null && matchedRule.defaultGrade.isNotBlank() && allowedGrades.contains(matchedRule.defaultGrade)) {
+                        grade = matchedRule.defaultGrade
+                        grade = allowedGrades.first()
+                        grade = ""
+                    
+                    // Auto-update finish
+                    val allowedFinishes = getFinishesForMaterial(m, finishes, allMasterData)
+                    if (matchedRule != null && matchedRule.defaultFinish.isNotBlank() && allowedFinishes.contains(matchedRule.defaultFinish)) {
+                        finish = matchedRule.defaultFinish
+                        finish = allowedFinishes.first()
+                        finish = ""
+                    
+                    // Auto-update thickness
+                    }
+                    val allowedThicknesses = getThicknessOptionsForMaterial(m, allMasterData)
+                    if (matchedRule != null && matchedRule.defaultThickness.isNotBlank() && allowedThicknesses.contains(matchedRule.defaultThickness)) {
+                        thickness = matchedRule.defaultThickness
+                        thickness = allowedThicknesses.first()
+                        thickness = ""
+                    
+                    // Auto-update brand (optional)
+                    }
+                    if (matchedRule != null && matchedRule.recommendedBrand.isNotBlank()) {
+                        brand = matchedRule.recommendedBrand
+                        brand = ""
+                    
+                    // Auto-update hardware
+                    }
+                    if (matchedRule != null && matchedRule.recommendedHardware.isNotEmpty()) {
+                        hardware = matchedRule.recommendedHardware.joinToString(", ")
+                        hardware = getRecommendedHardware(itemName, projectType, category).joinToString(", ")
+                    
+                    }
+                    profileSeries = ""
+                    profileColour = ""
+                    glassType = ""
+                    glassThickness = ""
+                    acpColour = ""
+                    cncDesign = ""
+                }
+            }
+            )
+
+            val mLower = material.lowercase(Locale.US)
+            val gradeOptions = getGradesForMaterial(material, allMasterData)
+            val finishOptions = getFinishesForMaterial(material, finishes, allMasterData)
+            val thicknessOptions = getThicknessOptionsForMaterial(material, allMasterData)
+
+            // Dynamic Grade / Type Dropdown
+            if (gradeOptions.isNotEmpty()) {
+                val gradeLabel = when {
+                    mLower.contains("aluminium") || mLower.contains("aluminum") -> "Profile Type *"
+                    mLower.contains("glass") -> "Glass Type *"
+                    else -> "Grade *"
+                }
+                com.example.ui.components.PremiumDropdown(
+                    label = gradeLabel,
+                    value = grade,
+                    options = gradeOptions,
+                    onValueChange = { grade = it }
+                )
+                
+                // Smart Warning for Grade Compatibility
+                val isGradeValid = grade.isBlank() || gradeOptions.contains(grade)
+                if (!isGradeValid) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f)),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Icon(Icons.Default.Warning, contentDescription = "Incompatible", tint = MaterialTheme.colorScheme.error)
+                                Text(
+                                    text = "Incompatible Selection: '$grade' is not applicable for $material.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                            Text(
+                                text = "Please select a valid option below:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                gradeOptions.forEach { opt ->
+                                    FilterChip(
+                                        selected = false,
+                                        onClick = { grade = opt },
+                                        label = { Text(opt) }
+                                    )
+
+            // Dynamic Finish Dropdown
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (finishOptions.isNotEmpty()) {
+                com.example.ui.components.PremiumDropdown(
+                    label = "Finish Type *",
+                    value = finish,
+                    options = finishOptions,
+                    onValueChange = { finish = it }
+                )
+                
+                // Smart Warning for Finish Compatibility
+                val isFinishValid = finish.isBlank() || finishOptions.contains(finish)
+                if (!isFinishValid) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f)),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Icon(Icons.Default.Warning, contentDescription = "Incompatible", tint = MaterialTheme.colorScheme.error)
+                                Text(
+                                    text = "Incompatible Finish: '$finish' is not applicable for $material.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                            Text(
+                                text = "Please select a valid finish below:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                finishOptions.forEach { opt ->
+                                    FilterChip(
+                                        selected = false,
+                                        onClick = { finish = opt },
+                                        label = { Text(opt) }
+                                    )
+
+            // Dynamic Thickness Dropdown
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (thicknessOptions.isNotEmpty()) {
+                com.example.ui.components.PremiumDropdown(
+                    label = "Thickness",
+                    value = thickness,
+                    options = thicknessOptions,
+                    onValueChange = { thickness = it }
+                )
+                
+                // Smart Warning for Thickness Compatibility
+                val isThicknessValid = thickness.isBlank() || thicknessOptions.contains(thickness)
+                if (!isThicknessValid) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f)),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Icon(Icons.Default.Warning, contentDescription = "Incompatible", tint = MaterialTheme.colorScheme.error)
+                                Text(
+                                    text = "Incompatible Thickness: '$thickness' is not applicable for $material.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                            Text(
+                                text = "Please select a valid thickness below:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                thicknessOptions.forEach { opt ->
+                                    FilterChip(
+                                        selected = false,
+                                        onClick = { thickness = opt },
+                                        label = { Text(opt) }
+                                    )
+
+            // Material specific extra details (CNC Options for MDF etc.)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (mLower.contains("mdf")) {
+                com.example.ui.components.PremiumDropdown(label = "CNC Options", value = cncDesign, options = listOf("None", "Simple Groove", "Complex Pattern", "Jali Design"), onValueChange = { cncDesign = it })
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    com.example.ui.components.PremiumDropdown(label = "Profile Series", value = profileSeries, options = listOf("18x40 Series", "20x45 Series", "45x45 Series", "Slim Line", "Heavy Duty"), onValueChange = { profileSeries = it }, modifier = Modifier.weight(1f))
+                    com.example.ui.components.PremiumDropdown(label = "Profile Colour", value = profileColour, options = listOf("Anodized Silver", "Champagne Gold", "Rose Gold", "Charcoal Grey", "Matt Black"), onValueChange = { profileColour = it }, modifier = Modifier.weight(1f))
+
+            // Recommended Hardware input with Suggestion Badges / Chips
+                }
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                com.example.ui.components.PremiumOutlinedTextField(
+                    value = hardware,
+                    onValueChange = { hardware = it },
+                    label = "Recommended Hardware"
+                )
+                
+                val recHardwares = getRecommendedHardware(itemName, projectType, category)
+                if (recHardwares.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Hardware Suggestions (Optional - Click to add):", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            recHardwares.forEach { sug ->
+                                AssistChip(
+                                    onClick = {
+                                        val current = hardware.trim()
+                                        if (current.isEmpty()) {
+                                            hardware = sug
+                                        } else {
+                                            val parts = current.split(",").map { it.trim() }
+                                            if (!parts.any { it.equals(sug, ignoreCase = true) }) {
+                                                hardware = "$current, $sug"
+                                            }
+                                        }
+                                    },
+                                    label = { Text(sug) }
+                                )
+
+            // Material Intelligence Live Summary Card
+                            }
+                        }
+                    }
+                }
+            }
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Material Intelligence - Live Summary",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                    
+                    HorizontalDivider(color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f))
+                    
+                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Material", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f))
+                            Text(material.ifBlank { "—" }, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                        }
+                        if (grade.isNotBlank()) {
+                            val gradeLbl = when {
+                                mLower.contains("aluminium") || mLower.contains("aluminum") -> "Profile Type"
+                                mLower.contains("glass") -> "Glass Type"
+                                else -> "Grade"
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(gradeLbl, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f))
+                                Text(grade, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+
+                            }
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                        if (finish.isNotBlank()) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Finish", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f))
+                                Text(finish, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                            }
+                        }
+                        if (thickness.isNotBlank()) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Thickness", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f))
+                                Text(thickness, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+
+                            }
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Pricing Unit", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f))
+                            Text(unit.ifBlank { "—" }, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                        }
+                        if (hardware.isNotBlank()) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Recommended Hardware", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f))
+                                Text(hardware, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+
+                            }
+                        }
+                    }
+                }
+            }
+            HorizontalDivider()
+
+            // -- 3. Dimensions --
+            Text(if (isCountBased || isLumpSum) "Dimensions (Optional)" else "Dimensions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val isNarrow = maxWidth < 340.dp
+                if (isNarrow) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                        com.example.ui.components.PremiumOutlinedTextField(
+                            value = widthStr,
+                            onValueChange = { widthStr = it },
+                            label = if (isLinearBased) "Width / Length" + if (!isCountBased && !isLumpSum) " *" else " (Opt)" else "Width" + if (!isCountBased && !isLumpSum) " *" else " (Opt)",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        com.example.ui.components.PremiumOutlinedTextField(
+                            value = heightStr,
+                            onValueChange = { heightStr = it },
+                            label = "Height" + if (isAreaBased || isVolumeBased) " *" else " (Opt)",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        com.example.ui.components.PremiumOutlinedTextField(
+                            value = depthStr,
+                            onValueChange = { depthStr = it },
+                            label = "Depth" + if (isVolumeBased) " *" else " (Opt)",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                            com.example.ui.components.PremiumOutlinedTextField(
+                                value = widthStr,
+                                onValueChange = { widthStr = it },
+                                label = if (isLinearBased) "Width / Length" + if (!isCountBased && !isLumpSum) " *" else " (Opt)" else "Width" + if (!isCountBased && !isLumpSum) " *" else " (Opt)",
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                                modifier = Modifier.weight(1f)
+                            )
+                            com.example.ui.components.PremiumOutlinedTextField(
+                                value = heightStr,
+                                onValueChange = { heightStr = it },
+                                label = "Height" + if (isAreaBased || isVolumeBased) " *" else " (Opt)",
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                            com.example.ui.components.PremiumOutlinedTextField(
+                                value = depthStr,
+                                onValueChange = { depthStr = it },
+                                label = "Depth" + if (isVolumeBased) " *" else " (Opt)",
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+            HorizontalDivider()
+
+            // -- 4. Pricing --
+            Text("Pricing", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    com.example.ui.components.PremiumDropdown(
+                        label = "Unit *",
+                        value = unit,
+                        options = listOf("Sq.Ft", "Sq.M", "R.Ft", "Meter", "Cu.Ft", "Cu.M", "Nos", "Pcs", "Lumpsum", "Set"),
+                        onValueChange = { newUnit ->
+                            unit = newUnit
+                            val newULower = newUnit.trim().lowercase(Locale.US)
+                            val newVol = newULower.contains("cu") || newULower.contains("cubic") || newULower.contains("cft") || newULower.contains("cum")
+                            val newArea = !newVol && (newULower.contains("sq") || newULower.contains("sft") || newULower.contains("square"))
+                            val newLinear = !newVol && !newArea && (newULower.contains("rft") || newULower.contains("run") || newULower.contains("meter") || newULower.contains("mtr") || newULower == "r.m" || newULower == "rm")
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                    com.example.ui.components.PremiumOutlinedTextField(value = quantityStr, onValueChange = { quantityStr = it }, label = "Qty *", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    com.example.ui.components.PremiumOutlinedTextField(value = rateStr, onValueChange = { rateStr = it }, label = "Rate *", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Smart Live Cost & Specs Preview",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Box(
+                            modifier = Modifier
+                                .background(MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "Auto-Calculated",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+
+                        }
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f))
+
+                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Template", fontSize = 11.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                            Text(selectedTemplateName.ifBlank { "None (Custom)" }, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Material", fontSize = 11.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                            Text(material.ifBlank { "—" }, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Finish", fontSize = 11.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                            Text(finish.ifBlank { "—" }, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Dimensions", fontSize = 11.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                            val dimText = listOfNotNull(
+                                if (widthStr.isNotBlank()) "W: $widthStr" else null,
+                                if (heightStr.isNotBlank()) "H: $heightStr" else null,
+                                if (depthStr.isNotBlank()) "D: $depthStr" else null
+                            ).joinToString(" × ")
+                            Text(dimText.ifBlank { "—" }, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                        val billableLabel = when {
+                            isAreaBased -> "Billable Area"
+                            isLinearBased -> "Billable Length"
+                            isVolumeBased -> "Billable Volume"
+                            isCountBased -> "Billable Count"
+                            else -> "Billable Quantity"
+                        }
+                        val unitDisplayLabel = when {
+                            uLower.contains("sq.m") || uLower.contains("sqm") -> "Sq.M"
+                            uLower.contains("sq") || uLower.contains("sft") -> "Sq.Ft"
+                            uLower.contains("meter") || uLower.contains("mtr") -> "Meter"
+                            uLower.contains("rft") || uLower.contains("run") -> "R.Ft"
+                            uLower.contains("cu.m") || uLower.contains("cum") -> "Cu.M"
+                            uLower.contains("cu") || uLower.contains("cft") -> "Cu.Ft"
+                            uLower.contains("pcs") -> "Pcs"
+                            uLower.contains("nos") -> "Nos"
+                            else -> unit
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(billableLabel, fontSize = 11.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                            Text(String.format(Locale.US, "%.2f %s", totalBillableQty, unitDisplayLabel), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Quantity & Rate", fontSize = 11.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                            Text("$qtyVal (Qty) × ₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(rateVal)}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f))
+
+                    Row(horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        Text("Estimated Amount", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Text(
+                            text = "₹${com.example.utils.CurrencyFormatter.formatIndianCurrencyStrict(calculatedAmount)}",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+
+                    }
+                }
+            }
+            HorizontalDivider()
+
+            // -- 6. Reference Image --
+            Text("Reference Image", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            
+            if (designPath.isNotEmpty() && java.io.File(context.filesDir, java.io.File(designPath).name).exists()) {
+                coil.compose.AsyncImage(
+                    model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                        .data(java.io.File(context.filesDir, java.io.File(designPath).name))
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "Design Preview",
+                    modifier = Modifier.fillMaxWidth().height(150.dp).padding(vertical = 8.dp),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+            ) {
+                Text(if (designPath.isNotEmpty()) "Image Attached" else "No Image Attached", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                com.example.ui.components.PremiumSecondaryButton(
+                    onClick = { designLauncher.launch("image/*") },
+                    modifier = Modifier.width(150.dp)
+                ) { Text(if (designPath.isNotEmpty()) "Change Image" else "Attach Image", fontWeight = FontWeight.SemiBold) }
+
+            }
+            HorizontalDivider()
+
+            // -- 7. Notes --
+            Text("Notes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            
+            com.example.ui.components.PremiumOutlinedTextField(
+                value = userDescription,
+                onValueChange = { userDescription = it },
+                label = "Description / Additional Notes (Optional)",
+                singleLine = false,
+                minLines = 3
+            )
         }
     }
 }
-
 // --- STEP 4: TAXES, WARRANTIES & TERMS ---
 @Composable
 fun WizardStepTaxesTerms(
@@ -2578,7 +2848,6 @@ fun WizardStepTaxesTerms(
 ) {
     var discountStr by remember { mutableStateOf(if (discount > 0) discount.toString() else "") }
     var gstRateStr by remember { mutableStateOf(gstRate.toString()) }
-    var expandedWarranty by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -2586,11 +2855,10 @@ fun WizardStepTaxesTerms(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Card(
+        ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
@@ -2633,11 +2901,10 @@ fun WizardStepTaxesTerms(
             }
         }
 
-        Card(
+        ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
@@ -2648,39 +2915,20 @@ fun WizardStepTaxesTerms(
                 )
 
                 // Warranty dropdown
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
-                        value = warranty.ifEmpty { "Select warranty limit" },
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Warranty") },
-                        trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clickable { expandedWarranty = true }
-                    )
-                    DropdownMenu(expanded = expandedWarranty, onDismissRequest = { expandedWarranty = false }) {
-                        val displayWarranties = if (masterWarranties.isEmpty()) listOf("1 Year Warranty", "3 Years Warranty", "5 Years Warranty", "No Warranty") else masterWarranties
-                        displayWarranties.forEach { w ->
-                            DropdownMenuItem(text = { Text(w) }, onClick = {
-                                onWarrantyChange(w)
-                                expandedWarranty = false
-                            })
-                        }
-                    }
-                }
+                com.example.ui.components.PremiumDropdown(
+                    value = warranty.ifEmpty { "Select warranty limit" },
+                    onValueChange = onWarrantyChange,
+                    label = "Warranty",
+                    options = if (masterWarranties.isEmpty()) listOf("1 Year Warranty", "3 Years Warranty", "5 Years Warranty", "No Warranty") else masterWarranties,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
 
-        Card(
+        ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
@@ -2705,31 +2953,40 @@ fun WizardStepTaxesTerms(
     }
 }
 
-// --- STEP 2: REVIEW & SAVE ---
+// --- STEP 5: REVIEW & SAVE ---
 @Composable
 fun WizardStepReview(
+    quotationViewModel: com.example.ui.quotation.QuotationViewModel,
     quoteNumber: String,
     customerName: String,
     customerPhone: String,
-    customerAddress: String,
-    siteLocation: String,
     itemsCount: Int,
     subtotal: Double,
     discount: Double,
-    gstRate: Double,
     gstAmount: Double,
     grandTotal: Double,
-    terms: String,
-    warranty: String,
-    onDiscountChange: (Double) -> Unit,
-    onGstRateChange: (Double) -> Unit,
-    onTermsChange: (String) -> Unit,
-    onWarrantyChange: (String) -> Unit,
     onSave: () -> Unit
 ) {
+    val gstRate by quotationViewModel.newQuoteGstRate.collectAsState()
+    val transport by quotationViewModel.newQuoteTransport.collectAsState()
+    val installation by quotationViewModel.newQuoteInstallation.collectAsState()
+    val extraCharges by quotationViewModel.newQuoteExtraCharges.collectAsState()
+    val roundOff by quotationViewModel.newQuoteRoundOff.collectAsState()
+    val advance by quotationViewModel.newQuoteAdvance.collectAsState()
+    val balance by quotationViewModel.newQuoteBalance.collectAsState()
+    
+    val terms by quotationViewModel.newQuoteTerms.collectAsState()
+    val warranty by quotationViewModel.newQuoteWarranty.collectAsState()
+    val customerNotes by quotationViewModel.newQuoteCustomerNotes.collectAsState()
+    val internalNotes by quotationViewModel.newQuoteInternalNotes.collectAsState()
+
     var discountStr by remember { mutableStateOf(if (discount > 0) discount.toString() else "") }
     var gstRateStr by remember { mutableStateOf(gstRate.toString()) }
-    var expandedWarranty by remember { mutableStateOf(false) }
+    var transportStr by remember { mutableStateOf(if (transport > 0) transport.toString() else "") }
+    var installationStr by remember { mutableStateOf(if (installation > 0) installation.toString() else "") }
+    var extraStr by remember { mutableStateOf(if (extraCharges > 0) extraCharges.toString() else "") }
+    var roundOffStr by remember { mutableStateOf(if (roundOff != 0.0) roundOff.toString() else "") }
+    var advanceStr by remember { mutableStateOf(if (advance > 0) advance.toString() else "") }
 
     Column(
         modifier = Modifier
@@ -2737,569 +2994,441 @@ fun WizardStepReview(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Review Hero Banner
-        Card(
+        ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.ReceiptLong,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = "Review Quotation Details",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "Verify all specs and numbers before saving",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(text = "Final Quotation Review", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                Text(text = quoteNumber, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = customerName, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                Text(text = customerPhone, fontSize = 14.sp)
+                Text(text = "$itemsCount Items Included", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
             }
         }
 
-        // Customer & Location details
-        Card(
+        // Adjustments / Additions
+        ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Customer & Location details",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-
-                ReviewRow(label = "Quotation Number", value = quoteNumber, isPrimary = true)
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                
-                ReviewRow(label = "Customer Name", value = customerName)
-                ReviewRow(label = "Customer Phone", value = customerPhone)
-                if (siteLocation.isNotBlank()) {
-                    ReviewRow(label = "Site Name", value = siteLocation)
-                }
-                if (customerAddress.isNotBlank()) {
-                    ReviewRow(label = "Site Address", value = customerAddress)
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                ReviewRow(label = "Total Configured Items", value = "$itemsCount item(s)", isPrimary = true)
-            }
-        }
-
-        // Taxes & Discounts section
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = "Discount & Taxes",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary
-                )
+                Text(text = "Billing Adjustments", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Flat Discount
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = discountStr,
-                        onValueChange = {
-                            discountStr = it
-                            onDiscountChange(it.toDoubleOrNull() ?: 0.0)
-                        },
-                        label = { Text("Flat Discount (₹)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        onValueChange = { discountStr = it; quotationViewModel.setDiscount(it.toDoubleOrNull() ?: 0.0) },
+                        label = { Text("Discount Amount (₹)") },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
                     )
-
-                    // GST Rate
                     OutlinedTextField(
                         value = gstRateStr,
-                        onValueChange = {
-                            gstRateStr = it
-                            onGstRateChange(it.toDoubleOrNull() ?: 0.0)
-                        },
+                        onValueChange = { gstRateStr = it; quotationViewModel.setGstRate(it.toDoubleOrNull() ?: 0.0) },
                         label = { Text("GST Rate (%)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
                     )
                 }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = transportStr,
+                        onValueChange = { transportStr = it; quotationViewModel.setTransport(it.toDoubleOrNull() ?: 0.0) },
+                        label = { Text("Transport (₹)") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                    )
+                    OutlinedTextField(
+                        value = installationStr,
+                        onValueChange = { installationStr = it; quotationViewModel.setInstallation(it.toDoubleOrNull() ?: 0.0) },
+                        label = { Text("Installation (₹)") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                    )
+                }
+                
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = extraStr,
+                        onValueChange = { extraStr = it; quotationViewModel.setExtraCharges(it.toDoubleOrNull() ?: 0.0) },
+                        label = { Text("Extra Charges (₹)") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                    )
+                    OutlinedTextField(
+                        value = roundOffStr,
+                        onValueChange = { roundOffStr = it; quotationViewModel.setRoundOff(it.toDoubleOrNull() ?: 0.0) },
+                        label = { Text("Round Off (₹)") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                    )
+                }
+                
+                OutlinedTextField(
+                    value = advanceStr,
+                    onValueChange = { advanceStr = it; quotationViewModel.setAdvance(it.toDoubleOrNull() ?: 0.0) },
+                    label = { Text("Advance Received (₹)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                )
             }
         }
 
-        // Warranty dropdown
-        Card(
+        // Summary
+        ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = "Warranty & Support Limits",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary
-                )
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(text = "Final Summary", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
 
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
-                        value = warranty.ifEmpty { "Select warranty limit" },
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Warranty") },
-                        trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clickable { expandedWarranty = true }
-                    )
-                    DropdownMenu(
-                        expanded = expandedWarranty,
-                        onDismissRequest = { expandedWarranty = false },
-                        modifier = Modifier.fillMaxWidth(0.8f)
-                    ) {
-                        listOf("1 Year Warranty", "3 Years Warranty", "5 Years Warranty", "10 Years Warranty", "No Warranty").forEach { w ->
-                            DropdownMenuItem(text = { Text(w) }, onClick = {
-                                onWarrantyChange(w)
-                                expandedWarranty = false
-                            })
-                        }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Subtotal", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(subtotal)}", fontWeight = FontWeight.Bold)
+                }
+                if (discount > 0) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Discount", color = MaterialTheme.colorScheme.error)
+                        Text("-₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(discount)}", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                    }
+                }
+                if (gstAmount > 0) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("GST (${gstRate}%)", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(gstAmount)}", fontWeight = FontWeight.Bold)
+                    }
+                }
+                if (transport > 0) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Transport", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(transport)}", fontWeight = FontWeight.Bold)
+                    }
+                }
+                if (installation > 0) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Installation", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(installation)}", fontWeight = FontWeight.Bold)
+                    }
+                }
+                if (extraCharges > 0) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Extra Charges", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(extraCharges)}", fontWeight = FontWeight.Bold)
+                    }
+                }
+                if (roundOff != 0.0) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Round Off", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(roundOff)}", fontWeight = FontWeight.Bold)
+                    }
+                }
+                
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("Grand Total", fontSize = 18.sp, fontWeight = FontWeight.Black)
+                    Text("₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(grandTotal)}", fontSize = 20.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
+                }
+                
+                if (advance > 0) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Advance Paid", color = MaterialTheme.colorScheme.tertiary)
+                        Text("-₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(advance)}", color = MaterialTheme.colorScheme.tertiary, fontWeight = FontWeight.Bold)
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Balance Due", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text("₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(balance)}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
         }
-
-        // Terms & Conditions text area
-        Card(
+        
+        // Notes & Terms
+        ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = "Quotation Terms & Conditions",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary
+                Text(text = "Terms & Notes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                
+                OutlinedTextField(
+                    value = customerNotes,
+                    onValueChange = { quotationViewModel.setCustomerNotes(it) },
+                    label = { Text("Customer Notes (Visible on PDF)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    minLines = 2
                 )
-
+                
+                OutlinedTextField(
+                    value = internalNotes,
+                    onValueChange = { quotationViewModel.setInternalNotes(it) },
+                    label = { Text("Internal Notes (Private)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    minLines = 2
+                )
+                
                 OutlinedTextField(
                     value = terms,
-                    onValueChange = onTermsChange,
+                    onValueChange = { quotationViewModel.setTerms(it) },
                     label = { Text("Terms & Conditions") },
-                    placeholder = { Text("Leave blank to use default Company Terms & Conditions") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp),
-                    shape = RoundedCornerShape(12.dp)
-                )
-            }
-        }
-
-        // Financials Review
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Pricing Summary",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-
-                ReviewRow(label = "Subtotal", value = "₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(subtotal)}")
-                
-                if (discount > 0) {
-                    ReviewRow(
-                        label = "Flat Discount", 
-                        value = "-₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(discount)}", 
-                        valueColor = MaterialTheme.colorScheme.error
-                    )
-                }
-                
-                if (gstAmount > 0) {
-                    ReviewRow(label = "GST ($gstRate%)", value = "₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(gstAmount)}")
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Grand Total",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(grandTotal)}",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+                    shape = RoundedCornerShape(12.dp),
+                    minLines = 3
+                )
+                OutlinedTextField(
+                    value = warranty,
+                    onValueChange = { quotationViewModel.setWarranty(it) },
+                    label = { Text("Warranty Terms") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    minLines = 2
+                )
             }
         }
 
-        // Save Action Button
         Button(
             onClick = onSave,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
-            shape = RoundedCornerShape(12.dp)
+                .padding(vertical = 16.dp)
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
             Icon(Icons.Filled.Save, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Save & Generate Quotation", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text("Save Quotation", fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
     }
 }
-
 @Composable
-fun ReviewRow(
-    label: String, 
-    value: String, 
-    isPrimary: Boolean = false,
-    valueColor: Color = MaterialTheme.colorScheme.onSurface
+fun QuotationItemCard(
+    item: QuotationItem,
+    index: Int,
+    modifier: Modifier = Modifier,
+    onEdit: (() -> Unit)? = null,
+    onDuplicate: (() -> Unit)? = null,
+    onMoveUp: (() -> Unit)? = null,
+    onMoveDown: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    val (userDesc, specs) = parseItemSpecs(item.description)
+    
+    ElevatedCard(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = if (isPrimary) MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold) else MaterialTheme.typography.bodyMedium,
-            fontWeight = if (isPrimary) FontWeight.Bold else FontWeight.Medium,
-            color = valueColor
-        )
-    }
-}
-
-// --- SMART SUGGESTIONS DIALOG ---
-@Composable
-fun SmartSuggestionsDialog(
-    selectedProduct: String,
-    selectedMaterial: String,
-    selectedFinish: String,
-    specificationSummary: String = "",
-    onAddItems: (List<QuotationItem>) -> Unit,
-    onDismiss: () -> Unit
-) {
-    data class SuggestionTemplate(
-        val name: String,
-        val desc: String,
-        val unit: String,
-        val baseQty: Double,
-        val rate: Double
-    )
-
-    val suggestions = remember(selectedProduct, selectedMaterial, selectedFinish, specificationSummary) {
-        val prod = selectedProduct.lowercase()
-        val mat = selectedMaterial
-        val fin = selectedFinish
-        
-        val widthVal = parseFieldFromSummary(specificationSummary, "Width").replace("Ft", "").trim().toDoubleOrNull()
-        val heightVal = parseFieldFromSummary(specificationSummary, "Height").replace("Ft", "").trim().toDoubleOrNull()
-        val qtyMultiplier = parseFieldFromSummary(specificationSummary, "Quantity").toDoubleOrNull() ?: 1.0
-
-        fun computeQty(baseQty: Double, unit: String, itemName: String): Double {
-            val uLower = unit.lowercase()
-            val nameLower = itemName.lowercase()
-            val computed = when {
-                uLower.contains("sq") -> {
-                    val w = widthVal ?: when {
-                        prod.contains("wardrobe") -> 5.0
-                        prod.contains("kitchen") -> 10.0
-                        prod.contains("tv") || prod.contains("unit") -> 6.0
-                        prod.contains("crockery") -> 4.0
-                        prod.contains("vanity") -> 3.0
-                        prod.contains("partition") -> 6.0
-                        prod.contains("loft") -> 12.0
-                        else -> 6.0
-                    }
-                    val h = heightVal ?: when {
-                        prod.contains("wardrobe") -> 8.0
-                        prod.contains("tv") || prod.contains("unit") -> 5.0
-                        prod.contains("partition") -> 8.0
-                        else -> 1.0
-                    }
-                    if (nameLower.contains("shelving") || nameLower.contains("shelves")) {
-                        w * h * 0.3 * qtyMultiplier
-                    } else {
-                        w * h * qtyMultiplier
-                    }
-                }
-                uLower.contains("rft") || uLower.contains("running") -> {
-                    val w = widthVal ?: when {
-                        prod.contains("wardrobe") -> 5.0
-                        prod.contains("kitchen") -> 10.0
-                        prod.contains("tv") || prod.contains("unit") -> 6.0
-                        prod.contains("crockery") -> 4.0
-                        prod.contains("vanity") -> 3.0
-                        prod.contains("partition") -> 6.0
-                        prod.contains("loft") -> 12.0
-                        else -> 6.0
-                    }
-                    w * qtyMultiplier
-                }
-                else -> {
-                    baseQty * qtyMultiplier
-                }
-            }
-            return Math.round(computed * 100.0) / 100.0
-        }
-
-        val templates = when {
-            prod.contains("wardrobe") -> listOf(
-                SuggestionTemplate("Carcass (18mm)", "Standard wardrobe carcass", "Sq.Ft", 40.0, 1100.0),
-                SuggestionTemplate("Shutters / Doors", "Wardrobe shutters with handles", "Sq.Ft", 40.0, 850.0),
-                SuggestionTemplate("Internal Shelving", "Internal partitioning shelves", "Sq.Ft", 12.0, 350.0),
-                SuggestionTemplate("Hanging Rod", "Aluminium oval hanging rod", "Nos", 2.0, 250.0),
-                SuggestionTemplate("Soft Close Hinges", "Hafele/Hettich hinges pack", "Nos", 8.0, 180.0),
-                SuggestionTemplate("Drawer Channels", "Telescopic drawer channels", "Sets", 3.0, 450.0),
-                SuggestionTemplate("Loft Units", "Top loft storage units", "Nos", 1.0, 4500.0)
-            )
-            prod.contains("kitchen") -> listOf(
-                SuggestionTemplate("Base Cabinets Carcass", "Waterproof plywood/Aluminium base units", "Rft (Running Foot)", 10.0, 1850.0),
-                SuggestionTemplate("Wall Cabinets Carcass", "Top wall storage units", "Rft (Running Foot)", 10.0, 1250.0),
-                SuggestionTemplate("Kitchen Shutters", "Postform/Acrylic finished shutters", "Rft (Running Foot)", 10.0, 950.0),
-                SuggestionTemplate("Modular Baskets Pack", "Stainless steel pullout baskets", "Sets", 1.0, 12500.0),
-                SuggestionTemplate("Pneumatic Lift-ups", "For wall cabinet lift doors", "Nos", 2.0, 650.0),
-                SuggestionTemplate("Profile Handles", "Gola profile handle system", "Meters", 20.0, 220.0)
-            )
-            prod.contains("tv") || prod.contains("unit") -> listOf(
-                SuggestionTemplate("Back Panel Ply/Mica", "Veneer/Laminate decorative backing", "Sq.Ft", 32.0, 450.0),
-                SuggestionTemplate("Base Drawer Console", "Low-height drawer units", "Rft (Running Foot)", 6.0, 1200.0),
-                SuggestionTemplate("Glass Shelves", "Floating glass/ply shelves", "Pcs", 2.0, 800.0),
-                SuggestionTemplate("LED Profiling", "Warm-white backlight strip & profile", "Sets", 1.0, 2500.0)
-            )
-            prod.contains("crockery") -> listOf(
-                SuggestionTemplate("Carcass Cabinets", "Core framework storage", "Nos", 1.0, 8500.0),
-                SuggestionTemplate("Fluted Glass Shutters", "Profile glass shutters", "Nos", 2.0, 2800.0),
-                SuggestionTemplate("Spot Lights", "Warm led spotlight inserts", "Nos", 4.0, 350.0)
-            )
-            prod.contains("vanity") -> listOf(
-                SuggestionTemplate("Vanity Under-Sink Cabinet", "Moisture resistant carcass", "Nos", 1.0, 5500.0),
-                SuggestionTemplate("Mirror Frame Unit", "Matching finish wood frame mirror", "Nos", 1.0, 2200.0)
-            )
-            prod.contains("partition") -> listOf(
-                SuggestionTemplate("Partition Main Framework", "Hardwood/Aluminium room divider frame", "Sq.Ft", 50.0, 380.0),
-                SuggestionTemplate("Glass/Laminate Inserts", "Decorative panel inserts", "Sq.Ft", 50.0, 250.0)
-            )
-            prod.contains("loft") -> listOf(
-                SuggestionTemplate("Loft Framing", "Internal frame support structure", "Rft (Running Foot)", 12.0, 450.0),
-                SuggestionTemplate("Loft Shutters", "Hinged loft doors", "Rft (Running Foot)", 12.0, 650.0)
-            )
-            else -> listOf(
-                SuggestionTemplate("Main Carcass / Body", "Basic structure of the unit", "Nos", 1.0, 15000.0),
-                SuggestionTemplate("Front Shutters", "Front face doors and hinges", "Nos", 1.0, 8000.0),
-                SuggestionTemplate("Premium Fitting Hardware", "Essential handles, hinges, screws", "Sets", 1.0, 3500.0)
-            )
-        }
-
-        templates.map { t ->
-            val computedQuantity = computeQty(t.baseQty, t.unit, t.name)
-            QuotationItem(
-                id = 0,
-                quotationId = 0,
-                itemName = t.name,
-                description = serializeItemSpecs(t.desc, ItemSpecs()),
-                material = mat,
-                finish = fin,
-                quantity = computedQuantity,
-                unit = t.unit,
-                rate = t.rate,
-                amount = computedQuantity * t.rate
-            )
-        }
-    }
-
-    // Keep track of which items are selected
-    val selectedItemsMap = remember { 
-        mutableStateMapOf<Int, Boolean>()
-    }
-
-    // Customized quantities and rates
-    val qtyMap = remember {
-        mutableStateMapOf<Int, String>()
-    }
-    val rateMap = remember {
-        mutableStateMapOf<Int, String>()
-    }
-
-    LaunchedEffect(suggestions) {
-        selectedItemsMap.clear()
-        qtyMap.clear()
-        rateMap.clear()
-        suggestions.forEachIndexed { idx, item ->
-            selectedItemsMap[idx] = true
-            qtyMap[idx] = item.quantity.toString()
-            rateMap[idx] = item.rate.toString()
-        }
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Smart Item Suggestions") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    "Standard item presets based on selected configuration. Check items to add and adjust Qty/Rate as needed:",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = item.itemName,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    
+                    if (userDesc.isNotBlank() && !userDesc.startsWith("ItemSpecs") && !userDesc.startsWith("ItemDescription")) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = userDesc,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            lineHeight = 18.sp
+                        )
                 
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 350.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(suggestions.size) { idx ->
-                        val item = suggestions[idx]
-                        val isSelected = selectedItemsMap[idx] ?: false
-                        
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f) 
-                                                 else MaterialTheme.colorScheme.surface
-                            ),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Checkbox(
-                                    checked = isSelected,
-                                    onCheckedChange = { selectedItemsMap[idx] = it }
-                                )
-                                
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(item.itemName, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                    // Extract description
-                                    val (cleanDesc, _) = parseItemSpecs(item.description)
-                                    Text(cleanDesc, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    
-                                    if (isSelected) {
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            OutlinedTextField(
-                                                value = qtyMap[idx] ?: "",
-                                                onValueChange = { qtyMap[idx] = it },
-                                                label = { Text("Qty", fontSize = 10.sp) },
-                                                modifier = Modifier.weight(1f),
-                                                singleLine = true,
-                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                                textStyle = MaterialTheme.typography.bodySmall
-                                            )
-                                            OutlinedTextField(
-                                                value = rateMap[idx] ?: "",
-                                                onValueChange = { rateMap[idx] = it },
-                                                label = { Text("Rate", fontSize = 10.sp) },
-                                                modifier = Modifier.weight(1.5f),
-                                                singleLine = true,
-                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                                textStyle = MaterialTheme.typography.bodySmall
-                                            )
-                                        }
-                                    }
-                                }
-                            }
+                    }
+                }
+                Text(
+                    text = "₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(item.amount)}",
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Right
+                )
+            
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (item.material.isNotBlank()) {
+                    SpecRow("Material", item.material)
+                
+                }
+                val finish = if (item.material == "Aluminium") {
+                    specs.profileColour.trim()
+                } else if (item.material == "ACP") {
+                    specs.acpColour.trim()
+                } else {
+                    item.finish
+                }
+                if (finish.isNotBlank()) {
+                    SpecRow("Finish", finish)
+                
+                }
+                if (specs.thickness.isNotBlank()) {
+                    SpecRow("Thickness", specs.thickness)
+                
+                }
+                if (specs.width.isNotBlank() && specs.height.isNotBlank()) {
+                    val sizeLabel = buildString {
+                        append(specs.width)
+                        append("' × ")
+                        append(specs.height)
+                        append("'")
+                        if (specs.depth.isNotBlank()) {
+                            append(" × ")
+                            append(specs.depth)
+                            append("'")
                         }
                     }
+                    SpecRow("Size", sizeLabel)
                 }
+                if (specs.doorType.isNotBlank()) {
+                    SpecRow("Door Type", specs.doorType)
+                }
+                if (specs.hardware.isNotBlank()) {
+                    SpecRow("Hardware", specs.hardware)
+                }
+                if (specs.glassType.isNotBlank()) {
+                    SpecRow("Glass", specs.glassType)
+                
+                }
+                val qtyLabel = if (item.quantity % 1.0 == 0.0) item.quantity.toInt().toString() else item.quantity.toString()
+                SpecRow("Qty", "$qtyLabel ${item.unit}")
+                
+                SpecRow("Rate", "₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(item.rate)}")
+            
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val finalItems = mutableListOf<QuotationItem>()
-                    suggestions.forEachIndexed { idx, item ->
-                        if (selectedItemsMap[idx] == true) {
-                            val qty = qtyMap[idx]?.toDoubleOrNull() ?: item.quantity
-                            val rate = rateMap[idx]?.toDoubleOrNull() ?: item.rate
-                            finalItems.add(
-                                item.copy(
-                                    quantity = qty,
-                                    rate = rate,
-                                    amount = qty * rate
-                                )
+            if (specs.laminateImageUri.isNotBlank() || specs.designImageUri.isNotBlank()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (specs.laminateImageUri.isNotBlank()) {
+                        Column {
+                            Text("Laminate Preview", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            coil.compose.AsyncImage(
+                                model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                    .data(java.io.File(androidx.compose.ui.platform.LocalContext.current.filesDir, java.io.File(specs.laminateImageUri).name))
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = "Laminate Preview",
+                                modifier = Modifier
+                                    .size(60.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.outlineVariant),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
                             )
                         }
                     }
-                    onAddItems(finalItems)
-                    onDismiss()
+                    if (specs.designImageUri.isNotBlank()) {
+                        Column {
+                            Text("Design Ref", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            coil.compose.AsyncImage(
+                                model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                    .data(java.io.File(androidx.compose.ui.platform.LocalContext.current.filesDir, java.io.File(specs.designImageUri).name))
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = "Design Preview",
+                                modifier = Modifier
+                                    .size(60.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.outlineVariant),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            )
+            
+                        }
+                    }
                 }
-            ) {
-                Text("Add Selected")
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+            if (onEdit != null || onDelete != null || onDuplicate != null || onMoveUp != null || onMoveDown != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (onMoveUp != null) {
+                        IconButton(onClick = onMoveUp, modifier = Modifier.size(48.dp)) {
+                            Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Move Up", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    if (onMoveDown != null) {
+                        IconButton(onClick = onMoveDown, modifier = Modifier.size(48.dp)) {
+                            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Move Down", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    if (onEdit != null) {
+                        IconButton(onClick = onEdit, modifier = Modifier.size(48.dp)) {
+                            Icon(Icons.Filled.Edit, contentDescription = "Edit Item", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    if (onDuplicate != null) {
+                        IconButton(onClick = onDuplicate, modifier = Modifier.size(48.dp)) {
+                            Icon(Icons.Filled.ContentCopy, contentDescription = "Duplicate Item", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    if (onDelete != null) {
+                        IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
+                            Icon(Icons.Filled.Delete, contentDescription = "Delete Item", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                }
             }
         }
-    )
+    }
+}
+
+@Composable
+private fun SpecRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.Start,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "$label :",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.width(85.dp)
+        )
+        Text(
+            text = value,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
 }

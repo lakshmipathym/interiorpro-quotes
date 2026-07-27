@@ -29,22 +29,22 @@ class RestoreManagerImpl(
     override suspend fun verifyBackupIntegrity(backupFile: File, password: String): Boolean {
         try {
             if (!backupFile.exists()) {
-                Log.e(TAG, "File does not exist: ${backupFile.absolutePath}")
+
                 return false
             }
 
             // Verify basic file size constraints
             if (backupFile.length() == 0L) {
-                Log.e(TAG, "Empty backup file")
+
                 return false
             }
 
             // Cryptographic checksum calculation
             val computedHash = checksumManager.computeFileSha256(backupFile)
-            Log.d(TAG, "Integrity verified for file. Computed SHA-256 hash: $computedHash")
+
             return true
         } catch (e: Exception) {
-            Log.e(TAG, "Exception during backup integrity check: ${e.message}", e)
+
             return false
         }
     }
@@ -57,30 +57,43 @@ class RestoreManagerImpl(
             if (!backupFile.exists()) {
                 return RestoreResult.InvalidBackup("Backup file does not exist")
             }
+            if (backupFile.length() == 0L || backupFile.length() > 50 * 1024 * 1024) {
+                return RestoreResult.InvalidBackup("Backup file is empty or exceeds maximum size (50MB)")
+            }
 
             // 2. Read encrypted archive
             var dataBytes = backupFile.readBytes()
 
             // 3. Cryptographic Validation (SHA-256)
             val fileHash = checksumManager.computeFileSha256(backupFile)
-            Log.d(TAG, "Restoring archive with checksum SHA-256: $fileHash")
+
 
             // 4. Decrypt via AES-256
-            Log.d(TAG, "Decrypting archive payload...")
+
             try {
                 dataBytes = encryptionManager.decrypt(dataBytes, password.ifEmpty { "InteriorProSecureBackupDefault" })
             } catch (e: Exception) {
-                Log.e(TAG, "Decryption failed. Invalid credentials or corrupt package: ${e.message}")
+
                 return RestoreResult.InvalidBackup("Decryption failed: Incorrect password or corrupt payload")
             }
 
             // 5. Decompress via GZIP
             val jsonText = try {
-                Log.d(TAG, "Decompressing archive payload...")
+
                 val bis = ByteArrayInputStream(dataBytes)
                 GZIPInputStream(bis).use { gzip ->
                     InputStreamReader(gzip, Charsets.UTF_8).use { reader ->
-                        reader.readText()
+                        val sb = java.lang.StringBuilder()
+                        val buffer = CharArray(8192)
+                        var charsRead: Int
+                        var totalChars = 0
+                        val maxChars = 100 * 1024 * 1024 // 100MB limit for zip bombs
+                        while (reader.read(buffer).also { charsRead = it } != -1) {
+                            totalChars += charsRead
+                            if (totalChars > maxChars) throw SecurityException("Payload exceeded maximum allowed size")
+                            sb.append(buffer, 0, charsRead)
+                        }
+                        sb.toString()
                     }
                 }
             } catch (e: Exception) {
@@ -94,14 +107,13 @@ class RestoreManagerImpl(
             }
 
             // 6. Temporary Restore & Structural/Semantic Validation
-            Log.d(TAG, "Performing semantic validation of backup schema...")
+
             val isValid = com.example.backup.BackupManager.validateBackup(jsonText, password = "")
             if (!isValid) {
-                Log.e(TAG, "Staging validation failed: Structural fields are invalid or version is unsupported.")
+
                 return RestoreResult.InvalidBackup("Staging validation failed: Invalid JSON or schema structure")
             }
 
-            Log.d(TAG, "Initiating temporary staging-first restore...")
             val tempDb = Room.inMemoryDatabaseBuilder(
                 context,
                 AppDatabase::class.java
@@ -112,7 +124,7 @@ class RestoreManagerImpl(
                 val tempImportSuccess = com.example.backup.BackupManager.importBackup(tempDb, tempRepository, jsonText, password = "")
                 if (!tempImportSuccess) {
                     try { tempDb.close() } catch (ignored: Exception) {}
-                    Log.e(TAG, "Temporary restore staging validation failed: importBackup returned false.")
+
                     return RestoreResult.InvalidBackup("Staging validation failed: Database import into temporary container failed.")
                 }
 
@@ -120,7 +132,7 @@ class RestoreManagerImpl(
                 val profile = tempDb.companyProfileDao().getProfileDirect()
                 if (profile == null) {
                     try { tempDb.close() } catch (ignored: Exception) {}
-                    Log.e(TAG, "Staging validation failed: Imported database company profile is missing.")
+
                     return RestoreResult.InvalidBackup("Staging validation failed: Database company profile is missing.")
                 }
 
@@ -131,8 +143,8 @@ class RestoreManagerImpl(
                 Log.i(TAG, "Staging validation and database integrity checks succeeded.")
             } catch (e: Exception) {
                 try { tempDb.close() } catch (ignored: Exception) {}
-                Log.e(TAG, "Database validation failed with exception: ${e.message}", e)
-                return RestoreResult.InvalidBackup("Staging validation failed: Database structure or schema is corrupt: ${e.message}")
+
+                return RestoreResult.InvalidBackup("Staging validation failed: Database structure or schema is corrupt")
             } finally {
                 try {
                     tempDb.close()
@@ -150,10 +162,71 @@ class RestoreManagerImpl(
                 return RestoreResult.Rollback("Database restore transaction failed.")
             }
 
+            // Restore graphic assets from the backup package
+            try {
+                val rootObj = org.json.JSONObject(jsonText)
+                if (rootObj.has("graphics")) {
+                    val graphics = rootObj.getJSONObject("graphics")
+                    
+                    // 1. Restore Company Logo
+                    if (graphics.has("logo_base64")) {
+                        val base64 = graphics.getString("logo_base64")
+                        if (base64.isNotEmpty()) {
+                            val bytes = android.util.Base64.decode(base64, android.util.Base64.DEFAULT)
+                            java.io.File(context.filesDir, "company_logo.png").writeBytes(bytes)
+                        }
+                    }
+                    
+                    // 2. Restore Authorized Signature
+                    if (graphics.has("signature_base64")) {
+                        val base64 = graphics.getString("signature_base64")
+                        if (base64.isNotEmpty()) {
+                            val bytes = android.util.Base64.decode(base64, android.util.Base64.DEFAULT)
+                            java.io.File(context.filesDir, "auth_signature.png").writeBytes(bytes)
+                        }
+                    }
+                    
+                    // 3. Restore Company Seal
+                    if (graphics.has("seal_base64")) {
+                        val base64 = graphics.getString("seal_base64")
+                        if (base64.isNotEmpty()) {
+                            val bytes = android.util.Base64.decode(base64, android.util.Base64.DEFAULT)
+                            java.io.File(context.filesDir, "company_seal.png").writeBytes(bytes)
+                        }
+                    }
+                    
+                    // 4. Restore Reference Design Images
+                    val keys = graphics.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next()
+                        if (key.startsWith("design_") || key.startsWith("laminate_")) {
+                            val base64 = graphics.getString(key)
+                            if (base64.isNotEmpty()) {
+                                val bytes = android.util.Base64.decode(base64, android.util.Base64.DEFAULT)
+                                java.io.File(context.filesDir, key).writeBytes(bytes)
+                            }
+                        }
+                    }
+                }
+                
+                // 5. Update paths in CompanyProfile table to match active staging paths on this specific system
+                val currentProfile = repository.getCompanyProfileDirect()
+                if (currentProfile != null) {
+                    val updatedProfile = currentProfile.copy(
+                        logoPath = if (java.io.File(context.filesDir, "company_logo.png").exists()) java.io.File(context.filesDir, "company_logo.png").absolutePath else currentProfile.logoPath,
+                        signaturePath = if (java.io.File(context.filesDir, "auth_signature.png").exists()) java.io.File(context.filesDir, "auth_signature.png").absolutePath else currentProfile.signaturePath,
+                        companySealPath = if (java.io.File(context.filesDir, "company_seal.png").exists()) java.io.File(context.filesDir, "company_seal.png").absolutePath else currentProfile.companySealPath
+                    )
+                    db.companyProfileDao().insertOrUpdate(updatedProfile)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to restore graphic assets: ${e.message}")
+            }
+
             RestoreResult.Success
         } catch (e: Exception) {
-            Log.e(TAG, "Safe restore encountered a fatal exception; rolled back staging context", e)
-            RestoreResult.Rollback("Restore encountered a fatal exception: ${e.message}", e)
+
+            RestoreResult.Rollback("Restore encountered a fatal exception")
         }
     }
 }

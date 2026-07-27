@@ -1,0 +1,3 @@
+perl -0777 -pi -e 's/java\.io\.File\(designPath\)/java\.io\.File\(context\.filesDir, java\.io\.File\(designPath\)\.name\)/g' app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt
+perl -0777 -pi -e 's/java\.io\.File\(specs\.laminateImageUri\)/java\.io\.File\(androidx\.compose\.ui\.platform\.LocalContext\.current\.filesDir, java\.io\.File\(specs\.laminateImageUri\)\.name\)/g' app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt
+perl -0777 -pi -e 's/java\.io\.File\(specs\.designImageUri\)/java\.io\.File\(androidx\.compose\.ui\.platform\.LocalContext\.current\.filesDir, java\.io\.File\(specs\.designImageUri\)\.name\)/g' app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt

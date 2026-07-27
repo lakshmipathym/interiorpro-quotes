@@ -7,6 +7,26 @@ import java.io.File
  */
 interface EncryptionManager {
     /**
+     * Configures the active encryption configuration.
+     */
+    fun setConfig(config: EncryptionConfig)
+
+    /**
+     * Retrieves the active encryption configuration.
+     */
+    fun getConfig(): EncryptionConfig?
+
+    /**
+     * Encrypts a byte array using the active encryption configuration.
+     */
+    fun encrypt(data: ByteArray): EncryptionResult
+
+    /**
+     * Decrypts an EncryptionResult using the active encryption configuration.
+     */
+    fun decrypt(result: EncryptionResult): ByteArray
+
+    /**
      * Encrypts a byte array using AES-256 (standard security with password-based key derivation).
      */
     fun encrypt(data: ByteArray, password: String): ByteArray

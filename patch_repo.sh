@@ -1,0 +1,1 @@
+sed -i 's/val finalItems = items.map { it.copy(quotationId = if (quotation.id > 0) quotation.id else qId) }/val finalItems = items.map { it.copy(id = 0, quotationId = if (quotation.id > 0) quotation.id else qId) }/g' app/src/main/java/com/example/data/QuotesRepository.kt

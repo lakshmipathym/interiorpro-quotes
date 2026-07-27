@@ -38,6 +38,10 @@ object PdfGenerator {
     private const val COLOR_SUCCESS = "#16A34A"
     private const val COLOR_DANGER = "#DC2626"
 
+    private val TYPEFACE_NORMAL = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+    private val TYPEFACE_BOLD = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    private val TYPEFACE_ITALIC = Typeface.create(Typeface.DEFAULT, Typeface.ITALIC)
+
     // Main Engine to handle dynamic, multi-page layout and command recording
     private class PdfEngine(
         val context: Context,
@@ -54,14 +58,118 @@ object PdfGenerator {
         val maxContentY = pageHeight - bottomMargin - 20f // safety margin for footer
 
         var currentY = topMargin
+        var rightYTracker = 0f
         var currentPageIndex = 0
         var inTableMode = false
 
         // Drawing commands grouped by page index: (Canvas, CurrentPage, TotalPages) -> Unit
         val pagesCommands = mutableListOf<MutableList<(Canvas, Int, Int) -> Unit>>()
 
+        val bitmapCache = mutableMapOf<String, Bitmap>()
+        val paintCache = mutableMapOf<String, Paint>()
+        val colorCache = mutableMapOf<String, Int>()
+        val wrapTextCache = mutableMapOf<String, List<String>>()
+
         init {
             pagesCommands.add(mutableListOf())
+        }
+
+        fun parseColor(hex: String): Int {
+            return colorCache.getOrPut(hex) { Color.parseColor(hex) }
+        }
+
+        fun getPaint(
+            color: Int,
+            textSize: Float = 0f,
+            typeface: Typeface = TYPEFACE_NORMAL,
+            style: Paint.Style = Paint.Style.FILL,
+            strokeWidth: Float = 0f,
+            isAntiAlias: Boolean = true,
+            textAlign: Paint.Align = Paint.Align.LEFT,
+            isFilterBitmap: Boolean = false
+        ): Paint {
+            val key = "$color:$textSize:${typeface.hashCode()}:${style.ordinal}:$strokeWidth:$isAntiAlias:${textAlign.ordinal}:$isFilterBitmap"
+            return paintCache.getOrPut(key) {
+                Paint().apply {
+                    this.color = color
+                    if (textSize > 0f) this.textSize = textSize
+                    this.typeface = typeface
+                    this.style = style
+                    this.strokeWidth = strokeWidth
+                    this.isAntiAlias = isAntiAlias
+                    this.textAlign = textAlign
+                    this.isFilterBitmap = isFilterBitmap
+                    this.isDither = true
+                    this.flags = this.flags or Paint.SUBPIXEL_TEXT_FLAG
+                    this.hinting = Paint.HINTING_ON
+                }
+            }
+        }
+
+        fun getPaint(
+            colorHex: String,
+            textSize: Float = 0f,
+            typeface: Typeface = TYPEFACE_NORMAL,
+            style: Paint.Style = Paint.Style.FILL,
+            strokeWidth: Float = 0f,
+            isAntiAlias: Boolean = true,
+            textAlign: Paint.Align = Paint.Align.LEFT,
+            isFilterBitmap: Boolean = false
+        ): Paint {
+            return getPaint(parseColor(colorHex), textSize, typeface, style, strokeWidth, isAntiAlias, textAlign, isFilterBitmap)
+        }
+
+        fun wrapText(text: String, width: Int, paint: Paint): List<String> {
+            if (text.isEmpty()) return emptyList()
+            val key = "$text:$width:${paint.textSize}:${paint.typeface?.hashCode()}"
+            return wrapTextCache.getOrPut(key) {
+                val words = text.split(" ")
+                val lines = mutableListOf<String>()
+                var currentLine = ""
+
+                for (word in words) {
+                    val testLine = if (currentLine.isEmpty()) word else "$currentLine $word"
+                    val testWidth = paint.measureText(testLine)
+                    if (testWidth <= width) {
+                        currentLine = testLine
+                    } else {
+                        if (currentLine.isNotEmpty()) {
+                            lines.add(currentLine)
+                        }
+                        currentLine = word
+                    }
+                }
+                if (currentLine.isNotEmpty()) {
+                    lines.add(currentLine)
+                }
+                lines
+            }
+        }
+
+        fun getOrLoadBitmap(path: String, reqWidth: Float, reqHeight: Float): Bitmap? {
+            val key = "$path:$reqWidth:$reqHeight"
+            bitmapCache[key]?.let { if (!it.isRecycled) return it }
+            val bitmap = ImageManager.loadScaledBitmap(path, reqWidth, reqHeight)
+            if (bitmap != null) {
+                bitmapCache[key] = bitmap
+            }
+            return bitmap
+        }
+
+        fun clearBitmapCache() {
+            bitmapCache.values.forEach { bitmap ->
+                if (!bitmap.isRecycled) {
+                    bitmap.recycle()
+                }
+            }
+            bitmapCache.clear()
+        }
+
+        fun clearCaches() {
+            clearBitmapCache()
+            paintCache.clear()
+            wrapTextCache.clear()
+            colorCache.clear()
         }
 
         fun ensureSpace(heightNeeded: Float, reserveHeader: Boolean = false) {
@@ -88,21 +196,13 @@ object PdfGenerator {
 
         private fun drawRunningPageHeader() {
             val y = currentY
-            val companyNameText = company.companyName
+            val companyNameText = company.canonicalName
             val quoteNumText = quotation.quotationNumber
             if (companyNameText.isNotBlank()) {
                 addCommand { canvas, _, _ ->
-                    val p = Paint().apply {
-                        color = Color.parseColor(COLOR_TEXT_SECONDARY)
-                        textSize = 7.5f
-                        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                        isAntiAlias = true
-                    }
+                    val p = getPaint(COLOR_TEXT_SECONDARY, 7.5f, TYPEFACE_BOLD)
                     canvas.drawText("${companyNameText.uppercase()} - QUOTATION #$quoteNumText", marginX, y + 10f, p)
-                    canvas.drawLine(marginX, y + 14f, endX, y + 14f, Paint().apply {
-                        color = Color.parseColor(COLOR_BORDER)
-                        strokeWidth = 0.5f
-                    })
+                    canvas.drawLine(marginX, y + 14f, endX, y + 14f, getPaint(COLOR_BORDER, strokeWidth = 0.5f, style = Paint.Style.STROKE))
                 }
                 currentY += 24f
             }
@@ -119,28 +219,19 @@ object PdfGenerator {
             }
 
             addCommand { canvas, _, _ ->
-                val headerBgPaint = Paint().apply {
-                    color = Color.parseColor(COLOR_PRIMARY_BLUE)
-                    style = Paint.Style.FILL
-                }
+                val headerBgPaint = getPaint(COLOR_PRIMARY_BLUE, style = Paint.Style.FILL)
                 canvas.drawRect(colX[0], y, colX[colX.size - 1] + colWidths[colWidths.size - 1], y + 18f, headerBgPaint)
 
-                val textPaint = Paint().apply {
-                    color = Color.parseColor(COLOR_WHITE)
-                    textSize = 7.5f
-                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                    isAntiAlias = true
-                    textAlign = Paint.Align.CENTER
-                }
+                val textPaint = getPaint(COLOR_WHITE, 7.5f, TYPEFACE_BOLD, textAlign = Paint.Align.CENTER)
 
                 val fontMetrics = textPaint.fontMetrics
                 val centerY = y + 18f / 2f - (fontMetrics.ascent + fontMetrics.descent) / 2f
 
                 val headers = listOf("Sl No", "Item", "Specifications", "Size", "Qty", "Rate", "Amount")
                 for (i in headers.indices) {
-                    if (i == 5 || i == 6) {
+                    if (i == 4 || i == 5 || i == 6) {
                         val cx = colX[i] + colWidths[i] - 4f
-                        val rightPaint = Paint(textPaint).apply { textAlign = Paint.Align.RIGHT }
+                        val rightPaint = getPaint(COLOR_WHITE, 7.5f, TYPEFACE_BOLD, textAlign = Paint.Align.RIGHT)
                         canvas.drawText(headers[i], cx, centerY, rightPaint)
                     } else {
                         val cx = colX[i] + colWidths[i] / 2f
@@ -176,12 +267,23 @@ object PdfGenerator {
         return generateQuotationPdf(context, company, quotation, items, outputFile)
     }
 
+    fun generateQuotationPdf(
+        context: Context,
+        company: CompanyProfile,
+        snapshot: com.example.domain.models.FinalizedQuotationSnapshot,
+        outputFile: File
+    ): File {
+        val (quotation, items) = com.example.data.snapshot.QuotationSnapshotMapper.toEntity(snapshot)
+        return generateQuotationPdf(context, company, quotation, items, outputFile, isSnapshotMode = true)
+    }
+
     private fun generateQuotationPdf(
         context: Context,
         company: CompanyProfile,
         quotation: Quotation,
         items: List<QuotationItem>,
-        outputFile: File
+        outputFile: File,
+        isSnapshotMode: Boolean = false
     ): File {
         val pdfPrefs = context.getSharedPreferences("pdf_prefs", Context.MODE_PRIVATE)
         val showLogo = pdfPrefs.getBoolean("pdf_show_logo", true)
@@ -197,78 +299,66 @@ object PdfGenerator {
         val showTermsConditions = pdfPrefs.getBoolean("pdf_show_terms_conditions", true)
         val showPageNumber = pdfPrefs.getBoolean("pdf_show_page_number", true)
 
-        // Force dynamic recalculation of Item Amount = Qty * Rate
-        val validatedItems = items.map { item ->
-            val expectedAmount = item.quantity * item.rate
-            if (Math.abs(item.amount - expectedAmount) > 0.005) {
-                item.copy(amount = expectedAmount)
-            } else {
-                item
-            }
-        }
-
-        val subtotal = validatedItems.sumOf { it.amount }
-        val taxable = maxOf(0.0, subtotal - quotation.discount)
-        val gstAmount = if (showGst) ((taxable * quotation.gstRate) / 100.0) else 0.0
-        val grandTotalRaw = taxable + gstAmount
-        val grandTotalRounded = Math.round(grandTotalRaw).toDouble()
-        val roundOff = grandTotalRounded - grandTotalRaw
-
-        val updatedQuotation = quotation.copy(
-            subtotal = subtotal,
-            gstAmount = gstAmount,
-            grandTotal = grandTotalRounded
-        )
-
         // Query database for complete client details
         val db = AppDatabase.getDatabase(context)
         val customer = kotlinx.coroutines.runBlocking {
             try {
-                db.customerDao().getCustomerById(updatedQuotation.customerId.toLong())
+                db.customerDao().getCustomerById(quotation.customerId.toLong())
             } catch (e: Exception) {
                 null
             }
         }
 
-        val engine = PdfEngine(context, company, updatedQuotation)
+        val engine = PdfEngine(context, company, quotation)
 
         // --- RENDER MODULAR SECTIONS ---
-        drawHeader(engine, company, updatedQuotation, showLogo, showValidUntil, showGst, showWebsite, showWhatsapp)
-        drawCustomer(engine, customer, updatedQuotation)
-        drawItemsTable(engine, validatedItems)
-        drawSummary(engine, updatedQuotation, showGst, showAmountInWords, roundOff)
-        drawPayment(engine, company, showBankDetails, showQrCode)
-        drawTerms(engine, company, updatedQuotation, showTermsConditions)
+        drawHeader(engine, company, quotation, showLogo, showValidUntil, showGst, showWebsite, showWhatsapp)
+        drawCustomer(engine, customer, quotation)
+        drawItemsTable(engine, items, isSnapshotMode)
+        drawSummaryAndPayment(engine, quotation, company, showGst, showAmountInWords, showBankDetails, showQrCode, isSnapshotMode)
+        drawTerms(engine, company, quotation, showTermsConditions)
         drawSignature(engine, company, showCompanySeal, showSignature)
-        drawReferenceImages(engine, validatedItems)
+        drawReferenceImages(context, engine, items)
 
         // --- COMPILE PDF DOCUMENT PAGES ---
         val pdfDocument = PdfDocument()
-        engine.pagesCommands.forEachIndexed { idx, commands ->
-            val pageInfo = PdfDocument.PageInfo.Builder(595, 842, idx + 1).create()
-            val page = pdfDocument.startPage(pageInfo)
-            val canvas = page.canvas
+        try {
+            engine.pagesCommands.forEachIndexed { idx, commands ->
+                val pageInfo = PdfDocument.PageInfo.Builder(595, 842, idx + 1).create()
+                val page = pdfDocument.startPage(pageInfo)
+                val canvas = page.canvas
 
-            // Standard elegant corporate page border
-            val pBorder = Paint().apply {
-                color = Color.parseColor(COLOR_BORDER)
-                strokeWidth = 0.5f
-                style = Paint.Style.STROKE
+                // Standard elegant corporate page border
+                val pBorder = engine.getPaint(COLOR_BORDER, strokeWidth = 0.5f, style = Paint.Style.STROKE)
+                canvas.drawRect(20f, 20f, 575f, 822f, pBorder)
+
+                // Inject Stable Metadata into the first page
+                if (idx == 0) {
+                    val metaPaint = engine.getPaint(Color.TRANSPARENT, 1f, TYPEFACE_NORMAL)
+                    canvas.drawText("Title: Estimate & Quotation", 0f, 0f, metaPaint)
+                    canvas.drawText("Author: InteriorPro ERP", 0f, 0f, metaPaint)
+                    canvas.drawText("Subject: Interior Quotation", 0f, 0f, metaPaint)
+                    canvas.drawText("Keywords: interior, quotation, estimate, ERP", 0f, 0f, metaPaint)
+                    val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+                    canvas.drawText("CreationDate: $dateStr", 0f, 0f, metaPaint)
+                    canvas.drawText("AppVersion: 1.5", 0f, 0f, metaPaint)
+                }
+
+                commands.forEach { cmd ->
+                    cmd(canvas, idx + 1, engine.pagesCommands.size)
+                }
+
+                drawFooter(engine, canvas, idx + 1, engine.pagesCommands.size, company, showPageNumber)
+                pdfDocument.finishPage(page)
             }
-            canvas.drawRect(20f, 20f, 575f, 822f, pBorder)
 
-            commands.forEach { cmd ->
-                cmd(canvas, idx + 1, engine.pagesCommands.size)
+            FileOutputStream(outputFile).use { out ->
+                pdfDocument.writeTo(out)
             }
-
-            drawFooter(canvas, idx + 1, engine.pagesCommands.size, company, showPageNumber)
-            pdfDocument.finishPage(page)
+        } finally {
+            pdfDocument.close()
+            engine.clearCaches()
         }
-
-        FileOutputStream(outputFile).use { out ->
-            pdfDocument.writeTo(out)
-        }
-        pdfDocument.close()
 
         return outputFile
     }
@@ -290,88 +380,83 @@ object PdfGenerator {
 
         val headerTextLeft = if (hasLogo) engine.marginX + logoWidth + 12f else engine.marginX
 
-        val compNamePaint = Paint().apply {
-            color = Color.parseColor(COLOR_PRIMARY_BLUE)
-            textSize = 13f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            isAntiAlias = true
-        }
-        val taglinePaint = Paint().apply {
-            color = Color.parseColor(COLOR_ACCENT_ORANGE)
-            textSize = 8f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            isAntiAlias = true
-        }
-        val contactPaint = Paint().apply {
-            color = Color.parseColor(COLOR_TEXT_SECONDARY)
-            textSize = 7f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-            isAntiAlias = true
-        }
+        val compNamePaint = engine.getPaint(COLOR_PRIMARY_BLUE, 13f, TYPEFACE_BOLD)
+        val taglinePaint = engine.getPaint(COLOR_ACCENT_ORANGE, 8f, TYPEFACE_BOLD)
+        val contactPaint = engine.getPaint(COLOR_TEXT_SECONDARY, 7f, TYPEFACE_NORMAL)
 
         val maxLeftW = (390f - headerTextLeft - 15f).toInt()
-        val coNameLines = if (company.companyName.isNotBlank()) wrapText(company.companyName.uppercase(), maxLeftW, compNamePaint) else emptyList()
-        val taglineLines = if (company.tagline.isNotBlank()) wrapText(company.tagline, maxLeftW, taglinePaint) else emptyList()
+        val coNameLines = if (true) engine.wrapText(company.canonicalName.uppercase(), maxLeftW, compNamePaint) else emptyList()
+        val safeTagline = company.tagline.replace(Regex("(?i)primium"), "Premium")
+        val taglineLines = if (safeTagline.isNotBlank()) engine.wrapText(safeTagline, maxLeftW, taglinePaint) else emptyList()
 
         val addrParts = listOf(company.address, company.city, company.state, company.pincode).filter { it.isNotBlank() }
-        val addrLines = if (addrParts.isNotEmpty()) wrapText(addrParts.joinToString(", "), maxLeftW, contactPaint) else emptyList()
+        val addrLines = if (addrParts.isNotEmpty()) engine.wrapText(addrParts.joinToString(", "), maxLeftW, contactPaint) else emptyList()
+
+        fun smartWrapParts(parts: List<String>, maxW: Int, paint: Paint): List<String> {
+            val lines = mutableListOf<String>()
+            var currentLine = ""
+            for (part in parts) {
+                if (currentLine.isEmpty()) {
+                    currentLine = part
+                } else {
+                    val testLine = "$currentLine | $part"
+                    if (paint.measureText(testLine) <= maxW) {
+                        currentLine = testLine
+                    } else {
+                        lines.add(currentLine)
+                        currentLine = part
+                    }
+                }
+            }
+            if (currentLine.isNotEmpty()) {
+                lines.add(currentLine)
+            }
+            return lines
+        }
 
         val phoneEmailParts = mutableListOf<String>()
         if (company.phone.isNotBlank()) phoneEmailParts.add("Ph: ${company.phone}")
         if (showWhatsapp && company.whatsappNumber.isNotBlank()) phoneEmailParts.add("WA: ${company.whatsappNumber}")
         if (company.email.isNotBlank()) phoneEmailParts.add("Email: ${company.email}")
-        val phoneEmailLines = if (phoneEmailParts.isNotEmpty()) wrapText(phoneEmailParts.joinToString(" | "), maxLeftW, contactPaint) else emptyList()
+        val phoneEmailLines = smartWrapParts(phoneEmailParts, maxLeftW, contactPaint)
 
         val gstinWebParts = mutableListOf<String>()
         if (showGst && company.gstin.isNotBlank()) gstinWebParts.add("GSTIN: ${company.gstin}")
         val computedPan = if (showGst) extractPanFromGstin(company.gstin) else null
         if (computedPan != null) gstinWebParts.add("PAN: $computedPan")
         if (showWebsite && company.website.isNotBlank()) gstinWebParts.add("Web: ${company.website}")
-        val gstinWebLines = if (gstinWebParts.isNotEmpty()) wrapText(gstinWebParts.joinToString(" | "), maxLeftW, contactPaint) else emptyList()
+        val gstinWebLines = smartWrapParts(gstinWebParts, maxLeftW, contactPaint)
 
         val logoBottom = if (hasLogo) headerY + logoHeight else headerY
-        var leftTextY = headerY
+        var expectedTextHeight = 0f
         if (coNameLines.isNotEmpty()) {
-            leftTextY += 12f
-            if (coNameLines.size > 1) {
-                leftTextY += (coNameLines.size - 1) * 14f
-            }
+            expectedTextHeight += coNameLines.size * 14f + 2f
         }
         if (taglineLines.isNotEmpty()) {
-            leftTextY += taglineLines.size * 10f + 2f
+            expectedTextHeight += taglineLines.size * 10f + 2f
         }
         if (addrLines.isNotEmpty()) {
-            leftTextY += addrLines.size * 9f + 2f
+            expectedTextHeight += addrLines.size * 9f + 2f
         }
         if (phoneEmailLines.isNotEmpty()) {
-            leftTextY += phoneEmailLines.size * 9f + 2f
+            expectedTextHeight += phoneEmailLines.size * 9f + 2f
         }
         if (gstinWebLines.isNotEmpty()) {
-            leftTextY += gstinWebLines.size * 9f + 2f
+            expectedTextHeight += gstinWebLines.size * 9f + 2f
         }
-
-        val textHeight = leftTextY - headerY
-        val logoTop = if (hasLogo && textHeight > logoHeight) {
-            headerY + (textHeight - logoHeight) / 2f
-        } else {
-            headerY
-        }
-        val textStartTop = if (hasLogo && logoHeight > textHeight) {
-            headerY + (logoHeight - textHeight) / 2f
-        } else {
-            headerY
-        }
+        val textHeight = expectedTextHeight
+        val logoTop = headerY
+        val textStartTop = headerY
 
         val leftColumnBottom = headerY + maxOf(if (hasLogo) logoHeight else 0f, textHeight)
         val boxBottom = if (showValidUntil) headerY + 54f else headerY + 36f
         val contentBottom = maxOf(leftColumnBottom, boxBottom)
 
         val bannerY = contentBottom + 12f
-        val totalHeaderHeight = (bannerY + 18f + 14f) - headerY
 
         engine.addCommand { canvas, _, _ ->
             if (hasLogo) {
-                drawBitmapSafely(canvas, company.logoPath, engine.marginX, logoTop, logoWidth, logoHeight)
+                drawBitmapSafely(engine, canvas, company.logoPath, engine.marginX, logoTop, logoWidth, logoHeight)
             }
 
             var currY = textStartTop
@@ -416,21 +501,21 @@ object PdfGenerator {
             val boxTop = headerY
 
             val metaBox = RectF(boxLeft, boxTop, boxLeft + boxW, boxBottom)
-            canvas.drawRoundRect(metaBox, 4f, 4f, Paint().apply { color = Color.parseColor(COLOR_LIGHT_BG) })
-            canvas.drawRoundRect(metaBox, 4f, 4f, Paint().apply { color = Color.parseColor(COLOR_BORDER); strokeWidth = 0.5f; style = Paint.Style.STROKE })
+            canvas.drawRoundRect(metaBox, 4f, 4f, engine.getPaint(COLOR_LIGHT_BG))
+            canvas.drawRoundRect(metaBox, 4f, 4f, engine.getPaint(COLOR_BORDER, strokeWidth = 0.5f, style = Paint.Style.STROKE))
 
-            val lineP = Paint().apply { color = Color.parseColor(COLOR_BORDER); strokeWidth = 0.5f }
+            val lineP = engine.getPaint(COLOR_BORDER, strokeWidth = 0.5f, style = Paint.Style.STROKE)
             canvas.drawLine(boxLeft, boxTop + 18f, boxLeft + boxW, boxTop + 18f, lineP)
             if (showValidUntil) {
                 canvas.drawLine(boxLeft, boxTop + 36f, boxLeft + boxW, boxTop + 36f, lineP)
             }
 
-            val labelP = Paint().apply { color = Color.parseColor(COLOR_TEXT_SECONDARY); textSize = 7.5f; isAntiAlias = true }
-            val valP = Paint().apply { color = Color.parseColor(COLOR_DARK_SLATE); textSize = 7.5f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD); isAntiAlias = true }
+            val labelP = engine.getPaint(COLOR_TEXT_SECONDARY, 7.5f, TYPEFACE_NORMAL)
+            val valP = engine.getPaint(COLOR_DARK_SLATE, 7.5f, TYPEFACE_BOLD)
 
             val sdf = SimpleDateFormat("dd MMMM yyyy", Locale.US)
             val dateStr = sdf.format(Date(quotation.date))
-            val validityDays = company.defaultValidityDays.takeIf { it > 0 } ?: 30
+            val validityDays = quotation.validityDays.takeIf { it > 0 } ?: company.defaultValidityDays.takeIf { it > 0 } ?: 30
             val validUntilMs = quotation.date + (validityDays.toLong() * 24L * 60L * 60L * 1000L)
             val validUntilStr = sdf.format(Date(validUntilMs))
 
@@ -448,17 +533,13 @@ object PdfGenerator {
                 canvas.drawText(validUntilStr, boxLeft + 72f, boxTop + 48f, valP)
             }
 
-            val titleP = Paint().apply {
-                color = Color.parseColor(COLOR_PRIMARY_BLUE)
-                textSize = 12f
-                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                textAlign = Paint.Align.CENTER
-                isAntiAlias = true
-            }
+            val titleP = engine.getPaint(COLOR_PRIMARY_BLUE, 12f, TYPEFACE_BOLD, textAlign = Paint.Align.CENTER)
             canvas.drawText("ESTIMATE & QUOTATION", 595f / 2f, bannerY + 12f, titleP)
-            canvas.drawLine(engine.marginX, bannerY + 18f, engine.endX, bannerY + 18f, Paint().apply { color = Color.parseColor(COLOR_ACCENT_ORANGE); strokeWidth = 1f })
+            canvas.drawLine(engine.marginX, bannerY + 18f, engine.endX, bannerY + 18f, engine.getPaint(COLOR_ACCENT_ORANGE, strokeWidth = 1f, style = Paint.Style.STROKE))
         }
+        val totalHeaderHeight = (bannerY + 18f) - headerY
         engine.currentY += totalHeaderHeight
+        engine.currentY += 14f // explicit section spacing
     }
 
     private fun drawCustomer(engine: PdfEngine, customer: CustomerEntity?, quotation: Quotation) {
@@ -476,9 +557,15 @@ object PdfGenerator {
             if (isValidCustomerValue(customer.customerName)) {
                 clientRowsLeft.add(Pair("Customer Name", customer.customerName.trim()))
             }
-            val comp = customer.companyName.ifBlank { customer.siteLocation }.trim()
-            if (isValidCustomerValue(comp)) {
-                clientRowsLeft.add(Pair("Company Name", comp))
+            if (isValidCustomerValue(customer.companyName)) {
+                clientRowsLeft.add(Pair("Company Name", customer.companyName.trim()))
+            }
+            if (isValidCustomerValue(quotation.projectName)) {
+                clientRowsLeft.add(Pair("Project Name", quotation.projectName.trim()))
+            }
+            val siteN = quotation.siteName.ifBlank { customer.siteLocation }
+            if (isValidCustomerValue(siteN)) {
+                clientRowsLeft.add(Pair("Site Name", siteN.trim()))
             }
             if (isValidCustomerValue(customer.contactPerson)) {
                 clientRowsLeft.add(Pair("Contact Person", customer.contactPerson.trim()))
@@ -504,15 +591,21 @@ object PdfGenerator {
             if (billingParts.isNotEmpty()) {
                 clientRowsRight.add(Pair("Billing Address", billingParts.joinToString(", ")))
             }
-            if (isValidCustomerValue(customer.siteAddress)) {
-                clientRowsRight.add(Pair("Site Address", customer.siteAddress.trim()))
+            val siteAdd = quotation.siteAddress.ifBlank { customer.siteAddress }
+            if (isValidCustomerValue(siteAdd)) {
+                clientRowsRight.add(Pair("Site Address", siteAdd.trim()))
             }
-            if (isValidCustomerValue(customer.notes)) {
+            if (isValidCustomerValue(quotation.customerNotes)) {
+                clientRowsLeft.add(Pair("Notes", quotation.customerNotes.trim()))
+            } else if (isValidCustomerValue(customer.notes)) {
                 clientRowsLeft.add(Pair("Notes", customer.notes.trim()))
             }
         } else {
             if (isValidCustomerValue(quotation.customerName)) {
                 clientRowsLeft.add(Pair("Customer Name", quotation.customerName.trim()))
+            }
+            if (isValidCustomerValue(quotation.projectName)) {
+                clientRowsLeft.add(Pair("Project Name", quotation.projectName.trim()))
             }
             if (isValidCustomerValue(quotation.customerPhone)) {
                 clientRowsRight.add(Pair("Mobile", quotation.customerPhone.trim()))
@@ -520,29 +613,28 @@ object PdfGenerator {
             if (isValidCustomerValue(quotation.customerAddress)) {
                 clientRowsRight.add(Pair("Address", quotation.customerAddress.trim()))
             }
+            if (isValidCustomerValue(quotation.siteName)) {
+                clientRowsLeft.add(Pair("Site Name", quotation.siteName.trim()))
+            }
+            if (isValidCustomerValue(quotation.siteAddress)) {
+                clientRowsRight.add(Pair("Site Address", quotation.siteAddress.trim()))
+            }
+            if (isValidCustomerValue(quotation.customerNotes)) {
+                clientRowsLeft.add(Pair("Notes", quotation.customerNotes.trim()))
+            }
         }
 
         if (clientRowsLeft.isEmpty() && clientRowsRight.isEmpty()) return
 
-        val labelP = Paint().apply {
-            color = Color.parseColor(COLOR_TEXT_SECONDARY)
-            textSize = 7.5f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-            isAntiAlias = true
-        }
-        val valP = Paint().apply {
-            color = Color.parseColor(COLOR_DARK_SLATE)
-            textSize = 7.5f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            isAntiAlias = true
-        }
+        val labelP = engine.getPaint(COLOR_TEXT_SECONDARY, 7.5f, TYPEFACE_NORMAL)
+        val valP = engine.getPaint(COLOR_DARK_SLATE, 7.5f, TYPEFACE_BOLD)
 
         val wrappedLeftRows = clientRowsLeft.map { row ->
-            val wrappedVal = wrapText(row.second, 155, valP)
+            val wrappedVal = engine.wrapText(row.second, 155, valP)
             row.first to wrappedVal
         }
         val wrappedRightRows = clientRowsRight.map { row ->
-            val wrappedVal = wrapText(row.second, 165, valP)
+            val wrappedVal = engine.wrapText(row.second, 165, valP)
             row.first to wrappedVal
         }
 
@@ -559,40 +651,25 @@ object PdfGenerator {
             rowHeights[i] = maxOf(leftH, rightH) + 3f // row height + gap
             totalContentH += rowHeights[i]
         }
-        val sectionH = totalContentH + 12f // bottom padding + section spacing
-        engine.ensureSpace(sectionH, reserveHeader = true)
+        totalContentH += 12f // Bottom padding inside the customer card
+
+        val cardH = totalContentH
+        engine.ensureSpace(cardH + 14f, reserveHeader = true)
 
         val blockTop = engine.currentY
         val cardW = engine.usableWidth
+
         engine.addCommand { canvas, _, _ ->
-            val hPaint = Paint().apply {
-                color = Color.parseColor(COLOR_PRIMARY_BLUE)
-                textSize = 8f
-                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                isAntiAlias = true
-            }
-            val cardBgPaint = Paint().apply {
-                color = Color.parseColor(COLOR_LIGHT_BG)
-                style = Paint.Style.FILL
-                isAntiAlias = true
-            }
-            val borderPaint = Paint().apply {
-                color = Color.parseColor(COLOR_BORDER)
-                strokeWidth = 0.5f
-                style = Paint.Style.STROKE
-                isAntiAlias = true
-            }
-            val accentBarPaint = Paint().apply {
-                color = Color.parseColor(COLOR_PRIMARY_BLUE)
-                style = Paint.Style.FILL
-                isAntiAlias = true
-            }
+            val hPaint = engine.getPaint(COLOR_PRIMARY_BLUE, 8f, TYPEFACE_BOLD)
+            val cardBgPaint = engine.getPaint(COLOR_LIGHT_BG)
+            val borderPaint = engine.getPaint(COLOR_BORDER, strokeWidth = 0.5f, style = Paint.Style.STROKE)
+            val accentBarPaint = engine.getPaint(COLOR_PRIMARY_BLUE)
 
             // Draw single full-width card styled beautifully
-            val cardRect = RectF(engine.marginX, blockTop, engine.marginX + cardW, blockTop + sectionH - 12f)
+            val cardRect = RectF(engine.marginX, blockTop, engine.marginX + cardW, blockTop + cardH)
             canvas.drawRoundRect(cardRect, 4f, 4f, cardBgPaint)
             canvas.drawRoundRect(cardRect, 4f, 4f, borderPaint)
-            canvas.drawRect(engine.marginX, blockTop, engine.marginX + 3f, blockTop + sectionH - 12f, accentBarPaint)
+            canvas.drawRect(engine.marginX, blockTop, engine.marginX + 3f, blockTop + cardH, accentBarPaint)
 
             canvas.drawText("CUSTOMER DETAILS", engine.marginX + 10f, blockTop + 14f, hPaint)
 
@@ -625,37 +702,26 @@ object PdfGenerator {
                 currentYOffset += rowHeights[i]
             }
         }
-        engine.currentY += sectionH
+        engine.currentY += cardH + 14f
     }
 
     private fun parseDimensionToInchesAndFeet(dimStr: String): Pair<Double, Double> {
-        val clean = dimStr.replace("\"", "").lowercase(Locale.US).trim()
-        if (clean.isEmpty() || clean == "null" || clean == "0" || clean == "0.0") {
-            return Pair(0.0, 0.0)
-        }
-        val numeric = clean.replace("ft", "").replace("feet", "").replace("in", "").replace("inch", "").replace("'", "").trim()
-        val value = numeric.toDoubleOrNull() ?: 0.0
-        return when {
-            dimStr.contains("\"") || clean.contains("in") || clean.contains("inch") -> {
-                // Already in inches
-                Pair(value, value / 12.0)
-            }
-            else -> {
-                // Plain number or feet
-                Pair(value * 12.0, value)
-            }
-        }
+        val feet = com.example.engine.QuotationCalculationEngine.parseDimensionToFeet(dimStr)
+        val inches = feet * 12.0
+        return Pair(inches, feet)
     }
 
     private fun formatInchesDisplay(inches: Double): String {
         return if (inches % 1.0 == 0.0) {
             String.format(Locale.US, "%.0f\"", inches)
-        } else {
+        } else if (inches * 10 % 1.0 == 0.0) {
             String.format(Locale.US, "%.1f\"", inches)
+        } else {
+            String.format(Locale.US, "%.2f\"", inches)
         }
     }
 
-    private fun drawItemsTable(engine: PdfEngine, items: List<QuotationItem>) {
+    private fun drawItemsTable(engine: PdfEngine, items: List<QuotationItem>, isSnapshotMode: Boolean) {
         engine.ensureSpace(35f, reserveHeader = true)
         engine.inTableMode = true
         engine.drawTableHeaderDirectly()
@@ -668,219 +734,265 @@ object PdfGenerator {
             tx += colWidths[i]
         }
 
-        val bodyPaint = Paint().apply {
-            color = Color.parseColor(COLOR_DARK_SLATE)
-            textSize = 7.5f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-            isAntiAlias = true
-        }
-        val bodyBoldPaint = Paint().apply {
-            color = Color.parseColor(COLOR_PRIMARY_BLUE)
-            textSize = 7.5f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            isAntiAlias = true
-        }
-        val descPaint = Paint().apply {
-            color = Color.parseColor(COLOR_TEXT_SECONDARY)
-            textSize = 7f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.ITALIC)
-            isAntiAlias = true
-        }
-        val specPaint = Paint().apply {
-            color = Color.parseColor(COLOR_TEXT_SECONDARY)
-            textSize = 6.5f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-            isAntiAlias = true
+        val bodyPaint = engine.getPaint(COLOR_DARK_SLATE, 7.5f, TYPEFACE_NORMAL)
+        val bodyBoldPaint = engine.getPaint(COLOR_PRIMARY_BLUE, 7.5f, TYPEFACE_BOLD)
+        val descPaint = engine.getPaint(COLOR_TEXT_SECONDARY, 7f, TYPEFACE_ITALIC)
+        val specPaint = engine.getPaint(COLOR_TEXT_SECONDARY, 6.5f, TYPEFACE_NORMAL)
+
+        fun toTitleCase(s: String): String {
+            val specialCases = mapOf("tv" to "TV")
+            return s.split(" ").joinToString(" ") { word ->
+                val lower = word.lowercase()
+                if (specialCases.containsKey(lower)) specialCases[lower]!!
+                else word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.US) else it.toString() }
+            }
         }
 
         items.forEachIndexed { index, item ->
             val (userDesc, specs) = parseItemSpecs(item.description)
 
-            val itemNameLines = wrapText(item.itemName.ifBlank { "Interior Item" }, 107, bodyBoldPaint)
-            val descLines = if (userDesc.isNotBlank()) wrapText(userDesc, 107, bodyPaint) else emptyList()
+            val rawName = item.itemName.trim().ifBlank { "Interior Item" }
+            val titleName = toTitleCase(rawName)
+            val itemNameLines = engine.wrapText(titleName, 107, bodyBoldPaint)
+            val descLines = if (userDesc.isNotBlank()) engine.wrapText(userDesc, 107, descPaint) else emptyList()
 
             val specsList = generateSpecsList(item)
-            val specsWrapped = mutableListOf<Pair<Boolean, String>>()
-            specsList.forEach { spec ->
-                val lines = wrapText(spec, 147, specPaint)
-                lines.forEachIndexed { idx, line ->
-                    specsWrapped.add(Pair(idx == 0, line))
-                }
+            val specsWrapped = mutableListOf<Pair<String, List<String>>>()
+            var maxLabelWidth = 0f
+            specsList.forEach { (label, value) ->
+                val lw = specPaint.measureText(label)
+                if (lw > maxLabelWidth) maxLabelWidth = lw
+                val availableW = (colWidths[2] - 25f - maxLabelWidth).toInt()
+                val lines = engine.wrapText(value, availableW, specPaint)
+                specsWrapped.add(Pair(label, lines))
             }
 
-            // Size & Area Computation using our centralized parser
-            val (wInches, wFeet) = parseDimensionToInchesAndFeet(specs.width)
-            val (hInches, hFeet) = parseDimensionToInchesAndFeet(specs.height)
-            val (dInches, dFeet) = parseDimensionToInchesAndFeet(specs.depth)
+            // Size Computation using original strings if present
+            val wFeet = if (isSnapshotMode) item.parsedWidth else com.example.engine.QuotationCalculationEngine.parseDimensionToFeet(specs.width)
+            val hFeet = if (isSnapshotMode) item.parsedHeight else com.example.engine.QuotationCalculationEngine.parseDimensionToFeet(specs.height)
+            val dFeet = if (isSnapshotMode) item.parsedDepth else com.example.engine.QuotationCalculationEngine.parseDimensionToFeet(specs.depth)
 
-            val sizeLines = mutableListOf<Pair<String, String>>()
-            if (wFeet > 0.0) {
-                sizeLines.add(Pair("W", formatInchesDisplay(wInches)))
+            val sizeLinesStr = mutableListOf<String>()
+            val dims = mutableListOf<String>()
+            fun formatDimension(feet: Double): String {
+                if (feet <= 0.0) return ""
+                val wholeFeet = feet.toLong()
+                val inches = Math.round((feet - wholeFeet) * 12.0)
+                var f = wholeFeet
+                var i = inches
+                if (i == 12L) { f += 1; i = 0 }
+                return if (i == 0L) "$f'" else if (f == 0L) "$i\"" else "$f' $i\""
             }
-            if (hFeet > 0.0) {
-                sizeLines.add(Pair("H", formatInchesDisplay(hInches)))
+            if (wFeet > 0.0) dims.add(formatDimension(wFeet))
+            if (hFeet > 0.0) dims.add(formatDimension(hFeet))
+            if (dFeet > 0.0) dims.add(formatDimension(dFeet))
+
+            if (wFeet > 0.0) sizeLinesStr.add("W : " + formatDimension(wFeet))
+            if (hFeet > 0.0) sizeLinesStr.add("H : " + formatDimension(hFeet))
+            if (dFeet > 0.0) sizeLinesStr.add("D : " + formatDimension(dFeet))
+            
+            val billableQty = if (isSnapshotMode) item.billableQuantity else (if (item.rate > 0) item.amount / item.rate else com.example.engine.QuotationCalculationEngine.calculateQuantity(specs.width, specs.height, item.quantity, item.unit, specs.depth))
+            val uLower = item.unit.trim().lowercase(Locale.US)
+            
+            val billableLabel = when {
+                uLower.contains("sq") -> "Area :"
+                uLower.contains("cu") -> "Volume :"
+                uLower.contains("ft") || uLower.contains("meter") || uLower == "r.m" || uLower == "rm" -> "Length :"
+                else -> ""
             }
-            if (dFeet > 0.0) {
-                sizeLines.add(Pair("D", formatInchesDisplay(dInches)))
-            }
-            if (wFeet > 0.0 && hFeet > 0.0) {
-                val area = wFeet * hFeet
-                sizeLines.add(Pair("Area", String.format(Locale.US, "%.2f Sq.Ft", area)))
+            if (billableLabel.isNotEmpty()) {
+                val qtyRounded = Math.round(billableQty * 100.0) / 100.0
+                val qtyStr = if (qtyRounded % 1.0 == 0.0) String.format(Locale.US, "%.0f %s", qtyRounded, item.unit.trim()) else String.format(Locale.US, "%.2f %s", qtyRounded, item.unit.trim())
+                
+                val combinedLine = "$billableLabel $qtyStr"
+                val lines = engine.wrapText(combinedLine, (colWidths[3] - 4f).toInt(), engine.getPaint(COLOR_PRIMARY_BLUE, 6f, TYPEFACE_BOLD))
+                sizeLinesStr.addAll(lines)
             }
 
-            val col1H = (itemNameLines.size + descLines.size) * 11f
-            val col2H = specsWrapped.size * 9.5f
-            val col3H = sizeLines.size * 9.5f
+            val col1H = (itemNameLines.size + descLines.size) * 11f + if (descLines.isNotEmpty()) 2f else 0f
+            val col2H = specsWrapped.sumOf { it.second.size } * 10.5f + if (specsList.size > 1) (specsList.size - 1) * 2f else 0f
+            val col3H = sizeLinesStr.size * 10.5f
 
-            val rowHeight = maxOf(22f, maxOf(col1H, col2H, col3H) + 10f)
+            val rowHeight = maxOf(28f, maxOf(col1H, col2H, col3H) + 14f)
             engine.ensureSpace(rowHeight, reserveHeader = true)
 
             val rowY = engine.currentY
             engine.addCommand { canvas, _, _ ->
                 if (index % 2 == 1) {
-                    canvas.drawRect(colX[0], rowY, engine.endX, rowY + rowHeight, Paint().apply { color = Color.parseColor(COLOR_LIGHT_BG); style = Paint.Style.FILL })
+                    canvas.drawRect(colX[0], rowY, engine.endX, rowY + rowHeight, engine.getPaint(COLOR_LIGHT_BG))
                 }
 
-                val gridBorderPaint = Paint().apply {
-                    color = Color.parseColor(COLOR_BORDER)
-                    strokeWidth = 0.5f
-                    style = Paint.Style.STROKE
-                }
+                val gridBorderPaint = engine.getPaint(COLOR_BORDER, strokeWidth = 0.5f, style = Paint.Style.STROKE)
                 canvas.drawRect(colX[0], rowY, engine.endX, rowY + rowHeight, gridBorderPaint)
                 for (i in 1 until colX.size) {
                     canvas.drawLine(colX[i], rowY, colX[i], rowY + rowHeight, gridBorderPaint)
                 }
 
-                val cellTextY = rowY + (rowHeight + 7.5f) / 2f - 1f
+                val topPadding = 8f
+                val cellTextY = rowY + topPadding + 7.5f
 
                 // Col 0: Sl No (centered)
-                canvas.drawText((index + 1).toString(), colX[0] + 11f, cellTextY, Paint(bodyPaint).apply { textAlign = Paint.Align.CENTER; isAntiAlias = true })
+                canvas.drawText((index + 1).toString(), colX[0] + 11f, cellTextY, engine.getPaint(COLOR_DARK_SLATE, 7.5f, TYPEFACE_NORMAL, textAlign = Paint.Align.CENTER))
 
                 // Col 1: Item Details
-                var textY = rowY + (rowHeight - col1H) / 2f + 8.5f
+                var textY = rowY + topPadding + 7.5f
                 itemNameLines.forEach { line ->
-                    canvas.drawText(line, colX[1] + 4f, textY, bodyBoldPaint)
+                    canvas.drawText(line, colX[1] + 6f, textY, bodyBoldPaint)
                     textY += 11f
                 }
+                if (descLines.isNotEmpty()) textY += 2f
                 descLines.forEach { line ->
-                    canvas.drawText(line, colX[1] + 4f, textY, descPaint)
+                    canvas.drawText(line, colX[1] + 6f, textY, descPaint)
                     textY += 11f
                 }
 
                 // Col 2: Specifications
-                var specY = rowY + (rowHeight - col2H) / 2f + 7f
-                specsWrapped.forEach { (isFirst, line) ->
-                    if (isFirst) {
-                        canvas.drawText("• $line", colX[2] + 4f, specY, specPaint)
-                    } else {
-                        canvas.drawText(line, colX[2] + 12f, specY, specPaint)
+                var specY = rowY + topPadding + 7.5f
+                specsWrapped.forEachIndexed { sIdx, (label, lines) ->
+                    if (sIdx > 0) {
+                        specY += 2f
                     }
-                    specY += 9.5f
+                    lines.forEachIndexed { idx, line ->
+                        if (idx == 0) {
+                            canvas.drawText(label, colX[2] + 4f, specY, specPaint)
+                            canvas.drawText(":", colX[2] + 4f + maxLabelWidth + 2f, specY, specPaint)
+                            canvas.drawText(line, colX[2] + 4f + maxLabelWidth + 8f, specY, specPaint)
+                        } else {
+                            canvas.drawText(line, colX[2] + 4f + maxLabelWidth + 8f, specY, specPaint)
+                        }
+                        specY += 10.5f
+                    }
                 }
 
                 // Col 3: Size (perfectly aligned and centered)
-                val sizeLabelPaint = Paint(bodyBoldPaint).apply { textSize = 6.5f; color = Color.parseColor(COLOR_PRIMARY_BLUE); isAntiAlias = true }
-                val sizeValuePaint = Paint(bodyPaint).apply { textSize = 6.5f; color = Color.parseColor(COLOR_DARK_SLATE); isAntiAlias = true }
-                val colonAndSpace = " : "
-                val colonWidth = sizeLabelPaint.measureText(colonAndSpace)
+                val sizeLabelPaint = engine.getPaint(COLOR_PRIMARY_BLUE, 6.5f, TYPEFACE_BOLD, textAlign = Paint.Align.CENTER)
+                val sizeValuePaint = engine.getPaint(COLOR_DARK_SLATE, 6f, TYPEFACE_NORMAL, textAlign = Paint.Align.CENTER)
 
-                var maxNameWidth = 0f
-                var maxValueWidth = 0f
-                sizeLines.forEach { line ->
-                    val nw = sizeLabelPaint.measureText(line.first)
-                    if (nw > maxNameWidth) {
-                        maxNameWidth = nw
+                var sizeY = rowY + topPadding + 7.5f
+                val col3CenterX = colX[3] + 27.5f
+                sizeLinesStr.forEach { line ->
+                    if (line.isNotBlank()) {
+                        val paint = if (line.contains("Area :") || line.contains("Volume :") || line.contains("Length :")) engine.getPaint(COLOR_PRIMARY_BLUE, 6f, TYPEFACE_BOLD, textAlign = Paint.Align.CENTER) else sizeValuePaint
+                        canvas.drawText(line, col3CenterX, sizeY, paint)
                     }
-                    val vw = sizeValuePaint.measureText(line.second)
-                    if (vw > maxValueWidth) {
-                        maxValueWidth = vw
-                    }
-                }
-                val totalWidth = maxNameWidth + colonWidth + maxValueWidth
-                val startX = colX[3] + (55f - totalWidth) / 2f
-
-                var sizeY = rowY + (rowHeight - col3H) / 2f + 7.5f
-                sizeLines.forEach { line ->
-                    canvas.drawText(line.first, startX, sizeY, sizeLabelPaint)
-                    canvas.drawText(colonAndSpace, startX + maxNameWidth, sizeY, sizeLabelPaint)
-                    canvas.drawText(line.second, startX + maxNameWidth + colonWidth, sizeY, sizeValuePaint)
-                    sizeY += 9.5f
+                    sizeY += 10.5f
                 }
 
-                // Col 4: Qty
-                val userQty = getUserEnteredQuantity(item, specs)
-                val qtyRounded = Math.round(userQty * 100.0) / 100.0
+                // Col 4: Qty (Billable Quantity)
+                val billableQty = if (isSnapshotMode) item.billableQuantity else com.example.engine.QuotationCalculationEngine.calculateQuantity(specs.width, specs.height, item.quantity, item.unit, specs.depth)
+                val qtyRounded = Math.round(billableQty * 100.0) / 100.0
                 val qtyStr = if (qtyRounded % 1.0 == 0.0) String.format(Locale.US, "%,.0f", qtyRounded) else String.format(Locale.US, "%,.2f", qtyRounded)
-                canvas.drawText(qtyStr, colX[4] + 17.5f, cellTextY, Paint(bodyPaint).apply { textAlign = Paint.Align.CENTER; isAntiAlias = true })
+                canvas.drawText(qtyStr, colX[4] + colWidths[4] - 4f, cellTextY, engine.getPaint(COLOR_DARK_SLATE, 7.5f, TYPEFACE_NORMAL, textAlign = Paint.Align.RIGHT))
 
                 // Col 5: Rate
-                canvas.drawText(formatIndianCurrency(item.rate), colX[5] + colWidths[5] - 4f, cellTextY, Paint(bodyPaint).apply { textAlign = Paint.Align.RIGHT; isAntiAlias = true })
+                val rateUnitDisplay = item.unit.trim().ifEmpty { "Unit" }
+                val rateStr = formatIndianCurrency(item.rate) + " / " + rateUnitDisplay
+                canvas.drawText(rateStr, colX[5] + colWidths[5] - 4f, cellTextY, engine.getPaint(COLOR_DARK_SLATE, 7.5f, TYPEFACE_NORMAL, textAlign = Paint.Align.RIGHT))
 
                 // Col 6: Amount
-                canvas.drawText(formatIndianCurrency(item.amount), colX[6] + colWidths[6] - 4f, cellTextY, Paint(bodyBoldPaint).apply { textAlign = Paint.Align.RIGHT; isAntiAlias = true })
+                canvas.drawText(formatIndianCurrency(item.amount), colX[6] + colWidths[6] - 4f, cellTextY, engine.getPaint(COLOR_PRIMARY_BLUE, 7.5f, TYPEFACE_BOLD, textAlign = Paint.Align.RIGHT))
             }
             engine.currentY += rowHeight
         }
         engine.inTableMode = false
+        engine.currentY += 14f // explicit section spacing
     }
 
-    private fun drawSummary(
+    private fun drawSummaryAndPayment(
         engine: PdfEngine,
         quotation: Quotation,
+        company: CompanyProfile,
         showGst: Boolean,
         showAmountInWords: Boolean,
-        roundOff: Double
+        showBankDetails: Boolean,
+        showQrCode: Boolean,
+        isSnapshotMode: Boolean
     ) {
         val rowH = 16f
         val totalsRows = mutableListOf<Pair<String, String>>()
-        totalsRows.add(Pair("Sub Total", formatIndianCurrency(quotation.subtotal)))
+        totalsRows.add(Pair("Sub Total", "₹ " + formatIndianCurrency(quotation.subtotal)))
         if (quotation.discount > 0.0) {
-            totalsRows.add(Pair("Discount", formatIndianCurrency(quotation.discount)))
+            totalsRows.add(Pair("Discount", "₹ " + formatIndianCurrency(quotation.discount)))
         }
         if (showGst && (quotation.gstAmount > 0.0 || quotation.gstRate > 0.0)) {
-            totalsRows.add(Pair("GST (${quotation.gstRate}%)", formatIndianCurrency(quotation.gstAmount)))
+            totalsRows.add(Pair("GST (${quotation.gstRate}%)", "₹ " + formatIndianCurrency(quotation.gstAmount)))
         }
-        if (Math.abs(roundOff) > 0.001) {
-            totalsRows.add(Pair("Round Off", formatIndianCurrency(roundOff)))
+        if (quotation.transport > 0.0) {
+            totalsRows.add(Pair("Transport", "₹ " + formatIndianCurrency(quotation.transport)))
+        }
+        if (quotation.installation > 0.0) {
+            totalsRows.add(Pair("Installation", "₹ " + formatIndianCurrency(quotation.installation)))
+        }
+        if (quotation.extraCharges > 0.0) {
+            totalsRows.add(Pair("Extra Charges", "₹ " + formatIndianCurrency(quotation.extraCharges)))
+        }
+        if (Math.abs(quotation.roundOff) > 0.001) {
+            totalsRows.add(Pair("Round Off", "₹ " + formatIndianCurrency(quotation.roundOff)))
         }
 
         val boxTopPadding = 10f
         val boxBottomPadding = 10f
-        val grandTotalH = 22f
+        val hasAdvance = quotation.advance > 0.0
+        val grandTotalH = if (hasAdvance) 50f else 22f
         val totalsBoxH = boxTopPadding + totalsRows.size * rowH + boxBottomPadding + grandTotalH
 
-        // Amount in Words calculation
-        val leftW = 245f
-        val wordsStr = convertNumberToWords(quotation.grandTotal)
-        val wordsPaint = Paint().apply {
-            color = Color.parseColor(COLOR_DARK_SLATE)
-            textSize = 7.5f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            isAntiAlias = true
-        }
-        val wrappedWords = if (showAmountInWords) wrapText(wordsStr, (leftW - 16f).toInt(), wordsPaint) else emptyList()
-        val wordsBoxH = if (showAmountInWords) maxOf(26f, 12f + wrappedWords.size * 9.5f) else 0f
-
         val sectionSpacing = 14f
-        val sectionHeight = maxOf(totalsBoxH, wordsBoxH) + 12f
-        engine.ensureSpace(sectionHeight + sectionSpacing, reserveHeader = true)
-        engine.currentY += sectionSpacing
+        var wordsH = 0f
+        var wrappedWords: List<String> = emptyList()
+        val wordsPaint = engine.getPaint(COLOR_DARK_SLATE, 7.5f, TYPEFACE_BOLD)
+        
+        val normalizedFinalGrandTotal = Math.round(quotation.grandTotal * 100.0) / 100.0
+        val balanceDue = if (isSnapshotMode) quotation.balance else (normalizedFinalGrandTotal - quotation.advance)
+        if (showAmountInWords) {
+            val currencyWord = if (Math.abs(normalizedFinalGrandTotal - 1.0) < 0.005) "Rupee " else "Rupees "
+            val wordsStr = "Amount in Words: " + currencyWord + (if (isSnapshotMode) quotation.amountInWords else convertNumberToWords(normalizedFinalGrandTotal))
+            wrappedWords = engine.wrapText(wordsStr, engine.usableWidth.toInt(), wordsPaint)
+            wordsH = wrappedWords.size * 10f + 14f
+        }
 
-        val blockY = engine.currentY
+        val hasBank = showBankDetails && company.bankName.trim().isNotBlank() && company.accountNumber.trim().isNotBlank()
+        val hasQr = showQrCode && company.upiId.trim().isNotBlank()
+        var bankRowCount = 0
+        if (hasBank) {
+            if (company.bankName.isNotBlank()) bankRowCount++
+            if (company.accountHolderName.ifBlank { company.canonicalName }.isNotBlank()) bankRowCount++
+            if (company.accountNumber.isNotBlank()) bankRowCount++
+            if (company.ifsc.isNotBlank()) bankRowCount++
+            if (company.branch.isNotBlank()) bankRowCount++
+        }
+        if (hasQr && company.upiId.isNotBlank()) bankRowCount++
+        val payCardH = if (hasBank || hasQr) maxOf(if (hasQr) 65f else 0f, 28f + bankRowCount * 10.5f) else 0f
+
+        val requiredHeight = wordsH + maxOf(totalsBoxH, payCardH)
+        engine.ensureSpace(requiredHeight, reserveHeader = true)
+
+        val wordsTop = engine.currentY
+        val blockTop = wordsTop + wordsH
         val rightX = engine.marginX + 295f
+        val leftX = engine.marginX
+        val hasQrWidth = showQrCode && company.upiId.trim().isNotBlank()
+        val leftW = if (hasQrWidth) 245f else 170f
 
         engine.addCommand { canvas, _, _ ->
+            if (showAmountInWords) {
+                var textY = wordsTop + 10f
+                wrappedWords.forEach { line ->
+                    canvas.drawText(line, engine.marginX, textY, wordsPaint)
+                    textY += 10f
+                }
+            }
+
             // Draw Right Side Totals Box
-            val boxPaint = Paint().apply { color = Color.parseColor(COLOR_LIGHT_BG); style = Paint.Style.FILL }
-            val borderPaint = Paint().apply { color = Color.parseColor(COLOR_BORDER); strokeWidth = 0.75f; style = Paint.Style.STROKE }
-            val boxRect = RectF(rightX, blockY, engine.endX, blockY + totalsBoxH)
+            val boxPaint = engine.getPaint(COLOR_LIGHT_BG)
+            val borderPaint = engine.getPaint(COLOR_BORDER, strokeWidth = 0.75f, style = Paint.Style.STROKE)
+            val boxRect = RectF(rightX, blockTop, engine.endX, blockTop + totalsBoxH)
             canvas.drawRoundRect(boxRect, 4f, 4f, boxPaint)
             canvas.drawRoundRect(boxRect, 4f, 4f, borderPaint)
 
-            val grandTotalY = blockY + boxTopPadding + totalsRows.size * rowH + boxBottomPadding
+            val grandTotalY = blockTop + boxTopPadding + totalsRows.size * rowH + boxBottomPadding
             canvas.drawLine(rightX, grandTotalY, engine.endX, grandTotalY, borderPaint)
-
-            val gtBgPaint = Paint().apply { color = Color.parseColor(COLOR_PRIMARY_BLUE); style = Paint.Style.FILL }
+            
+            val gtBgPaint = engine.getPaint(COLOR_PRIMARY_BLUE)
             val clipPath = android.graphics.Path()
             clipPath.addRoundRect(boxRect, 4f, 4f, android.graphics.Path.Direction.CW)
             canvas.save()
@@ -888,127 +1000,90 @@ object PdfGenerator {
             canvas.drawRect(rightX, grandTotalY, engine.endX, grandTotalY + grandTotalH, gtBgPaint)
             canvas.restore()
 
-            val labelPaint = Paint().apply { color = Color.parseColor(COLOR_TEXT_SECONDARY); textSize = 7.5f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL); isAntiAlias = true }
-            val valuePaint = Paint().apply { color = Color.parseColor(COLOR_DARK_SLATE); textSize = 7.5f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD); textAlign = Paint.Align.RIGHT; isAntiAlias = true }
-            val colonPaint = Paint().apply { color = Color.parseColor(COLOR_TEXT_SECONDARY); textSize = 7.5f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL); isAntiAlias = true }
+            val labelPaint = engine.getPaint(COLOR_TEXT_SECONDARY, 7.5f, TYPEFACE_NORMAL)
+            val valuePaint = engine.getPaint(COLOR_DARK_SLATE, 7.5f, TYPEFACE_BOLD, textAlign = Paint.Align.RIGHT)
+            val colonPaint = engine.getPaint(COLOR_TEXT_SECONDARY, 7.5f, TYPEFACE_NORMAL)
 
             totalsRows.forEachIndexed { idx, row ->
-                val y = blockY + boxTopPadding + idx * rowH
+                val y = blockTop + boxTopPadding + idx * rowH
                 canvas.drawText(row.first, rightX + 10f, y + 11f, labelPaint)
                 canvas.drawText(":", rightX + 110f, y + 11f, colonPaint)
                 canvas.drawText(row.second, engine.endX - 10f, y + 11f, valuePaint)
             }
 
-            canvas.drawText("GRAND TOTAL", rightX + 10f, grandTotalY + 14f, Paint().apply { color = Color.WHITE; textSize = 8f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD); isAntiAlias = true })
-            canvas.drawText(":", rightX + 110f, grandTotalY + 14f, Paint().apply { color = Color.WHITE; textSize = 8f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD); isAntiAlias = true })
-            canvas.drawText("₹ " + formatIndianCurrency(quotation.grandTotal), engine.endX - 10f, grandTotalY + 14f, Paint().apply { color = Color.WHITE; textSize = 8.5f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD); textAlign = Paint.Align.RIGHT; isAntiAlias = true })
+            val textWhiteBold8 = engine.getPaint(COLOR_WHITE, 8f, TYPEFACE_BOLD)
+            val textWhiteBold8_5Right = engine.getPaint(COLOR_WHITE, 8.5f, TYPEFACE_BOLD, textAlign = Paint.Align.RIGHT)
 
-            // Draw Left Side Amount in Words Box
-            if (showAmountInWords && wordsBoxH > 0f) {
-                val leftX = engine.marginX
-                val wordsBg = RectF(leftX, blockY, leftX + leftW, blockY + wordsBoxH)
-                canvas.drawRoundRect(wordsBg, 4f, 4f, Paint().apply { color = Color.parseColor(COLOR_LIGHT_BG) })
-                canvas.drawRoundRect(wordsBg, 4f, 4f, Paint().apply { color = Color.parseColor(COLOR_BORDER); strokeWidth = 0.5f; style = Paint.Style.STROKE })
+            canvas.drawText("Grand Total", rightX + 10f, grandTotalY + 14f, textWhiteBold8)
+            canvas.drawText(":", rightX + 110f, grandTotalY + 14f, textWhiteBold8)
+            canvas.drawText("₹ " + formatIndianCurrency(normalizedFinalGrandTotal), engine.endX - 10f, grandTotalY + 14f, textWhiteBold8_5Right)
 
-                canvas.drawText("AMOUNT IN WORDS", leftX + 8f, blockY + 10f, Paint().apply { color = Color.parseColor(COLOR_ACCENT_ORANGE); textSize = 6f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD); isAntiAlias = true })
+            if (quotation.advance > 0.0) {
+                val advanceY = grandTotalY + 28f
+                canvas.drawText("Advance Paid", rightX + 10f, advanceY, textWhiteBold8)
+                canvas.drawText(":", rightX + 110f, advanceY, textWhiteBold8)
+                canvas.drawText("₹ " + formatIndianCurrency(quotation.advance), engine.endX - 10f, advanceY, textWhiteBold8_5Right)
+                
+                val balanceY = advanceY + 14f
+                canvas.drawText("Balance Due", rightX + 10f, balanceY, textWhiteBold8)
+                canvas.drawText(":", rightX + 110f, balanceY, textWhiteBold8)
+                canvas.drawText("₹ " + formatIndianCurrency(balanceDue), engine.endX - 10f, balanceY, textWhiteBold8_5Right)
+            }
 
-                var textY = blockY + 19f
-                wrappedWords.forEach { line ->
-                    canvas.drawText(line, leftX + 8f, textY, wordsPaint)
-                    textY += 9.5f
+            if (hasBank || hasQr) {
+                val payCardTop = blockTop
+                val payCard = RectF(leftX, payCardTop, leftX + leftW, payCardTop + payCardH)
+                canvas.drawRoundRect(payCard, 4f, 4f, engine.getPaint(COLOR_LIGHT_BG))
+                canvas.drawRoundRect(payCard, 4f, 4f, engine.getPaint(COLOR_BORDER, strokeWidth = 0.5f, style = Paint.Style.STROKE))
+
+                canvas.drawText("PAYMENT METHOD", leftX + 8f, blockTop + 12f, engine.getPaint(COLOR_PRIMARY_BLUE, 7.5f, TYPEFACE_BOLD))
+
+                var bY = payCardTop + 24f
+                val pLabelP = engine.getPaint(COLOR_TEXT_SECONDARY, 7f, TYPEFACE_NORMAL)
+                val pValP = engine.getPaint(COLOR_DARK_SLATE, 7f, TYPEFACE_BOLD)
+
+                fun drawBankRow(label: String, value: String) {
+                    if (value.isNotBlank()) {
+                        canvas.drawText(label, leftX + 10f, bY, pLabelP)
+                        canvas.drawText(":", leftX + 85f, bY, pValP)
+                        canvas.drawText(value, leftX + 92f, bY, pValP)
+                        bY += 10.5f
+                    }
+                }
+
+                if (hasBank) {
+                    drawBankRow("Bank Name", company.bankName)
+                    drawBankRow("A/c Holder", company.accountHolderName.ifBlank { company.canonicalName })
+                    drawBankRow("A/c Number", company.accountNumber)
+                    drawBankRow("IFSC Code", company.ifsc)
+                    drawBankRow("Branch", company.branch)
+                    if (hasQr && company.upiId.isNotBlank()) {
+                        drawBankRow("UPI ID", company.upiId)
+                    }
+                } else if (hasQr) {
+                    val textY = payCardTop + (payCardH / 2f) + 2.5f
+                    canvas.drawText("UPI ID", leftX + 10f, textY, pLabelP)
+                    canvas.drawText(":", leftX + 85f, textY, pValP)
+                    canvas.drawText(company.upiId, leftX + 92f, textY, pValP)
+                }
+
+                if (hasQr) {
+                    val qrSize = payCardH - 12f
+                    val qrLeft = leftX + leftW - qrSize - 8f
+                    val qrTop = payCardTop + (payCardH - qrSize) / 2f
+                    fun uriEncodeSafely(text: String): String {
+                        return try {
+                            java.net.URLEncoder.encode(text, "UTF-8").replace("+", "%20")
+                        } catch (e: Exception) {
+                            text.replace(" ", "%20")
+                        }
+                    }
+                    val upiPayload = "upi://pay?pa=${company.upiId}&pn=${uriEncodeSafely(company.canonicalName)}"
+                    drawQrCode(engine, canvas, qrLeft, qrTop, qrSize, upiPayload)
                 }
             }
         }
-        engine.currentY += sectionHeight
-    }
-
-    private fun drawPayment(
-        engine: PdfEngine,
-        company: CompanyProfile,
-        showBankDetails: Boolean,
-        showQrCode: Boolean
-    ) {
-        val hasBank = showBankDetails && company.bankName.trim().isNotBlank() && company.accountNumber.trim().isNotBlank()
-        val hasQr = showQrCode && company.upiId.trim().isNotBlank()
-
-        if (!hasBank && !hasQr) return
-
-        // Compute row count for bank details card
-        var bankRowCount = 0
-        if (hasBank) {
-            if (company.bankName.isNotBlank()) bankRowCount++
-            if (company.accountHolderName.ifBlank { company.companyName }.isNotBlank()) bankRowCount++
-            if (company.accountNumber.isNotBlank()) bankRowCount++
-            if (company.ifsc.isNotBlank()) bankRowCount++
-            if (company.branch.isNotBlank()) bankRowCount++
-        }
-        if (hasQr && company.upiId.isNotBlank()) bankRowCount++
-
-        val sectionSpacing = 14f
-        val payCardH = maxOf(50f, bankRowCount * 10.5f + 14f)
-        val sectionHeight = payCardH + 26f
-        engine.ensureSpace(sectionHeight + sectionSpacing, reserveHeader = true)
-        engine.currentY += sectionSpacing
-
-        val blockTop = engine.currentY
-        val leftX = engine.marginX
-        val leftW = 245f
-
-        engine.addCommand { canvas, _, _ ->
-            val payCardTop = blockTop + 14f
-            val payCard = RectF(leftX, payCardTop, leftX + leftW, payCardTop + payCardH)
-            canvas.drawRoundRect(payCard, 4f, 4f, Paint().apply { color = Color.parseColor(COLOR_LIGHT_BG) })
-            canvas.drawRoundRect(payCard, 4f, 4f, Paint().apply { color = Color.parseColor(COLOR_BORDER); strokeWidth = 0.5f; style = Paint.Style.STROKE })
-
-            canvas.drawText("PAYMENT METHOD", leftX, blockTop + 9f, Paint().apply { color = Color.parseColor(COLOR_PRIMARY_BLUE); textSize = 7.5f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD); isAntiAlias = true })
-
-            var bY = payCardTop + 15f
-            fun drawBankRow(label: String, value: String) {
-                if (value.isNotBlank()) {
-                    val labelP = Paint().apply { color = Color.parseColor(COLOR_TEXT_SECONDARY); textSize = 7f; isAntiAlias = true }
-                    val valP = Paint().apply { color = Color.parseColor(COLOR_DARK_SLATE); textSize = 7f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD); isAntiAlias = true }
-                    canvas.drawText(label, leftX + 8f, bY, labelP)
-                    canvas.drawText(":", leftX + 65f, bY, valP)
-                    canvas.drawText(value, leftX + 72f, bY, valP)
-                    bY += 10.5f
-                }
-            }
-
-            if (hasBank) {
-                drawBankRow("Bank Name", company.bankName)
-                drawBankRow("A/c Holder", company.accountHolderName.ifBlank { company.companyName })
-                drawBankRow("A/c Number", company.accountNumber)
-                drawBankRow("IFSC Code", company.ifsc)
-                drawBankRow("Branch", company.branch)
-                if (hasQr && company.upiId.isNotBlank()) {
-                    drawBankRow("UPI ID", company.upiId)
-                }
-            } else if (hasQr) {
-                val labelP = Paint().apply { color = Color.parseColor(COLOR_TEXT_SECONDARY); textSize = 7f; isAntiAlias = true }
-                val valP = Paint().apply { color = Color.parseColor(COLOR_DARK_SLATE); textSize = 7f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD); isAntiAlias = true }
-                val textY = payCardTop + (payCardH / 2f) + 2.5f
-                canvas.drawText("UPI ID", leftX + 8f, textY, labelP)
-                canvas.drawText(":", leftX + 65f, textY, valP)
-                canvas.drawText(company.upiId, leftX + 72f, textY, valP)
-            }
-
-            if (hasQr) {
-                val qrSize = payCardH - 12f
-                val qrLeft = leftX + leftW - qrSize - 8f
-                val qrTop = payCardTop + (payCardH - qrSize) / 2f
-                val upiPayload = "upi://pay?pa=${company.upiId}&pn=${uriEncodeSafely(company.companyName)}"
-                drawQrCode(canvas, qrLeft, qrTop, qrSize, upiPayload)
-            }
-        }
-        engine.currentY += sectionHeight
-    }
-
-    private fun uriEncodeSafely(text: String): String {
-        return try {
-            java.net.URLEncoder.encode(text, "UTF-8")
-        } catch (e: Exception) {
-            text.replace(" ", "%20")
-        }
+        engine.currentY = blockTop + maxOf(totalsBoxH, payCardH) + sectionSpacing
     }
 
     private fun drawTerms(
@@ -1022,7 +1097,7 @@ object PdfGenerator {
         val termsList = mutableListOf<String>()
 
         // Dynamic terms settings values
-        val warrantyVal = company.defaultWarranty.ifBlank { quotation.warranty }
+        val warrantyVal = quotation.warranty.ifBlank { company.defaultWarranty }
         if (warrantyVal.isNotBlank()) {
             termsList.add("Warranty : $warrantyVal")
         }
@@ -1035,14 +1110,13 @@ object PdfGenerator {
         if (company.defaultPaymentTerms.isNotBlank()) {
             termsList.add("Payment Terms : ${company.defaultPaymentTerms}")
         }
-        if (company.defaultQuoteValidity.isNotBlank()) {
-            termsList.add("Quote Validity : ${company.defaultQuoteValidity}")
-        }
+        val validityDays = quotation.validityDays.takeIf { it > 0 } ?: company.defaultValidityDays.takeIf { it > 0 } ?: 30
+        termsList.add("Quote Validity : $validityDays Days")
         if (company.additionalConditions.isNotBlank()) {
             termsList.add("Additional Conditions : ${company.additionalConditions}")
         }
 
-        val rawTerms = quotation.termsAndConditions.ifBlank { company.termsAndConditions }
+        val rawTerms = quotation.termsAndConditions.trim()
         if (rawTerms.isNotBlank()) {
             rawTerms.split("\n").forEach { term ->
                 val trimmed = term.trim()
@@ -1053,12 +1127,7 @@ object PdfGenerator {
         }
 
         if (termsList.isEmpty()) return
-        val measurePaint = Paint().apply {
-            textSize = 7f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-            style = Paint.Style.FILL
-            isAntiAlias = true
-        }
+        val measurePaint = engine.getPaint(COLOR_DARK_SLATE, 7f, TYPEFACE_NORMAL)
 
         val leftX = engine.marginX
 
@@ -1070,13 +1139,14 @@ object PdfGenerator {
         )
 
         val termItems = mutableListOf<TermItem>()
+        val seenLabels = mutableSetOf<String>()
         var termIdx = 1
 
         termsList.forEach { rawTerm ->
             val cleanedTerm = rawTerm.trim()
             if (cleanedTerm.isNotEmpty()) {
                 val cleaned = cleanedTerm.replace(Regex("\\s*:\\s*"), " : ").trim()
-
+                
                 if (cleaned.startsWith("Payment", ignoreCase = true) || cleaned.contains("Advance", ignoreCase = true)) {
                     val parts = cleaned.split(" : ")
                     val label: String
@@ -1088,35 +1158,43 @@ object PdfGenerator {
                         label = "Payment Terms"
                         valueStr = cleaned
                     }
-
-                    val bullets = mutableListOf<String>()
-                    if (valueStr.isNotEmpty()) {
-                        val payments = valueStr.split(Regex("[,;\n•*]+"))
-                        payments.forEach { pay ->
-                            val payTrimmed = pay.trim()
-                            if (payTrimmed.isNotEmpty()) {
-                                bullets.add(payTrimmed)
+                    
+                    if (!seenLabels.contains(label.lowercase(Locale.US))) {
+                        seenLabels.add(label.lowercase(Locale.US))
+                        val bullets = mutableListOf<String>()
+                        if (valueStr.isNotEmpty()) {
+                            val payments = valueStr.split(Regex("[,;\n•*]+"))
+                            payments.forEach { pay ->
+                                val payTrimmed = pay.trim()
+                                if (payTrimmed.isNotEmpty()) {
+                                    bullets.add(payTrimmed)
+                                }
                             }
                         }
+                        termItems.add(TermItem(termIdx++, label, "", bullets))
                     }
-                    termItems.add(TermItem(termIdx++, label, "", bullets))
                 } else if (cleaned.contains(" : ")) {
                     val parts = cleaned.split(" : ")
-                    termItems.add(TermItem(termIdx++, parts[0].trim(), parts[1].trim()))
+                    val label = parts[0].trim()
+                    if (!seenLabels.contains(label.lowercase(Locale.US))) {
+                        seenLabels.add(label.lowercase(Locale.US))
+                        termItems.add(TermItem(termIdx++, label, parts[1].trim()))
+                    }
                 } else {
-                    termItems.add(TermItem(termIdx++, cleaned, ""))
+                    if (!seenLabels.contains(cleaned.lowercase(Locale.US))) {
+                        seenLabels.add(cleaned.lowercase(Locale.US))
+                        termItems.add(TermItem(termIdx++, cleaned, ""))
+                    }
                 }
             }
         }
 
-        val termSpacing = 6f
-        var contentHeight = 22f // title + padding
-
+        val termSpacing = 4f
+        var contentHeight = 0f
         val col1Width = 20f
         val col2Width = 110f
         val col3Width = 15f
         val col4Width = 378f
-
         data class WrappedTerm(
             val item: TermItem,
             val labelLines: List<String>,
@@ -1124,17 +1202,15 @@ object PdfGenerator {
             val bulletsWrapped: List<List<String>>,
             val itemH: Float
         )
-
         val wrappedTerms = termItems.map { item ->
             val hasValueOrBullets = item.value.isNotEmpty() || item.bullets.isNotEmpty()
             val labelLines = if (hasValueOrBullets) {
-                wrapText(item.label, col2Width.toInt(), measurePaint)
+                engine.wrapText(item.label, col2Width.toInt(), measurePaint)
             } else {
-                wrapText(item.label, (523f - col1Width).toInt(), measurePaint)
+                engine.wrapText(item.label, (523f - col1Width).toInt(), measurePaint)
             }
-            val valLines = if (item.value.isNotEmpty()) wrapText(item.value, col4Width.toInt(), measurePaint) else emptyList()
-            val bulletsWrapped = item.bullets.map { bullet -> wrapText(bullet, (col4Width - 10f).toInt(), measurePaint) }
-
+            val valLines = if (item.value.isNotEmpty()) engine.wrapText(item.value, col4Width.toInt(), measurePaint) else emptyList()
+            val bulletsWrapped = item.bullets.map { bullet -> engine.wrapText(bullet, (col4Width - 10f).toInt(), measurePaint) }
             val labelBlockH = labelLines.size * 10f
             val itemH = if (hasValueOrBullets) {
                 if (item.bullets.isNotEmpty()) {
@@ -1148,43 +1224,32 @@ object PdfGenerator {
                 labelBlockH
             }
             contentHeight += itemH + termSpacing
-
             WrappedTerm(item, labelLines, valLines, bulletsWrapped, itemH)
         }
-
         if (wrappedTerms.isNotEmpty()) {
             contentHeight -= termSpacing
         }
-
         val sectionSpacing = 14f
-        engine.ensureSpace(contentHeight + sectionSpacing, reserveHeader = true)
-        engine.currentY += sectionSpacing
+        val titleHeight = 16f
+        
+        val firstTermH = wrappedTerms.firstOrNull()?.itemH ?: 0f
+        engine.ensureSpace(titleHeight + firstTermH, reserveHeader = true)
 
         val blockTop = engine.currentY
-
-        val titlePaint = Paint().apply {
-            color = Color.parseColor(COLOR_PRIMARY_BLUE)
-            textSize = 8.5f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            style = Paint.Style.FILL
-            isAntiAlias = true
-        }
-
-        val textPaint = Paint().apply {
-            color = Color.parseColor(COLOR_DARK_SLATE)
-            textSize = 7f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-            style = Paint.Style.FILL
-            isAntiAlias = true
-        }
-
         engine.addCommand { canvas, _, _ ->
+            val titlePaint = engine.getPaint(COLOR_PRIMARY_BLUE, 8.5f, TYPEFACE_BOLD)
             canvas.drawText("TERMS & CONDITIONS", leftX, blockTop + 8f, titlePaint)
-            var tY = blockTop + 18f
+        }
+        engine.currentY += 12f
 
-            wrappedTerms.forEach { wt ->
-                val item = wt.item
-                val tY_start = tY
+        wrappedTerms.forEachIndexed { index, wt ->
+            val item = wt.item
+            engine.ensureSpace(wt.itemH + termSpacing, reserveHeader = true)
+            // Add baseline offset so text doesn't draw above its bounding box
+            val tY = engine.currentY + 7f
+
+            engine.addCommand { canvas, _, _ ->
+                val textPaint = engine.getPaint(COLOR_DARK_SLATE, 7f, TYPEFACE_NORMAL)
                 val hasValueOrBullets = item.value.isNotEmpty() || item.bullets.isNotEmpty()
 
                 // Column 1: Serial Number
@@ -1224,11 +1289,12 @@ object PdfGenerator {
                         }
                     }
                 }
-
-                tY = tY_start + wt.itemH + termSpacing
             }
+            engine.currentY += wt.itemH + termSpacing
         }
-        engine.currentY += contentHeight
+        engine.currentY -= termSpacing // remove trailing term gap
+        engine.currentY += sectionSpacing // add section gap
+         // add section gap
     }
 
     private fun drawSignature(
@@ -1242,95 +1308,57 @@ object PdfGenerator {
         val hasSeal = showCompanySeal && sealPath.isNotBlank() && File(sealPath).exists()
         val hasSig = showSignature && sigPath.isNotBlank() && File(sigPath).exists()
 
-        val sectionSpacing = 14f
-        val signatureBoxH = 85f
+        val sectionSpacing = 20f
+        val signatureBoxH = 70f
 
-        // Smart page-break logic: calculate required footer height including signature block and bottom margin
-        val footerRequiredHeight = signatureBoxH + sectionSpacing + engine.bottomMargin
-        val remainingHeight = engine.pageHeight - engine.currentY
-
-        if (remainingHeight >= footerRequiredHeight) {
-            engine.currentY += sectionSpacing
-        } else {
-            engine.startNewPage(reserveHeader = true)
-            engine.currentY += sectionSpacing
-        }
-
-        val sigY = engine.currentY
+        engine.ensureSpace(signatureBoxH + sectionSpacing, reserveHeader = true)
+        val sigY = engine.currentY + sectionSpacing
 
         engine.addCommand { canvas, _, _ ->
             val baselineY = sigY + 50f
-            val linePaint = Paint().apply {
-                color = Color.parseColor(COLOR_BORDER)
-                strokeWidth = 0.75f
-                isAntiAlias = true
-            }
+            val linePaint = engine.getPaint(COLOR_BORDER, strokeWidth = 0.75f, style = Paint.Style.STROKE)
 
             // Left Column (Column 1): Company Seal
             val sealCenterX = engine.marginX + 75f
             if (hasSeal) {
                 // Seal is 40x40. Draw centered horizontally on sealCenterX, bottom aligned at baselineY
-                drawBitmapSafely(canvas, sealPath, sealCenterX - 20f, baselineY - 40f, 40f, 40f)
+                drawBitmapSafely(engine, canvas, sealPath, sealCenterX - 20f, baselineY - 40f, 40f, 40f)
             }
             // Draw a clean baseline under the seal
-            canvas.drawLine(sealCenterX - 35f, baselineY, sealCenterX + 35f, baselineY, linePaint)
+            canvas.drawLine(sealCenterX - 50f, baselineY, sealCenterX + 50f, baselineY, linePaint)
             // Label centered below baseline
-            canvas.drawText("COMPANY SEAL", sealCenterX, baselineY + 11f, Paint().apply {
-                color = Color.parseColor(COLOR_TEXT_SECONDARY)
-                textSize = 6.5f
-                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                textAlign = Paint.Align.CENTER
-                isAntiAlias = true
-            })
+            canvas.drawText("COMPANY SEAL", sealCenterX, baselineY + 11f, engine.getPaint(COLOR_TEXT_SECONDARY, 6.5f, TYPEFACE_BOLD, textAlign = Paint.Align.CENTER))
 
             // Right Column (Column 2): Signature & Signatory Name
             val authCenterX = engine.endX - 75f
-            val coNameVal = company.companyName
+            val coNameVal = company.canonicalName
             if (coNameVal.isNotBlank()) {
-                canvas.drawText("For ${coNameVal.uppercase()}", authCenterX, baselineY - 32f, Paint().apply {
-                    color = Color.parseColor(COLOR_TEXT_SECONDARY)
-                    textSize = 7f
-                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                    textAlign = Paint.Align.CENTER
-                    isAntiAlias = true
-                })
+                canvas.drawText("For ${coNameVal.uppercase(Locale.US)}", authCenterX, baselineY - 32f, engine.getPaint(COLOR_TEXT_SECONDARY, 7f, TYPEFACE_BOLD, textAlign = Paint.Align.CENTER))
             }
 
             if (hasSig) {
                 // Signature is 80x25. Draw centered horizontally on authCenterX, bottom aligned at baselineY
-                drawBitmapSafely(canvas, sigPath, authCenterX - 40f, baselineY - 25f, 80f, 25f)
+                drawBitmapSafely(engine, canvas, sigPath, authCenterX - 40f, baselineY - 25f, 80f, 25f)
             }
 
             // Draw a clean baseline under the signature / name
-            canvas.drawLine(authCenterX - 55f, baselineY, authCenterX + 55f, baselineY, linePaint)
+            canvas.drawLine(authCenterX - 50f, baselineY, authCenterX + 50f, baselineY, linePaint)
 
             // Draw owner name and designation centered below baseline
             var sigLabelY = baselineY + 11f
             val ownerName = company.ownerName
             if (ownerName.isNotBlank()) {
-                canvas.drawText(ownerName, authCenterX, sigLabelY, Paint().apply {
-                    color = Color.parseColor(COLOR_DARK_SLATE)
-                    textSize = 7.5f
-                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                    textAlign = Paint.Align.CENTER
-                    isAntiAlias = true
-                })
+                canvas.drawText(ownerName, authCenterX, sigLabelY, engine.getPaint(COLOR_DARK_SLATE, 7.5f, TYPEFACE_BOLD, textAlign = Paint.Align.CENTER))
                 sigLabelY += 9f
             }
 
             val designation = company.signatureText.ifBlank { "Authorized Signatory" }
-            canvas.drawText(designation, authCenterX, sigLabelY, Paint().apply {
-                color = Color.parseColor(COLOR_TEXT_SECONDARY)
-                textSize = 6.5f
-                typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-                textAlign = Paint.Align.CENTER
-                isAntiAlias = true
-            })
+            canvas.drawText(designation, authCenterX, sigLabelY, engine.getPaint(COLOR_TEXT_SECONDARY, 6.5f, TYPEFACE_NORMAL, textAlign = Paint.Align.CENTER))
         }
-        engine.currentY += signatureBoxH
+        engine.currentY += signatureBoxH + sectionSpacing
     }
 
-    private fun drawReferenceImages(engine: PdfEngine, items: List<QuotationItem>) {
+    private fun drawReferenceImages(context: Context, engine: PdfEngine, items: List<QuotationItem>) {
         data class ImageInfo(
             val path: String,
             val caption: String
@@ -1339,13 +1367,13 @@ object PdfGenerator {
         items.forEach { item ->
             val (_, specs) = parseItemSpecs(item.description)
             if (specs.laminateImageUri.isNotBlank()) {
-                val file = File(specs.laminateImageUri)
+                val file = File(context.filesDir, File(specs.laminateImageUri).name)
                 if (file.exists()) {
                     validImages.add(ImageInfo(specs.laminateImageUri, "${item.itemName} - Laminate/Finish"))
                 }
             }
             if (specs.designImageUri.isNotBlank()) {
-                val file = File(specs.designImageUri)
+                val file = File(context.filesDir, File(specs.designImageUri).name)
                 if (file.exists()) {
                     validImages.add(ImageInfo(specs.designImageUri, "${item.itemName} - Design Reference"))
                 }
@@ -1354,51 +1382,58 @@ object PdfGenerator {
 
         if (validImages.isEmpty()) return
 
-        val titlePaint = Paint().apply {
-            color = Color.parseColor(COLOR_PRIMARY_BLUE)
-            textSize = 10f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            isAntiAlias = true
-        }
+        val titlePaint = engine.getPaint(COLOR_PRIMARY_BLUE, 10f, TYPEFACE_BOLD)
+        val cardW = 245f
+        val cardH = 220f
+        val gapX = 33f
+        val gapY = 20f
 
-        val imagesPerPage = 4
-        val chunks = validImages.chunked(imagesPerPage)
-        chunks.forEachIndexed { pageIdx, pageImages ->
-            engine.startNewPage(reserveHeader = true)
+        var currentImgIdx = 0
+        var isFirstTitle = true
 
-            val titleY = engine.currentY + 12f
-            engine.addCommand { canvas, _, _ ->
-                val titleText = if (pageIdx == 0) "REFERENCE IMAGES" else "REFERENCE IMAGES (Contd.)"
-                canvas.drawText(titleText, engine.marginX, titleY, titlePaint)
-                canvas.drawLine(
-                    engine.marginX, titleY + 6f, engine.endX, titleY + 6f,
-                    Paint().apply { color = Color.parseColor(COLOR_BORDER); strokeWidth = 0.75f }
-                )
+        while (currentImgIdx < validImages.size) {
+            val titleHeight = if (isFirstTitle) 30f else 0f
+            val requiredHeight = titleHeight + cardH
+
+            // If we can't even fit one row, start a new page
+            if (engine.currentY + requiredHeight > engine.maxContentY) {
+                engine.startNewPage(reserveHeader = true)
             }
-            engine.currentY += 30f
+
+            if (isFirstTitle || engine.currentY == engine.topMargin) {
+                val titleY = engine.currentY + 12f
+                val titleText = if (isFirstTitle) "REFERENCE IMAGES" else "REFERENCE IMAGES (Contd.)"
+                engine.addCommand { canvas, _, _ ->
+                    canvas.drawText(titleText, engine.marginX, titleY, titlePaint)
+                    canvas.drawLine(
+                        engine.marginX, titleY + 6f, engine.endX, titleY + 6f,
+                        engine.getPaint(COLOR_BORDER, strokeWidth = 0.75f, style = Paint.Style.STROKE)
+                    )
+                }
+                engine.currentY += 30f
+                isFirstTitle = false
+            }
 
             val startY = engine.currentY
-            val cardW = 245f
-            val cardH = 220f
-            val gapX = 33f
-            val gapY = 20f
-
-            pageImages.forEachIndexed { imgIdx, imageInfo ->
-                val col = imgIdx % 2
-                val row = imgIdx / 2
-                val x = engine.marginX + col * (cardW + gapX)
+            var imagesPlacedOnPage = 0
+            
+            while (currentImgIdx < validImages.size) {
+                val row = imagesPlacedOnPage / 2
+                val col = imagesPlacedOnPage % 2
                 val y = startY + row * (cardH + gapY)
+                
+                // Need a new page if this row doesn't fit
+                if (col == 0 && y + cardH > engine.maxContentY) {
+                    break 
+                }
+
+                val imageInfo = validImages[currentImgIdx]
+                val x = engine.marginX + col * (cardW + gapX)
 
                 engine.addCommand { canvas, _, _ ->
-                    val bgPaint = Paint().apply { color = Color.parseColor(COLOR_LIGHT_BG); style = Paint.Style.FILL }
-                    val borderPaint = Paint().apply { color = Color.parseColor(COLOR_BORDER); strokeWidth = 0.5f; style = Paint.Style.STROKE }
-                    val captionPaint = Paint().apply {
-                        color = Color.parseColor(COLOR_DARK_SLATE)
-                        textSize = 7.5f
-                        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                        textAlign = Paint.Align.CENTER
-                        isAntiAlias = true
-                    }
+                    val bgPaint = engine.getPaint(COLOR_LIGHT_BG)
+                    val borderPaint = engine.getPaint(COLOR_BORDER, strokeWidth = 0.5f, style = Paint.Style.STROKE)
+                    val captionPaint = engine.getPaint(COLOR_DARK_SLATE, 7.5f, TYPEFACE_BOLD, textAlign = Paint.Align.CENTER)
 
                     val cardRect = RectF(x, y, x + cardW, y + cardH)
                     canvas.drawRoundRect(cardRect, 4f, 4f, bgPaint)
@@ -1409,10 +1444,10 @@ object PdfGenerator {
                     val imgX = x + 8f
                     val imgY = y + 8f
 
-                    drawBitmapSafely(canvas, imageInfo.path, imgX, imgY, imgAreaW, imgAreaH)
+                    drawBitmapSafely(engine, canvas, imageInfo.path, imgX, imgY, imgAreaW, imgAreaH)
 
                     val captionY = y + cardH - 18f
-                    val wrappedCaption = wrapText(imageInfo.caption, (cardW - 16f).toInt(), captionPaint)
+                    val wrappedCaption = engine.wrapText(imageInfo.caption, (cardW - 16f).toInt(), captionPaint)
                     var capY = captionY
                     if (wrappedCaption.isNotEmpty()) {
                         wrappedCaption.forEach { line ->
@@ -1421,25 +1456,24 @@ object PdfGenerator {
                         }
                     }
                 }
+                
+                imagesPlacedOnPage++
+                currentImgIdx++
+                
+                // Update currentY after placing images
+                if (imagesPlacedOnPage % 2 == 0 || currentImgIdx == validImages.size) {
+                    engine.currentY = y + cardH + gapY
+                }
             }
-            engine.currentY += 2 * cardH + gapY
         }
     }
 
-    private fun drawFooter(canvas: Canvas, pageNum: Int, totalPages: Int, company: CompanyProfile, showPageNumber: Boolean) {
+    private fun drawFooter(engine: PdfEngine, canvas: Canvas, pageNum: Int, totalPages: Int, company: CompanyProfile, showPageNumber: Boolean) {
         val footY = 842f - 40f
-        val linePaint = Paint().apply {
-            color = Color.parseColor(COLOR_BORDER)
-            strokeWidth = 0.5f
-        }
+        val linePaint = engine.getPaint(COLOR_BORDER, strokeWidth = 0.5f, style = Paint.Style.STROKE)
         canvas.drawLine(36f, footY, 559f, footY, linePaint)
 
-        val paint = Paint().apply {
-            color = Color.parseColor(COLOR_TEXT_SECONDARY)
-            textSize = 6.5f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-            isAntiAlias = true
-        }
+        val paint = engine.getPaint(COLOR_TEXT_SECONDARY, 6.5f, TYPEFACE_NORMAL)
 
         // Left: Powered by InteriorPro Technologies
         canvas.drawText(
@@ -1455,7 +1489,7 @@ object PdfGenerator {
             websiteText,
             (36f + 559f) / 2f,
             footY + 12f,
-            Paint(paint).apply { textAlign = Paint.Align.CENTER }
+            engine.getPaint(COLOR_TEXT_SECONDARY, 6.5f, TYPEFACE_NORMAL, textAlign = Paint.Align.CENTER)
         )
 
         // Right: Page x of y
@@ -1465,14 +1499,14 @@ object PdfGenerator {
                 pageText,
                 559f,
                 footY + 12f,
-                Paint(paint).apply { textAlign = Paint.Align.RIGHT }
+                engine.getPaint(COLOR_TEXT_SECONDARY, 6.5f, TYPEFACE_NORMAL, textAlign = Paint.Align.RIGHT)
             )
         }
     }
 
-    private fun drawBitmapSafely(canvas: Canvas, path: String, left: Float, top: Float, reqWidth: Float, reqHeight: Float) {
+    private fun drawBitmapSafely(engine: PdfEngine, canvas: Canvas, path: String, left: Float, top: Float, reqWidth: Float, reqHeight: Float) {
         try {
-            val bitmap = ImageManager.loadScaledBitmap(path, reqWidth, reqHeight)
+            val bitmap = engine.getOrLoadBitmap(path, reqWidth, reqHeight)
             if (bitmap != null) {
                 // Calculate scale to fit preserving aspect ratio
                 val scale = minOf(reqWidth / bitmap.width.toFloat(), reqHeight / bitmap.height.toFloat())
@@ -1485,20 +1519,19 @@ object PdfGenerator {
 
                 val srcRect = Rect(0, 0, bitmap.width, bitmap.height)
                 val destRect = RectF(drawLeft, drawTop, drawLeft + drawW, drawTop + drawH)
-                canvas.drawBitmap(bitmap, srcRect, destRect, Paint().apply { isAntiAlias = true; isFilterBitmap = true })
+                canvas.drawBitmap(bitmap, srcRect, destRect, engine.getPaint(Color.BLACK, isAntiAlias = true, isFilterBitmap = true))
             }
         } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 
-    private fun drawQrCode(canvas: Canvas, left: Float, top: Float, size: Float, text: String) {
-        val blackPaint = Paint().apply { color = Color.BLACK; style = Paint.Style.FILL }
-        val borderPaint = Paint().apply { color = Color.parseColor(COLOR_BORDER); strokeWidth = 0.5f; style = Paint.Style.STROKE }
+    private fun drawQrCode(engine: PdfEngine, canvas: Canvas, left: Float, top: Float, size: Float, text: String) {
+        val blackPaint = engine.getPaint(Color.BLACK)
+        val borderPaint = engine.getPaint(COLOR_BORDER, strokeWidth = 0.5f, style = Paint.Style.STROKE)
 
         // Draw background card with light grey border
         val bgRect = RectF(left, top, left + size, top + size)
-        canvas.drawRoundRect(bgRect, 2f, 2f, Paint().apply { color = Color.WHITE })
+        canvas.drawRoundRect(bgRect, 2f, 2f, engine.getPaint(Color.WHITE))
         canvas.drawRoundRect(bgRect, 2f, 2f, borderPaint)
 
         // Render QR Code grid payload
@@ -1506,7 +1539,7 @@ object PdfGenerator {
 
         fun drawFinderPattern(l: Float, t: Float) {
             canvas.drawRect(l, t, l + cellSize * 7, t + cellSize * 7, blackPaint)
-            canvas.drawRect(l + cellSize, t + cellSize, l + cellSize * 6, t + cellSize * 6, Paint().apply { color = Color.WHITE })
+            canvas.drawRect(l + cellSize, t + cellSize, l + cellSize * 6, t + cellSize * 6, engine.getPaint(Color.WHITE))
             canvas.drawRect(l + cellSize * 2, t + cellSize * 2, l + cellSize * 5, t + cellSize * 5, blackPaint)
         }
 
@@ -1541,56 +1574,37 @@ object PdfGenerator {
         return CurrencyFormatter.convertNumberToWords(amount)
     }
 
-    private fun wrapText(text: String, width: Int, paint: Paint): List<String> {
-        if (text.isEmpty()) return emptyList()
-        val words = text.split(" ")
-        val lines = mutableListOf<String>()
-        var currentLine = ""
-
-        for (word in words) {
-            val testLine = if (currentLine.isEmpty()) word else "$currentLine $word"
-            val testWidth = paint.measureText(testLine)
-            if (testWidth <= width) {
-                currentLine = testLine
-            } else {
-                if (currentLine.isNotEmpty()) {
-                    lines.add(currentLine)
-                }
-                currentLine = word
-            }
-        }
-        if (currentLine.isNotEmpty()) {
-            lines.add(currentLine)
-        }
-        return lines
-    }
-
-    private fun getUserEnteredQuantity(item: QuotationItem, specs: ItemSpecs): Double {
-        val wClean = specs.width.replace("\"", "").lowercase(Locale.US).replace("ft", "").replace("feet", "").trim()
-        val hClean = specs.height.replace("\"", "").lowercase(Locale.US).replace("ft", "").replace("feet", "").trim()
-        val w = wClean.toDoubleOrNull() ?: 1.0
-        val h = hClean.toDoubleOrNull() ?: 1.0
-        val uLower = item.unit.trim().lowercase(Locale.US)
-        return when {
-            uLower == "sq.ft" || uLower.contains("sq.ft") || uLower.contains("sqft") || uLower == "sft" -> {
-                val area = w * h
-                if (area > 0) item.quantity / area else item.quantity
-            }
-            uLower == "running feet" || uLower.contains("run") || uLower.contains("rft") -> {
-                if (w > 0) item.quantity / w else item.quantity
-            }
-            uLower == "sq.m" || uLower.contains("sq.m") || uLower.contains("sqm") || uLower.contains("square meter") -> {
-                val areaM = w * h * 0.09290304
-                if (areaM > 0) item.quantity / areaM else item.quantity
-            }
-            else -> {
-                item.quantity
-            }
-        }
-    }
-
     private fun parseItemSpecs(description: String): Pair<String, ItemSpecs> {
         if (!description.contains("|||")) {
+            val trimmed = description.trim()
+            if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+                try {
+                    val json = org.json.JSONObject(trimmed)
+                    val specs = ItemSpecs(
+                        width = json.optString("width", ""),
+                        height = json.optString("height", ""),
+                        depth = json.optString("depth", ""),
+                        doorType = json.optString("doorType", ""),
+                        finish = json.optString("finish", ""),
+                        hardware = json.optString("hardware", ""),
+                        brand = json.optString("brand", ""),
+                        thickness = json.optString("thickness", ""),
+                        colour = json.optString("colour", ""),
+                        laminateImageUri = json.optString("laminateImageUri", ""),
+                        designImageUri = json.optString("designImageUri", ""),
+                        profileSeries = json.optString("profileSeries", ""),
+                        profileColour = json.optString("profileColour", ""),
+                        glassType = json.optString("glassType", ""),
+                        glassThickness = json.optString("glassThickness", ""),
+                        acpColour = json.optString("acpColour", ""),
+                        grade = json.optString("grade", ""),
+                        cncDesign = json.optString("cncDesign", "")
+                    )
+                    return Pair("", specs)
+                } catch (e: Exception) {
+                    // ignore
+                }
+            }
             return Pair(description, ItemSpecs())
         }
         val parts = description.split("|||")
@@ -1615,7 +1629,8 @@ object PdfGenerator {
                 glassType = json.optString("glassType", ""),
                 glassThickness = json.optString("glassThickness", ""),
                 acpColour = json.optString("acpColour", ""),
-                grade = json.optString("grade", "")
+                grade = json.optString("grade", ""),
+                        cncDesign = json.optString("cncDesign", "")
             )
             Pair(userDesc, specs)
         } catch (e: Exception) {
@@ -1623,13 +1638,23 @@ object PdfGenerator {
         }
     }
 
-    private fun generateSpecsList(item: QuotationItem): List<String> {
+    private fun generateSpecsList(item: QuotationItem): List<Pair<String, String>> {
         val (userDesc, specs) = parseItemSpecs(item.description)
-        val list = mutableListOf<String>()
+        val list = mutableListOf<Pair<String, String>>()
         val addedValues = mutableSetOf<String>()
 
         fun formatValue(v: String): String {
-            val trimmed = v.trim()
+            var trimmed = v.trim()
+            trimmed = trimmed.replace(Regex("([a-z])([A-Z]+)"), "$1 $2")
+            
+            val replacements = mapOf(
+                "Polohardware" to "Polo Hardware",
+                "Savronplay" to "Savron Ply"
+            )
+            replacements.forEach { (old, new) ->
+                trimmed = trimmed.replace(Regex("(?i)\\b${old}\\b"), new)
+            }
+            
             val regex = Regex("""(\d+(?:\.\d+)?)\s*([a-zA-Z]+)""")
             val result = regex.replace(trimmed) { matchResult ->
                 val num = matchResult.groupValues[1]
@@ -1650,7 +1675,7 @@ object PdfGenerator {
                 val lower = formatted.lowercase(Locale.US)
                 if (lower != "none" && lower != "n/a" && lower != "null" && lower != "not applicable" && lower != "not available" && lower != "empty") {
                     if (!addedValues.contains(lower)) {
-                        list.add("$label : $formatted")
+                        list.add(Pair(label, formatted))
                         addedValues.add(lower)
                     }
                 }
@@ -1688,6 +1713,7 @@ object PdfGenerator {
         addSpec("Hardware", specs.hardware)
 
         // Brand
+        addSpec("CNC Design", specs.cncDesign)
         addSpec("Brand", specs.brand)
 
         // Series
@@ -1716,6 +1742,7 @@ object PdfGenerator {
         val glassType: String = "",
         val glassThickness: String = "",
         val acpColour: String = "",
-        val grade: String = ""
+        val grade: String = "",
+        val cncDesign: String = ""
     )
 }

@@ -1,0 +1,11 @@
+sed -i -e '/val cust = repository.getCustomerById/d' \
+       -e '/_newQuoteCustomer.value = cust ?: CustomerEntity(/c\
+            _newQuoteCustomer.value = CustomerEntity(\
+                customerId = quotation.customerId.toLong(),\
+                customerName = quotation.customerName,\
+                mobileNumber = quotation.customerPhone,\
+                address = quotation.customerAddress,\
+                email = "", city = "", state = "", pincode = "",\
+                gstNumber = "", panNumber = "", billingAddress = "", shippingAddress = "",\
+                source = "", type = "Individual"\
+            )' app/src/main/java/com/example/ui/quotation/QuotationViewModel.kt

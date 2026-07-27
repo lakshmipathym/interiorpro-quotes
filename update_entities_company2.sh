@@ -1,0 +1,1 @@
+perl -0777 -pi -e 's/    val defaultDeliveryDays: Int = 15,\n    val termsAndConditions: String = ""\n\)/    val defaultDeliveryDays: Int = 15,\n    val termsAndConditions: String = "",\n    val defaultWarranty: String = "",\n    val defaultDeliveryTime: String = "",\n    val defaultInstallationTime: String = ""\n\)/s' app/src/main/java/com/example/data/Entities.kt

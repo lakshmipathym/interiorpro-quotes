@@ -7,7 +7,6 @@ data class WorkspacePreview(
     val errorReason: String? = null,
     val companyName: String = "",
     val quotationCount: Int = 0,
-    val clientCount: Int = 0,
     val customerCount: Int = 0,
     val hasLogo: Boolean = false,
     val hasSignature: Boolean = false,

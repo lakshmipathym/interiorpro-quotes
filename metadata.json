@@ -1,5 +1,5 @@
 {
-  "name": "InteriorPro Quotes",
+  "name": "InteriorPro ERP",
   "description": "Professional offline quotation application for Interior Designers, Furniture Manufacturers, Aluminium Interior Contractors, and Modular Kitchen businesses.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

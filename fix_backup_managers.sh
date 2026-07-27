@@ -1,0 +1,4 @@
+perl -0777 -pi -e 's/name\.startsWith\("design_"\) \|\| name\.startsWith\("temp_des_"\)/name\.startsWith\("design_"\) \|\| name\.startsWith\("laminate_"\)/g' app/src/main/java/com/example/core/backup/pkg/BackupPackageManager.kt
+perl -0777 -pi -e 's/key\.startsWith\("design_"\) \|\| key\.startsWith\("temp_des_"\)/key\.startsWith\("design_"\) \|\| key\.startsWith\("laminate_"\)/g' app/src/main/java/com/example/core/backup/RestoreManagerImpl.kt
+perl -0777 -pi -e 's/name\.startsWith\("design_"\) \|\| name\.startsWith\("temp_des_"\)/name\.startsWith\("design_"\) \|\| name\.startsWith\("laminate_"\)/g' app/src/main/java/com/example/core/backup/WorkspaceManagerImpl.kt
+perl -0777 -pi -e 's/key\.startsWith\("design_"\) \|\| key\.startsWith\("temp_des_"\)/key\.startsWith\("design_"\) \|\| key\.startsWith\("laminate_"\)/g' app/src/main/java/com/example/core/backup/WorkspaceManagerImpl.kt

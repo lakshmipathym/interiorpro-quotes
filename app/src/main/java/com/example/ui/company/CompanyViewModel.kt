@@ -12,11 +12,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class CompanyViewModel(application: Application, private val repository: QuotesRepository) : AndroidViewModel(application) {
+class CompanyViewModel(application: Application, private val repository: QuotesRepository, private val masterRepository: com.example.data.MasterRepository) : AndroidViewModel(application) {
     val companyProfile: StateFlow<CompanyProfile?> = repository.companyProfile
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
     
-    val allMasterData: StateFlow<List<MasterData>> = repository.allMasterData
+    val allMasterData: StateFlow<List<com.example.data.MasterEntity>> = masterRepository.getAllMasters()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun saveCompanyProfile(profile: CompanyProfile) {
@@ -25,32 +25,32 @@ class CompanyViewModel(application: Application, private val repository: QuotesR
         }
     }
 
-    fun getMasterDataByType(type: String): Flow<List<MasterData>> = repository.getMasterDataByType(type)
+    fun getMasterDataByType(type: String): Flow<List<com.example.data.MasterEntity>> = masterRepository.getMastersByType(type)
 
     fun saveMasterData(type: String, value: String, extra: String = "") {
         viewModelScope.launch {
-            repository.saveMasterData(MasterData(type = type, value = value, extra = extra))
+            masterRepository.saveMaster(com.example.data.MasterEntity(masterType = type, name = value, description = extra))
         }
     }
 
-    fun deleteMasterData(master: MasterData) {
+    fun deleteMasterData(master: com.example.data.MasterEntity) {
         viewModelScope.launch {
-            repository.deleteMasterData(master)
+            masterRepository.deleteMasterPermanently(master)
         }
     }
 
-    fun deleteMasterDataById(id: Int) {
+    fun deleteMasterDataById(id: Long) {
         viewModelScope.launch {
-            repository.deleteMasterDataById(id)
+            masterRepository.softDeleteMaster(id)
         }
     }
 }
 
-class CompanyViewModelFactory(private val application: Application, private val repository: QuotesRepository) : ViewModelProvider.Factory {
+class CompanyViewModelFactory(private val application: Application, private val repository: QuotesRepository, private val masterRepository: com.example.data.MasterRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(CompanyViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return CompanyViewModel(application, repository) as T
+            return CompanyViewModel(application, repository, masterRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

@@ -5,6 +5,7 @@ import java.text.DecimalFormatSymbols
 import java.util.Locale
 
 object CurrencyFormatter {
+
     fun formatIndianCurrency(amount: Double): String {
         return try {
             val formatter = DecimalFormat("##,##,##,##0.00")
@@ -19,10 +20,26 @@ object CurrencyFormatter {
         }
     }
     
+    fun formatIndianCurrencyStrict(amount: Double): String {
+        return try {
+            val formatter = DecimalFormat("##,##,##,##0.00")
+            formatter.decimalFormatSymbols = DecimalFormatSymbols(Locale.US)
+            formatter.format(amount)
+        } catch (e: Exception) {
+            String.format(Locale.US, "%.2f", amount)
+        }
+    }
+    
     fun convertNumberToWords(amount: Double): String {
         val num = amount.toLong()
-        if (num == 0L) return "Zero"
-        return convertToWords(num) + " Only"
+        val paise = Math.round((amount - num) * 100.0).toLong()
+        
+        var result = if (num == 0L) "Zero" else convertToWords(num)
+        
+        if (paise > 0L) {
+            result += " and " + convertToWords(paise) + " Paise"
+        }
+        return result + " Only"
     }
     
     private val units = arrayOf("", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen")

@@ -1,0 +1,24 @@
+            canvas.drawText("₹ " + formatIndianCurrency(quotation.grandTotal), engine.endX - 10f, grandTotalY + 14f, textWhiteBold8_5Right)
+        }
+        engine.currentY += totalsBoxH
+
+        if (showAmountInWords) {
+            val wordsStr = "Amount in Words: Rupee " + convertNumberToWords(quotation.grandTotal) + " Only"
+            val wordsPaint = engine.getPaint(COLOR_DARK_SLATE, 7.5f, TYPEFACE_BOLD)
+            val wrappedWords = engine.wrapText(wordsStr, engine.usableWidth.toInt(), wordsPaint)
+            val wordsH = wrappedWords.size * 10f
+            engine.ensureSpace(wordsH, reserveHeader = true)
+            val wTop = engine.currentY
+            engine.addCommand { canvas, _, _ ->
+                var textY = wTop + 8f
+                wrappedWords.forEach { line ->
+                    canvas.drawText(line, engine.marginX, textY, wordsPaint)
+                    textY += 10f
+                }
+            }
+            engine.currentY += wordsH + 8f + sectionSpacing
+        }
+
+    }
+    private fun drawPayment(
+        engine: PdfEngine,

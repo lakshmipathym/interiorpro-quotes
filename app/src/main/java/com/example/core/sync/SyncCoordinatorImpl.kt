@@ -66,7 +66,7 @@ class SyncCoordinatorImpl : SyncCoordinator {
 
             // 3.2 Upload Metadata & Data to Google Drive secure appDataFolder
             onStateChanged(SyncState.Uploading)
-            Log.d(TAG, "Uploading archive file to Google Drive App Data folder...")
+
             
             val cloudProperties = mapOf(
                 "checksum" to localMetadata.checksum,
@@ -89,7 +89,7 @@ class SyncCoordinatorImpl : SyncCoordinator {
             }
 
             // 3.3 Verify Upload
-            Log.d(TAG, "Verifying uploaded file in Google Drive App Data folder...")
+
             val cloudFiles = driveService.listAppDataFiles()
             val matchedFile = cloudFiles.find { it.id == uploadedFileId }
             if (matchedFile == null) {
@@ -113,7 +113,7 @@ class SyncCoordinatorImpl : SyncCoordinator {
             }
 
             // 4.2 Download payload to temporary staging space
-            Log.d(TAG, "Downloading latest archive payload (${latestCloudFile.id}) to staging file...")
+
             val downloadSuccess = driveService.downloadFromAppData(latestCloudFile.id, downloadStagingFile)
             if (!downloadSuccess) {
                 onStateChanged(SyncState.Failed("Download failed from Google Drive"))
@@ -121,7 +121,7 @@ class SyncCoordinatorImpl : SyncCoordinator {
             }
 
             // 4.3 Verify SHA-256 Checksum, Decrypt, Temporary Restore, and Validate schema
-            Log.d(TAG, "Validating and decrypting downloaded payload...")
+
             val integrityOk = restoreManager.verifyBackupIntegrity(downloadStagingFile, BACKUP_PASSWORD)
             if (!integrityOk) {
                 onStateChanged(SyncState.Failed("Downloaded backup failed cryptographic integrity verification"))
@@ -143,9 +143,9 @@ class SyncCoordinatorImpl : SyncCoordinator {
             return SyncResult.Success(syncedItemsCount = localMetadata.recordCount)
 
         } catch (e: Exception) {
-            Log.e(TAG, "Fatal uncaught exception in Sync Coordinator orchestration", e)
-            onStateChanged(SyncState.Failed("Sync coordinator fatal exception: ${e.message}", e))
-            return SyncResult.Failure("Fatal sync coordinator exception: ${e.message}", e)
+
+            onStateChanged(SyncState.Failed("Sync coordinator fatal exception"))
+            return SyncResult.Failure("Fatal sync coordinator exception")
         } finally {
             // Clean up temporary local files
             if (uploadStagingFile.exists()) uploadStagingFile.delete()

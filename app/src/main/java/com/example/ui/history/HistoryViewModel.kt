@@ -20,6 +20,19 @@ class HistoryViewModel(application: Application, val repository: QuotesRepositor
 
     fun deleteQuotation(id: Int) {
         viewModelScope.launch {
+            val quotation = repository.getQuotationByIdDirect(id)
+            if (quotation != null) {
+                val safeQuoteNum = quotation.quotationNumber.replace("/", "_")
+                val filesDir = getApplication<Application>().filesDir
+                val files = filesDir.listFiles()
+                if (files != null) {
+                    for (file in files) {
+                        if (file.name.startsWith("design_${safeQuoteNum}_") || file.name.startsWith("laminate_${safeQuoteNum}_")) {
+                            file.delete()
+                        }
+                    }
+                }
+            }
             repository.deleteQuotation(id)
         }
     }
@@ -48,10 +61,76 @@ class HistoryViewModel(application: Application, val repository: QuotesRepositor
                 status = "Draft"
             )
             
-            val duplicatedItems = items.map {
-                it.copy(
+            val safeNewQuoteNum = newNumber.replace("/", "_")
+            val duplicatedItems = items.mapIndexed { index, item ->
+                var duplicatedDesc = item.description
+                try {
+                    if (duplicatedDesc.contains("|||")) {
+                        val parts = duplicatedDesc.split("|||")
+                        val userDesc = parts[0].trim()
+                        val specsJson = parts[1].trim()
+                        if (specsJson.startsWith("{") && specsJson.endsWith("}")) {
+                            val json = org.json.JSONObject(specsJson)
+                            
+                            val laminateImageUri = json.optString("laminateImageUri", "")
+                            if (laminateImageUri.isNotEmpty()) {
+                                val filesDir = getApplication<Application>().filesDir
+                                val oldFile = java.io.File(filesDir, java.io.File(laminateImageUri).name)
+                                if (oldFile.exists()) {
+                                    val newFile = java.io.File(oldFile.parent, "laminate_${safeNewQuoteNum}_${index}.jpg")
+                                    oldFile.copyTo(newFile, overwrite = true)
+                                    json.put("laminateImageUri", newFile.absolutePath)
+                                }
+                            }
+                            
+                            val designImageUri = json.optString("designImageUri", "")
+                            if (designImageUri.isNotEmpty()) {
+                                val filesDir = getApplication<Application>().filesDir
+                                val oldFile = java.io.File(filesDir, java.io.File(designImageUri).name)
+                                if (oldFile.exists()) {
+                                    val newFile = java.io.File(oldFile.parent, "design_${safeNewQuoteNum}_${index}.jpg")
+                                    oldFile.copyTo(newFile, overwrite = true)
+                                    json.put("designImageUri", newFile.absolutePath)
+                                }
+                            }
+                            
+                            duplicatedDesc = "$userDesc ||| $json"
+                        }
+                    } else if (duplicatedDesc.startsWith("{") && duplicatedDesc.endsWith("}")) {
+                        val json = org.json.JSONObject(duplicatedDesc)
+                        
+                        val laminateImageUri = json.optString("laminateImageUri", "")
+                        if (laminateImageUri.isNotEmpty()) {
+                            val filesDir = getApplication<Application>().filesDir
+                                val oldFile = java.io.File(filesDir, java.io.File(laminateImageUri).name)
+                            if (oldFile.exists()) {
+                                val newFile = java.io.File(oldFile.parent, "laminate_${safeNewQuoteNum}_${index}.jpg")
+                                oldFile.copyTo(newFile, overwrite = true)
+                                json.put("laminateImageUri", newFile.absolutePath)
+                            }
+                        }
+                        
+                        val designImageUri = json.optString("designImageUri", "")
+                        if (designImageUri.isNotEmpty()) {
+                            val filesDir = getApplication<Application>().filesDir
+                                val oldFile = java.io.File(filesDir, java.io.File(designImageUri).name)
+                            if (oldFile.exists()) {
+                                val newFile = java.io.File(oldFile.parent, "design_${safeNewQuoteNum}_${index}.jpg")
+                                oldFile.copyTo(newFile, overwrite = true)
+                                json.put("designImageUri", newFile.absolutePath)
+                            }
+                        }
+                        
+                        duplicatedDesc = json.toString()
+                    }
+                } catch (e: Exception) {
+                    // Ignore
+                }
+                
+                item.copy(
                     id = 0,
-                    quotationId = 0
+                    quotationId = 0,
+                    description = duplicatedDesc
                 )
             }
             

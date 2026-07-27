@@ -1,0 +1,2 @@
+sed -i 's/private val repository: QuotesRepository,/private val repository: QuotesRepository, private val masterRepository: com.example.data.MasterRepository,/' app/src/main/java/com/example/ui/quotation/QuotationViewModel.kt
+sed -i 's/return QuotationViewModel(application, repository, syncManager)/return QuotationViewModel(application, repository, masterRepository, syncManager)/' app/src/main/java/com/example/ui/quotation/QuotationViewModel.kt

@@ -36,37 +36,41 @@ class MasterRepository(private val db: AppDatabase) {
 
     suspend fun isMasterUsed(masterType: String, name: String): Boolean {
         val trimmedName = name.trim()
+        val normalizedType = when(masterType) {
+            "PROJECT_CATEGORY" -> "CATEGORY"
+            "MATERIAL_TYPE" -> "MATERIAL"
+            else -> masterType
+        }
         return try {
-            when (masterType) {
+            when (normalizedType) {
                 "PROJECT_TYPE" -> {
-                    val usedInQuote = quotationDao.getAllQuotationsDirect().any { it.projectType.trim().equals(trimmedName, ignoreCase = true) }
-                    val usedInTemplate = quotationTemplateDao.getAllTemplatesDirect().any { it.projectType.trim().equals(trimmedName, ignoreCase = true) }
+                    val usedInQuote = quotationDao.countByProjectType(trimmedName) > 0
+                    val usedInTemplate = quotationTemplateDao.countByProjectType(trimmedName) > 0
                     usedInQuote || usedInTemplate
                 }
                 "CATEGORY" -> {
-                    val usedInQuote = quotationDao.getAllQuotationsDirect().any { it.category.trim().equals(trimmedName, ignoreCase = true) }
-                    val usedInTemplate = quotationTemplateDao.getAllTemplatesDirect().any { it.category.trim().equals(trimmedName, ignoreCase = true) }
+                    val usedInQuote = quotationDao.countByCategory(trimmedName) > 0
+                    val usedInTemplate = quotationTemplateDao.countByCategory(trimmedName) > 0
                     usedInQuote || usedInTemplate
                 }
                 "MATERIAL" -> {
-                    val usedInQuote = quotationDao.getAllQuotationsDirect().any { it.material.trim().equals(trimmedName, ignoreCase = true) }
-                    val usedInTemplate = quotationTemplateDao.getAllTemplatesDirect().any { it.material.trim().equals(trimmedName, ignoreCase = true) }
+                    val usedInQuote = quotationDao.countByMaterial(trimmedName) > 0
+                    val usedInTemplate = quotationTemplateDao.countByMaterial(trimmedName) > 0
                     usedInQuote || usedInTemplate
                 }
                 "FINISH_TYPE" -> {
-                    val usedInQuote = quotationDao.getAllQuotationsDirect().any { it.finish.trim().equals(trimmedName, ignoreCase = true) }
-                    val usedInTemplate = quotationTemplateDao.getAllTemplatesDirect().any { it.finish.trim().equals(trimmedName, ignoreCase = true) }
+                    val usedInQuote = quotationDao.countByFinish(trimmedName) > 0
+                    val usedInTemplate = quotationTemplateDao.countByFinish(trimmedName) > 0
                     usedInQuote || usedInTemplate
                 }
                 "UNIT" -> {
-                    val usedInItems = quotationItemDao.getAllQuotationItemsDirect().any { it.unit.trim().equals(trimmedName, ignoreCase = true) }
-                    usedInItems
+                    quotationItemDao.countByUnit(trimmedName) > 0
                 }
                 "WARRANTY" -> {
-                    quotationDao.getAllQuotationsDirect().any { it.warranty.trim().equals(trimmedName, ignoreCase = true) }
+                    quotationDao.countByWarranty(trimmedName) > 0
                 }
                 "TERMS" -> {
-                    quotationDao.getAllQuotationsDirect().any { it.termsAndConditions.contains(trimmedName, ignoreCase = true) }
+                    quotationDao.countByTerms(trimmedName) > 0
                 }
                 else -> false
             }

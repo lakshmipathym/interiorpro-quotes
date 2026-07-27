@@ -1,0 +1,2 @@
+sed -i 's/model = File(signaturePath),/model = ImageRequest.Builder(LocalContext.current).data(File(signaturePath)).setParameter("refresh", sigRefreshKey, null).build(),/g' app/src/main/java/com/example/ui/settings/SettingsScreen.kt
+sed -i 's/model = File(companySealPath),/model = ImageRequest.Builder(LocalContext.current).data(File(companySealPath)).setParameter("refresh", sealRefreshKey, null).build(),/g' app/src/main/java/com/example/ui/settings/SettingsScreen.kt

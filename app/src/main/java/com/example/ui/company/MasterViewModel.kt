@@ -36,7 +36,14 @@ class MasterViewModel(application: Application, private val repository: MasterRe
             sortBy,
             showInactive
         ) { rawMasters, query, sort, includeInactive ->
-            var list = rawMasters.filter { it.masterType == masterType && !it.isDeleted }
+            var list = rawMasters.filter { 
+                val normType = when(it.masterType) {
+                    "PROJECT_CATEGORY" -> "CATEGORY"
+                    "MATERIAL_TYPE" -> "MATERIAL"
+                    else -> it.masterType
+                }
+                normType == masterType && !it.isDeleted 
+            }
 
             // 1. Filter active
             if (!includeInactive) {

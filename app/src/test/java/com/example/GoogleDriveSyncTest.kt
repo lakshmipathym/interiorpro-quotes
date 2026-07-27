@@ -70,7 +70,12 @@ class GoogleDriveSyncTest {
         )
     }
 
-
+    @org.junit.After
+    fun tearDown() {
+        if (::db.isInitialized) {
+            db.close()
+        }
+    }
 
     @Test
     fun testDeviceRegistrationMetadata() {

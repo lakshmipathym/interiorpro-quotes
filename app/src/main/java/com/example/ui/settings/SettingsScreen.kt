@@ -2,6 +2,7 @@ package com.example.ui.settings
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -16,9 +17,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
@@ -27,25 +30,38 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
 import com.example.data.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 
+import com.example.ui.theme.ThemeManager
+import com.example.ui.theme.ThemeMode
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     settingsViewModel: com.example.ui.settings.SettingsViewModel,
     companyViewModel: com.example.ui.company.CompanyViewModel,
-    onNavigateToMasters: () -> Unit = {}
+    masterViewModel: com.example.ui.company.MasterViewModel,
+    themeManager: ThemeManager,
+    onNavigateToMasters: () -> Unit = {},
+    onNavigateToAbout: () -> Unit = {},
+    onNavigateToSyncDashboard: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val companyProfile by companyViewModel.companyProfile.collectAsState()
+    
+    val gstRates by masterViewModel.getFilteredMasters("GST_RATE").collectAsState(initial = emptyList())
+    val paymentTermsMaster by masterViewModel.getFilteredMasters("PAYMENT_TERM").collectAsState(initial = emptyList())
 
     // Company Profile state variables
     var coName by remember { mutableStateOf("") }
@@ -83,6 +99,9 @@ fun SettingsScreen(
     var defaultDiscountStr by remember { mutableStateOf("0.0") }
     var defaultValidityDaysStr by remember { mutableStateOf("30") }
     var defaultDeliveryDaysStr by remember { mutableStateOf("15") }
+    var logoRefreshKey by remember { mutableStateOf(System.currentTimeMillis()) }
+    var sigRefreshKey by remember { mutableStateOf(System.currentTimeMillis()) }
+    var sealRefreshKey by remember { mutableStateOf(System.currentTimeMillis()) }
 
     // Terms
     var termsAndConditions by remember { mutableStateOf("") }
@@ -92,6 +111,9 @@ fun SettingsScreen(
     var defaultPaymentTerms by remember { mutableStateOf("") }
     var defaultQuoteValidity by remember { mutableStateOf("") }
     var additionalConditions by remember { mutableStateOf("") }
+
+    var gstExpanded by remember { mutableStateOf(false) }
+    var paymentTermsExpanded by remember { mutableStateOf(false) }
 
     // Error states
     var coNameError by remember { mutableStateOf<String?>(null) }
@@ -138,7 +160,7 @@ fun SettingsScreen(
             try {
                 cloudBackupsList = settingsViewModel.listCloudBackups()
             } catch (e: Exception) {
-                e.printStackTrace()
+
             }
         }
     }
@@ -159,7 +181,7 @@ fun SettingsScreen(
                         lastBackupDate = currentDate
                         Toast.makeText(context, "Backup file saved successfully!", Toast.LENGTH_LONG).show()
                     } catch (e: Exception) {
-                        Toast.makeText(context, "Failed to save backup file: ${e.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, "Failed to save backup file", Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -173,7 +195,19 @@ fun SettingsScreen(
             scope.launch {
                 try {
                     val jsonContent = context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                        inputStream.bufferedReader().use { it.readText() }
+                        inputStream.bufferedReader().use { reader ->
+                            val sb = java.lang.StringBuilder()
+                            val buffer = CharArray(8192)
+                            var charsRead: Int
+                            var totalChars = 0
+                            val maxChars = 50 * 1024 * 1024 // 50MB limit
+                            while (reader.read(buffer).also { charsRead = it } != -1) {
+                                totalChars += charsRead
+                                if (totalChars > maxChars) throw SecurityException("Backup file exceeds maximum allowed size")
+                                sb.append(buffer, 0, charsRead)
+                            }
+                            sb.toString()
+                        }
                     }
                     if (jsonContent != null) {
                         val isValid = settingsViewModel.validateBackupData(jsonContent)
@@ -187,7 +221,7 @@ fun SettingsScreen(
                         Toast.makeText(context, "Failed to read backup file.", Toast.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(context, "Error reading backup: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "Error reading backup", Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -200,18 +234,21 @@ fun SettingsScreen(
             scope.launch {
                 val tempFile = File(context.cacheDir, "temp_export.ipro")
                 settingsViewModel.exportWorkspaceBundle(tempFile) { file ->
-                    if (file != null && file.exists()) {
-                        try {
+                    try {
+                        if (file != null && file.exists()) {
                             context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                                 outputStream.write(file.readBytes())
                             }
-                            tempFile.delete()
                             Toast.makeText(context, "Workspace exported successfully!", Toast.LENGTH_LONG).show()
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "Export writing failed: ${e.message}", Toast.LENGTH_LONG).show()
+                        } else {
+                            Toast.makeText(context, "Workspace packaging failed.", Toast.LENGTH_LONG).show()
                         }
-                    } else {
-                        Toast.makeText(context, "Workspace packaging failed.", Toast.LENGTH_LONG).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Export writing failed", Toast.LENGTH_LONG).show()
+                    } finally {
+                        if (tempFile.exists()) {
+                            tempFile.delete()
+                        }
                     }
                 }
             }
@@ -223,15 +260,25 @@ fun SettingsScreen(
     ) { uri: Uri? ->
         uri?.let {
             scope.launch {
+                val tempFile = File(context.cacheDir, "temp_import.ipro")
                 try {
-                    val tempFile = File(context.cacheDir, "temp_import.ipro")
                     context.contentResolver.openInputStream(uri)?.use { inputStream ->
                         tempFile.outputStream().use { outputStream ->
-                            inputStream.copyTo(outputStream)
+                            val buffer = ByteArray(8192)
+                            var bytesRead: Int
+                            var totalBytes = 0
+                            val maxBytes = 50 * 1024 * 1024 // 50MB limit
+                            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                                totalBytes += bytesRead
+                                if (totalBytes > maxBytes) throw SecurityException("Workspace file exceeds maximum allowed size")
+                                outputStream.write(buffer, 0, bytesRead)
+                            }
                         }
                     }
                     settingsViewModel.verifyAndPreviewWorkspaceBundle(tempFile) { preview ->
-                        tempFile.delete()
+                        if (tempFile.exists()) {
+                            tempFile.delete()
+                        }
                         if (preview.isValid) {
                             workspacePreviewState = preview
                             isConfirmWorkspaceImportDialogOpen = true
@@ -240,7 +287,10 @@ fun SettingsScreen(
                         }
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(context, "Failed to read file: ${e.message}", Toast.LENGTH_LONG).show()
+                    if (tempFile.exists()) {
+                        tempFile.delete()
+                    }
+                    Toast.makeText(context, "Failed to read file", Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -254,6 +304,7 @@ fun SettingsScreen(
             val copiedPath = copyUriToInternalStorage(context, it, "company_logo.png")
             if (copiedPath != null) {
                 logoPath = copiedPath
+                logoRefreshKey = System.currentTimeMillis()
                 Toast.makeText(context, "Company Logo updated!", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(context, "Failed to copy logo image", Toast.LENGTH_SHORT).show()
@@ -272,6 +323,7 @@ fun SettingsScreen(
             val copiedPath = copyUriToInternalStorage(context, it, "auth_signature.png")
             if (copiedPath != null) {
                 signaturePath = copiedPath
+                sigRefreshKey = System.currentTimeMillis()
                 Toast.makeText(context, "Authorized Signature updated!", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(context, "Failed to copy signature image", Toast.LENGTH_SHORT).show()
@@ -286,6 +338,7 @@ fun SettingsScreen(
             val copiedPath = copyUriToInternalStorage(context, it, "company_seal.png")
             if (copiedPath != null) {
                 companySealPath = copiedPath
+                sealRefreshKey = System.currentTimeMillis()
                 Toast.makeText(context, "Company Seal updated successfully!", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(context, "Failed to copy seal image", Toast.LENGTH_SHORT).show()
@@ -348,1550 +401,543 @@ fun SettingsScreen(
         return com.example.utils.ValidationManager.isValidGstin(gst)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState())
+
+    
+    var selectedTabIndex by remember { mutableStateOf(0) }
+    val tabs = listOf("Profile & Bank", "Branding", "Quotation Defaults", "PDF Prefs", "Data & Backup")
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Settings") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        },
+        floatingActionButton = {
+            if (selectedTabIndex in 0..2) {
+                ExtendedFloatingActionButton(
+                    onClick = {
+                        val hasCoNameError = coName.trim().isEmpty()
+                        val hasPhoneError = phone.trim().isEmpty()
+                        val hasEmailError = email.isNotEmpty() && !com.example.utils.ValidationManager.isValidEmail(email)
+                        val hasGstError = gstin.isNotEmpty() && !com.example.utils.ValidationManager.isValidGstin(gstin)
+
+                        coNameError = if (hasCoNameError) "Company Name is required" else null
+                        phoneError = if (hasPhoneError) "Phone Number is required" else null
+                        emailError = if (hasEmailError) "Invalid Email Address" else null
+                        gstinError = if (hasGstError) "Invalid GSTIN format" else null
+
+                        if (!hasCoNameError && !hasPhoneError && !hasEmailError && !hasGstError) {
+                            val newProfile = CompanyProfile(
+                                id = companyProfile?.id ?: 1,
+                                companyName = coName.trim(),
+                                contactPerson = ownerName.trim(),
+                                ownerName = ownerName.trim(),
+                                phone = phone.trim(),
+                                whatsappNumber = whatsappNumber.trim(),
+                                email = email.trim(),
+                                website = website.trim(),
+                                gstin = gstin.trim().uppercase(),
+                                address = address.trim(),
+                                city = city.trim(),
+                                district = district.trim(),
+                                state = state.trim(),
+                                pincode = pincode.trim(),
+                                bankName = bankName.trim(),
+                                accountHolderName = accountHolderName.trim(),
+                                accountNumber = bankAccount.trim(),
+                                ifsc = bankIfsc.trim().uppercase(),
+                                branch = bankBranch.trim(),
+                                upiId = upiId.trim(),
+                                logoPath = logoPath.trim(),
+                                signaturePath = signaturePath.trim(),
+                                companySealPath = companySealPath.trim(),
+                                signatureText = signatureText.trim(),
+                                tagline = tagline.trim(),
+                                brandColor = companyProfile?.brandColor ?: "",
+                                defaultGstRate = defaultGstRateStr.toDoubleOrNull() ?: 18.0,
+                                defaultDiscount = defaultDiscountStr.toDoubleOrNull() ?: 0.0,
+                                defaultValidityDays = defaultValidityDaysStr.toIntOrNull() ?: 30,
+                                defaultDeliveryDays = defaultDeliveryDaysStr.toIntOrNull() ?: 15,
+                                termsAndConditions = termsAndConditions.trim(),
+                                defaultWarranty = defaultWarranty.trim(),
+                                defaultDeliveryTime = defaultDeliveryTime.trim(),
+                                defaultInstallationTime = defaultInstallationTime.trim(),
+                                defaultPaymentTerms = defaultPaymentTerms.trim(),
+                                defaultQuoteValidity = defaultQuoteValidity.trim(),
+                                additionalConditions = additionalConditions.trim()
+                            )
+                            companyViewModel.saveCompanyProfile(newProfile)
+                            android.widget.Toast.makeText(context, "Settings saved successfully!", android.widget.Toast.LENGTH_SHORT).show()
+                        } else {
+                            android.widget.Toast.makeText(context, "Please fix errors in Profile & Bank", android.widget.Toast.LENGTH_LONG).show()
+                            selectedTabIndex = 0
+                        }
+                    },
+                    icon = { Icon(Icons.Default.Save, contentDescription = "Save Settings") },
+                    text = { Text("Save Settings") }
+                )
+            }
+        }
+    ) { paddingValues ->
+        Column(modifier = Modifier.padding(paddingValues)) {
+            ScrollableTabRow(
+                selectedTabIndex = selectedTabIndex,
+                edgePadding = 16.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTabIndex == index,
+                        onClick = { selectedTabIndex = index },
+                        text = { Text(title, fontWeight = FontWeight.Bold, maxLines = 1) }
+                    )
+                }
+            }
+            
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .imePadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp)
+                    .padding(bottom = 80.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Column(modifier = Modifier.widthIn(max = 600.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                when (selectedTabIndex) {
+                    0 -> {
+                        // Profile & Bank Tab
+                        SettingsProfileAndBankTab(
+                            coName = coName, onCoNameChange = { coName = it },
+                            tagline = tagline, onTaglineChange = { tagline = it },
+                            ownerName = ownerName, onOwnerNameChange = { ownerName = it },
+                            phone = phone, onPhoneChange = { phone = it },
+                            whatsappNumber = whatsappNumber, onWhatsappChange = { whatsappNumber = it },
+                            email = email, onEmailChange = { email = it },
+                            website = website, onWebsiteChange = { website = it },
+                            gstin = gstin, onGstinChange = { gstin = it },
+                            address = address, onAddressChange = { address = it },
+                            city = city, onCityChange = { city = it },
+                            district = district, onDistrictChange = { district = it },
+                            state = state, onStateChange = { state = it },
+                            pincode = pincode, onPincodeChange = { pincode = it },
+                            bankName = bankName, onBankNameChange = { bankName = it },
+                            accountHolderName = accountHolderName, onAccountHolderNameChange = { accountHolderName = it },
+                            bankAccount = bankAccount, onBankAccountChange = { bankAccount = it },
+                            bankIfsc = bankIfsc, onBankIfscChange = { bankIfsc = it },
+                            bankBranch = bankBranch, onBankBranchChange = { bankBranch = it },
+                            upiId = upiId, onUpiIdChange = { upiId = it },
+                            coNameError = coNameError, phoneError = phoneError, emailError = emailError, gstinError = gstinError
+                        )
+
+                    }
+                    1 -> {
+                        SettingsBrandingTab(
+                            logoPath = logoPath, onLogoPathChange = { logoPath = it },
+                            signaturePath = signaturePath, onSignaturePathChange = { signaturePath = it },
+                            companySealPath = companySealPath, onCompanySealPathChange = { companySealPath = it },
+                            signatureText = signatureText, onSignatureTextChange = { signatureText = it },
+                            logoRefreshKey = logoRefreshKey, onLogoRefreshKeyChange = { logoRefreshKey = it },
+                            sigRefreshKey = sigRefreshKey, onSigRefreshKeyChange = { sigRefreshKey = it },
+                            sealRefreshKey = sealRefreshKey, onSealRefreshKeyChange = { sealRefreshKey = it }
+                        )
+
+                    }
+                    2 -> {
+                        // Quotation Defaults Tab
+                        SettingsQuotationDefaultsTab(
+                            defaultGstRateStr = defaultGstRateStr, onDefaultGstRateStrChange = { defaultGstRateStr = it },
+                            defaultDiscountStr = defaultDiscountStr, onDefaultDiscountStrChange = { defaultDiscountStr = it },
+                            defaultValidityDaysStr = defaultValidityDaysStr, onDefaultValidityDaysStrChange = { defaultValidityDaysStr = it },
+                            defaultDeliveryDaysStr = defaultDeliveryDaysStr, onDefaultDeliveryDaysStrChange = { defaultDeliveryDaysStr = it },
+                            defaultWarranty = defaultWarranty, onDefaultWarrantyChange = { defaultWarranty = it },
+                            defaultDeliveryTime = defaultDeliveryTime, onDefaultDeliveryTimeChange = { defaultDeliveryTime = it },
+                            defaultInstallationTime = defaultInstallationTime, onDefaultInstallationTimeChange = { defaultInstallationTime = it },
+                            defaultPaymentTerms = defaultPaymentTerms, onDefaultPaymentTermsChange = { defaultPaymentTerms = it },
+                            additionalConditions = additionalConditions, onAdditionalConditionsChange = { additionalConditions = it },
+                            termsAndConditions = termsAndConditions, onTermsAndConditionsChange = { termsAndConditions = it },
+                            paymentTermsExpanded = paymentTermsExpanded, onPaymentTermsExpandedChange = { paymentTermsExpanded = it },
+                            paymentTermsMaster = paymentTermsMaster
+                        )
+
+                    }
+                    3 -> {
+                        // PDF Preferences Tab
+                        SettingsPdfPreferencesTab(
+                            pdfShowLogo = pdfShowLogo, onPdfShowLogoChange = { pdfShowLogo = it; pdfPrefs.edit().putBoolean("pdf_show_logo", it).apply() },
+                            pdfShowGst = pdfShowGst, onPdfShowGstChange = { pdfShowGst = it; pdfPrefs.edit().putBoolean("pdf_show_gst", it).apply() },
+                            pdfShowWebsite = pdfShowWebsite, onPdfShowWebsiteChange = { pdfShowWebsite = it; pdfPrefs.edit().putBoolean("pdf_show_website", it).apply() },
+                            pdfShowWhatsapp = pdfShowWhatsapp, onPdfShowWhatsappChange = { pdfShowWhatsapp = it; pdfPrefs.edit().putBoolean("pdf_show_whatsapp", it).apply() },
+                            pdfShowValidUntil = pdfShowValidUntil, onPdfShowValidUntilChange = { pdfShowValidUntil = it; pdfPrefs.edit().putBoolean("pdf_show_valid_until", it).apply() },
+                            pdfShowQrCode = pdfShowQrCode, onPdfShowQrCodeChange = { pdfShowQrCode = it; pdfPrefs.edit().putBoolean("pdf_show_qr_code", it).apply() },
+                            pdfShowBankDetails = pdfShowBankDetails, onPdfShowBankDetailsChange = { pdfShowBankDetails = it; pdfPrefs.edit().putBoolean("pdf_show_bank_details", it).apply() },
+                            pdfShowAmountInWords = pdfShowAmountInWords, onPdfShowAmountInWordsChange = { pdfShowAmountInWords = it; pdfPrefs.edit().putBoolean("pdf_show_amount_in_words", it).apply() },
+                            pdfShowCompanySeal = pdfShowCompanySeal, onPdfShowCompanySealChange = { pdfShowCompanySeal = it; pdfPrefs.edit().putBoolean("pdf_show_company_seal", it).apply() },
+                            pdfShowSignature = pdfShowSignature, onPdfShowSignatureChange = { pdfShowSignature = it; pdfPrefs.edit().putBoolean("pdf_show_signature", it).apply() },
+                            pdfShowTermsConditions = pdfShowTermsConditions, onPdfShowTermsConditionsChange = { pdfShowTermsConditions = it; pdfPrefs.edit().putBoolean("pdf_show_terms_conditions", it).apply() },
+                            pdfShowPageNumber = pdfShowPageNumber, onPdfShowPageNumberChange = { pdfShowPageNumber = it; pdfPrefs.edit().putBoolean("pdf_show_page_number", it).apply() }
+                        )
+                    }
+                    4 -> {
+                        // Data & Backup Tab
+                        SettingsDataAndBackupTab(
+                            onCreateWorkspace = { createWorkspaceLauncher.launch("InteriorPro_Workspace.ipro") },
+                            onImportWorkspace = { importWorkspaceLauncher.launch(arrayOf("*/*")) },
+                            lastBackupDate = lastBackupDate ?: "Never",
+                            onNavigateToMasters = onNavigateToMasters,
+                            onNavigateToSyncDashboard = onNavigateToSyncDashboard,
+                            themeManager = themeManager,
+                            onNavigateToAbout = onNavigateToAbout
+                        )
+                    }
+                }
+                } // End of inner width-constrained Column
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsProfileAndBankTab(
+    coName: String, onCoNameChange: (String) -> Unit,
+    tagline: String, onTaglineChange: (String) -> Unit,
+    ownerName: String, onOwnerNameChange: (String) -> Unit,
+    phone: String, onPhoneChange: (String) -> Unit,
+    whatsappNumber: String, onWhatsappChange: (String) -> Unit,
+    email: String, onEmailChange: (String) -> Unit,
+    website: String, onWebsiteChange: (String) -> Unit,
+    gstin: String, onGstinChange: (String) -> Unit,
+    address: String, onAddressChange: (String) -> Unit,
+    city: String, onCityChange: (String) -> Unit,
+    district: String, onDistrictChange: (String) -> Unit,
+    state: String, onStateChange: (String) -> Unit,
+    pincode: String, onPincodeChange: (String) -> Unit,
+    bankName: String, onBankNameChange: (String) -> Unit,
+    accountHolderName: String, onAccountHolderNameChange: (String) -> Unit,
+    bankAccount: String, onBankAccountChange: (String) -> Unit,
+    bankIfsc: String, onBankIfscChange: (String) -> Unit,
+    bankBranch: String, onBankBranchChange: (String) -> Unit,
+    upiId: String, onUpiIdChange: (String) -> Unit,
+    coNameError: String?, phoneError: String?, emailError: String?, gstinError: String?
+) {
+    Text("Company Profile", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = coName, onValueChange = onCoNameChange,
+        label = "Company Name *", modifier = Modifier.fillMaxWidth(),
+        isError = coNameError != null, errorMessage = coNameError
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = tagline, onValueChange = onTaglineChange,
+        label = "Tagline", modifier = Modifier.fillMaxWidth()
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = ownerName, onValueChange = onOwnerNameChange,
+        label = "Owner / Contact Person", modifier = Modifier.fillMaxWidth()
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = phone, onValueChange = onPhoneChange,
+        label = "Phone Number *", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+        modifier = Modifier.fillMaxWidth(),
+        isError = phoneError != null, errorMessage = phoneError
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = whatsappNumber, onValueChange = onWhatsappChange,
+        label = "WhatsApp Number", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+        modifier = Modifier.fillMaxWidth()
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = email, onValueChange = onEmailChange,
+        label = "Email Address *", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+        modifier = Modifier.fillMaxWidth(),
+        isError = emailError != null, errorMessage = emailError
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = website, onValueChange = onWebsiteChange,
+        label = "Website", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+        modifier = Modifier.fillMaxWidth()
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = gstin, onValueChange = onGstinChange,
+        label = "GSTIN / TAX ID", modifier = Modifier.fillMaxWidth(),
+        isError = gstinError != null, errorMessage = gstinError
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+    Text("Address", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = address, onValueChange = onAddressChange,
+        label = "Street Address", modifier = Modifier.fillMaxWidth()
+    )
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        com.example.ui.components.PremiumOutlinedTextField(
+            value = city, onValueChange = onCityChange,
+            label = "City", modifier = Modifier.weight(1f)
+        )
+        com.example.ui.components.PremiumOutlinedTextField(
+            value = pincode, onValueChange = onPincodeChange,
+            label = "Pincode", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.weight(1f)
+        )
+    }
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        com.example.ui.components.PremiumOutlinedTextField(
+            value = district, onValueChange = onDistrictChange,
+            label = "District", modifier = Modifier.weight(1f)
+        )
+        com.example.ui.components.PremiumOutlinedTextField(
+            value = state, onValueChange = onStateChange,
+            label = "State", modifier = Modifier.weight(1f)
+        )
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+    Text("Bank Details", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = bankName, onValueChange = onBankNameChange,
+        label = "Bank Name", modifier = Modifier.fillMaxWidth()
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = accountHolderName, onValueChange = onAccountHolderNameChange,
+        label = "Account Holder Name", modifier = Modifier.fillMaxWidth()
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = bankAccount, onValueChange = onBankAccountChange,
+        label = "Account Number", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = Modifier.fillMaxWidth()
+    )
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        com.example.ui.components.PremiumOutlinedTextField(
+            value = bankIfsc, onValueChange = onBankIfscChange,
+            label = "IFSC Code", modifier = Modifier.weight(1f)
+        )
+        com.example.ui.components.PremiumOutlinedTextField(
+            value = bankBranch, onValueChange = onBankBranchChange,
+            label = "Branch", modifier = Modifier.weight(1f)
+        )
+    }
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = upiId, onValueChange = onUpiIdChange,
+        label = "UPI ID", modifier = Modifier.fillMaxWidth()
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsQuotationDefaultsTab(
+    defaultGstRateStr: String, onDefaultGstRateStrChange: (String) -> Unit,
+    defaultDiscountStr: String, onDefaultDiscountStrChange: (String) -> Unit,
+    defaultValidityDaysStr: String, onDefaultValidityDaysStrChange: (String) -> Unit,
+    defaultDeliveryDaysStr: String, onDefaultDeliveryDaysStrChange: (String) -> Unit,
+    defaultWarranty: String, onDefaultWarrantyChange: (String) -> Unit,
+    defaultDeliveryTime: String, onDefaultDeliveryTimeChange: (String) -> Unit,
+    defaultInstallationTime: String, onDefaultInstallationTimeChange: (String) -> Unit,
+    defaultPaymentTerms: String, onDefaultPaymentTermsChange: (String) -> Unit,
+    additionalConditions: String, onAdditionalConditionsChange: (String) -> Unit,
+    termsAndConditions: String, onTermsAndConditionsChange: (String) -> Unit,
+    paymentTermsExpanded: Boolean, onPaymentTermsExpandedChange: (Boolean) -> Unit,
+    paymentTermsMaster: List<com.example.data.MasterEntity>
+) {
+    Text("Quotation Defaults", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        com.example.ui.components.PremiumOutlinedTextField(
+            value = defaultGstRateStr, onValueChange = onDefaultGstRateStrChange,
+            label = "Default GST (%)", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.weight(1f)
+        )
+        com.example.ui.components.PremiumOutlinedTextField(
+            value = defaultDiscountStr, onValueChange = onDefaultDiscountStrChange,
+            label = "Default Discount (%)", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.weight(1f)
+        )
+    }
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        com.example.ui.components.PremiumOutlinedTextField(
+            value = defaultValidityDaysStr, onValueChange = onDefaultValidityDaysStrChange,
+            label = "Validity (Days)", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.weight(1f)
+        )
+        com.example.ui.components.PremiumOutlinedTextField(
+            value = defaultDeliveryDaysStr, onValueChange = onDefaultDeliveryDaysStrChange,
+            label = "Delivery (Days)", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.weight(1f)
+        )
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+    Text("Terms & Conditions (PDF)", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = defaultWarranty, onValueChange = onDefaultWarrantyChange,
+        label = "Default Warranty", modifier = Modifier.fillMaxWidth()
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = defaultDeliveryTime, onValueChange = onDefaultDeliveryTimeChange,
+        label = "Default Delivery Time", modifier = Modifier.fillMaxWidth()
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = defaultInstallationTime, onValueChange = onDefaultInstallationTimeChange,
+        label = "Default Installation Time", modifier = Modifier.fillMaxWidth()
+    )
+
+    ExposedDropdownMenuBox(
+        expanded = paymentTermsExpanded,
+        onExpandedChange = onPaymentTermsExpandedChange,
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Text(
-            text = "Company Profile Settings",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 8.dp)
+        OutlinedTextField(
+            value = defaultPaymentTerms,
+            onValueChange = onDefaultPaymentTermsChange,
+            label = { Text("Default Payment Terms") },
+            readOnly = true,
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = paymentTermsExpanded) },
+            colors = ExposedDropdownMenuDefaults.textFieldColors(),
+            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth()
         )
-        
-        Text(
-            text = "Set up your business identity, document images, default parameters, and payment information. All settings are saved offline.",
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        // SECTION 1: Company Information
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ExposedDropdownMenu(
+            expanded = paymentTermsExpanded,
+            onDismissRequest = { onPaymentTermsExpandedChange(false) }
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Company Information",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 16.dp)
+            if (paymentTermsMaster.isEmpty()) {
+                DropdownMenuItem(
+                    text = { Text("No Payment Terms found (Add in Masters)") },
+                    onClick = { onPaymentTermsExpandedChange(false) }
                 )
-
-                // Logo Picker Row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(80.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
-                            .clickable { logoPickerLauncher.launch("image/*") },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (logoPath.isNotEmpty() && File(logoPath).exists()) {
-                            AsyncImage(
-                                model = File(logoPath),
-                                contentDescription = "Company Logo",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    imageVector = Icons.Default.AddAPhoto,
-                                    contentDescription = "Add Logo",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text("Logo", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.width(16.dp))
-                    
-                    Column {
-                        Text("Company Logo", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                        Text("Appears at the header of all generated PDFs.", fontSize = 11.sp, color = Color.Gray)
-                        if (logoPath.isNotEmpty()) {
-                            Row {
-                                TextButton(onClick = { logoPickerLauncher.launch("image/*") }) {
-                                    Text("Replace Logo", fontSize = 12.sp)
-                                }
-                                TextButton(onClick = { logoPath = "" }) {
-                                    Text("Delete Logo", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Company Name field
-                OutlinedTextField(
-                    value = coName,
-                    onValueChange = {
-                        coName = it
-                        coNameError = if (it.trim().isEmpty()) "Company Name is required" else null
-                    },
-                    label = { Text("Company Name *") },
-                    leadingIcon = { Icon(Icons.Default.Business, contentDescription = null) },
-                    isError = coNameError != null,
-                    supportingText = { coNameError?.let { Text(it, color = MaterialTheme.colorScheme.error) } },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Business Tagline
-                OutlinedTextField(
-                    value = tagline,
-                    onValueChange = { tagline = it },
-                    label = { Text("Business Tagline (Optional)") },
-                    leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
-                    placeholder = { Text("e.g. Premium Interior Designing Solutions") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Owner Name
-                OutlinedTextField(
-                    value = ownerName,
-                    onValueChange = { ownerName = it },
-                    label = { Text("Representative / Owner Name") },
-                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Phone Number
-                OutlinedTextField(
-                    value = phone,
-                    onValueChange = {
-                        phone = it
-                        phoneError = if (it.trim().isEmpty()) "Phone Number is required" else null
-                    },
-                    label = { Text("Phone Number *") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
-                    isError = phoneError != null,
-                    supportingText = { phoneError?.let { Text(it, color = MaterialTheme.colorScheme.error) } },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Email Address
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = {
-                        email = it
-                        emailError = if (!validateEmail(it)) "Invalid Email Address" else null
-                    },
-                    label = { Text("Email Address") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-                    isError = emailError != null,
-                    supportingText = { emailError?.let { Text(it, color = MaterialTheme.colorScheme.error) } },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // GST Number
-                OutlinedTextField(
-                    value = gstin,
-                    onValueChange = {
-                        gstin = it
-                        gstinError = if (!validateGst(it)) "Invalid GSTIN format (15 Alphanumeric)" else null
-                    },
-                    label = { Text("GST Number") },
-                    leadingIcon = { Icon(Icons.Default.Receipt, contentDescription = null) },
-                    isError = gstinError != null,
-                    supportingText = { gstinError?.let { Text(it, color = MaterialTheme.colorScheme.error) } },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Website
-                OutlinedTextField(
-                    value = website,
-                    onValueChange = { website = it },
-                    label = { Text("Website (Optional)") },
-                    leadingIcon = { Icon(Icons.Default.Language, contentDescription = null) },
-                    placeholder = { Text("e.g. www.interiorpro.com") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Address fields
-                Text("Address Details", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 8.dp))
-                
-                OutlinedTextField(
-                    value = address,
-                    onValueChange = { address = it },
-                    label = { Text("Street Address") },
-                    leadingIcon = { Icon(Icons.Default.Home, contentDescription = null) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = city,
-                        onValueChange = { city = it },
-                        label = { Text("City") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = pincode,
-                        onValueChange = { pincode = it },
-                        label = { Text("Pincode") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = district,
-                        onValueChange = { district = it },
-                        label = { Text("District") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = state,
-                        onValueChange = { state = it },
-                        label = { Text("State") },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-
-        // SECTION 2: Document Settings
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Documents",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Signature Box
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text("Signature Image", fontWeight = FontWeight.SemiBold, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(90.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
-                                .clickable { signaturePickerLauncher.launch("image/*") },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (signaturePath.isNotEmpty() && File(signaturePath).exists()) {
-                                AsyncImage(
-                                    model = File(signaturePath),
-                                    contentDescription = "Signature Preview",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                               )
-                            } else {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(Icons.Default.Edit, contentDescription = "Add Signature", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text("Add Sig", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        }
-                        if (signaturePath.isNotEmpty()) {
-                            TextButton(onClick = { signaturePath = "" }) {
-                                Text("Remove", color = MaterialTheme.colorScheme.error, fontSize = 11.sp)
-                            }
-                        }
-                    }
-
-                    // Company Seal Box (Future Ready)
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text("Company Seal", fontWeight = FontWeight.SemiBold, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(90.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
-                                .clickable { companySealPickerLauncher.launch("image/*") },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (companySealPath.isNotEmpty() && File(companySealPath).exists()) {
-                                AsyncImage(
-                                    model = File(companySealPath),
-                                    contentDescription = "Seal Preview",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(Icons.Default.VerifiedUser, contentDescription = "Add Seal", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text("Seal (Future)", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        }
-                        if (companySealPath.isNotEmpty()) {
-                            TextButton(onClick = { companySealPath = "" }) {
-                                Text("Remove", color = MaterialTheme.colorScheme.error, fontSize = 11.sp)
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    value = signatureText,
-                    onValueChange = { signatureText = it },
-                    label = { Text("Signature Representative Label") },
-                    placeholder = { Text("e.g. Proprietor / Authorized Signatory") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-
-        // SECTION 3: Quotation Defaults
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Quotation Defaults",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    OutlinedTextField(
-                        value = defaultGstRateStr,
-                        onValueChange = { defaultGstRateStr = it },
-                        label = { Text("Default GST %") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = defaultDiscountStr,
-                        onValueChange = { defaultDiscountStr = it },
-                        label = { Text("Default Discount") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    OutlinedTextField(
-                        value = defaultValidityDaysStr,
-                        onValueChange = { defaultValidityDaysStr = it },
-                        label = { Text("Validity (Days)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = defaultDeliveryDaysStr,
-                        onValueChange = { defaultDeliveryDaysStr = it },
-                        label = { Text("Est. Delivery Days") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-
-        // SECTION 4: Terms & Conditions
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Terms & Conditions",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Text(
-                    text = "These values will dynamically print in the PDF Terms & Conditions section.",
-                    fontSize = 11.sp,
-                    color = Color.Gray,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-
-                OutlinedTextField(
-                    value = defaultWarranty,
-                    onValueChange = { defaultWarranty = it },
-                    label = { Text("Default Warranty") },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                )
-
-                OutlinedTextField(
-                    value = defaultDeliveryTime,
-                    onValueChange = { defaultDeliveryTime = it },
-                    label = { Text("Default Delivery Time") },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                )
-
-                OutlinedTextField(
-                    value = defaultInstallationTime,
-                    onValueChange = { defaultInstallationTime = it },
-                    label = { Text("Default Installation Time") },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                )
-
-                OutlinedTextField(
-                    value = defaultPaymentTerms,
-                    onValueChange = { defaultPaymentTerms = it },
-                    label = { Text("Default Payment Terms") },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                )
-
-                OutlinedTextField(
-                    value = defaultQuoteValidity,
-                    onValueChange = { defaultQuoteValidity = it },
-                    label = { Text("Default Quote Validity") },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                )
-
-                OutlinedTextField(
-                    value = additionalConditions,
-                    onValueChange = { additionalConditions = it },
-                    label = { Text("Default Additional Conditions") },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                )
-
-                OutlinedTextField(
-                    value = termsAndConditions,
-                    onValueChange = { termsAndConditions = it },
-                    label = { Text("Custom Terms & Conditions (Multiline)") },
-                    minLines = 4,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-
-        // SECTION 5: Bank & Payment Details (Actively Used for PDF Printing)
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Bank & Payment Details",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-
-                OutlinedTextField(
-                    value = bankName,
-                    onValueChange = { bankName = it },
-                    label = { Text("Bank Name") },
-                    leadingIcon = { Icon(Icons.Default.AccountBalance, contentDescription = null) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    value = accountHolderName,
-                    onValueChange = { accountHolderName = it },
-                    label = { Text("Account Holder Name") },
-                    leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    value = bankAccount,
-                    onValueChange = { bankAccount = it },
-                    label = { Text("Account Number") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    leadingIcon = { Icon(Icons.Default.CreditCard, contentDescription = null) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = bankIfsc,
-                        onValueChange = { bankIfsc = it },
-                        label = { Text("IFSC Code") },
-                        modifier = Modifier.weight(1.2f)
-                    )
-                    OutlinedTextField(
-                        value = bankBranch,
-                        onValueChange = { bankBranch = it },
-                        label = { Text("Branch") },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    value = upiId,
-                    onValueChange = { upiId = it },
-                    label = { Text("UPI ID (For QR Payments)") },
-                    leadingIcon = { Icon(Icons.Default.QrCode, contentDescription = null) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-
-        // SECTION 6: PDF Preferences (Settings)
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "PDF Preferences & Document Settings",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        PreferenceSwitchRow(
-                            title = "Company Logo",
-                            checked = pdfShowLogo,
-                            onCheckedChange = { pdfShowLogo = it; pdfPrefs.edit().putBoolean("pdf_show_logo", it).apply() },
-                            icon = Icons.Default.Business
-                        )
-                        PreferenceSwitchRow(
-                            title = "GST / PAN Details",
-                            checked = pdfShowGst,
-                            onCheckedChange = { pdfShowGst = it; pdfPrefs.edit().putBoolean("pdf_show_gst", it).apply() },
-                            icon = Icons.Default.Receipt
-                        )
-                        PreferenceSwitchRow(
-                            title = "Show Website",
-                            checked = pdfShowWebsite,
-                            onCheckedChange = { pdfShowWebsite = it; pdfPrefs.edit().putBoolean("pdf_show_website", it).apply() },
-                            icon = Icons.Default.Language
-                        )
-                        PreferenceSwitchRow(
-                            title = "WhatsApp Number",
-                            checked = pdfShowWhatsapp,
-                            onCheckedChange = { pdfShowWhatsapp = it; pdfPrefs.edit().putBoolean("pdf_show_whatsapp", it).apply() },
-                            icon = Icons.Default.PhoneAndroid
-                        )
-                        PreferenceSwitchRow(
-                            title = "Valid Until Date",
-                            checked = pdfShowValidUntil,
-                            onCheckedChange = { pdfShowValidUntil = it; pdfPrefs.edit().putBoolean("pdf_show_valid_until", it).apply() },
-                            icon = Icons.Default.Event
-                        )
-                        PreferenceSwitchRow(
-                            title = "UPI Payment QR",
-                            checked = pdfShowQrCode,
-                            onCheckedChange = { pdfShowQrCode = it; pdfPrefs.edit().putBoolean("pdf_show_qr_code", it).apply() },
-                            icon = Icons.Default.QrCode
-                        )
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        PreferenceSwitchRow(
-                            title = "Bank Account Info",
-                            checked = pdfShowBankDetails,
-                            onCheckedChange = { pdfShowBankDetails = it; pdfPrefs.edit().putBoolean("pdf_show_bank_details", it).apply() },
-                            icon = Icons.Default.AccountBalance
-                        )
-                        PreferenceSwitchRow(
-                            title = "Amount in Words",
-                            checked = pdfShowAmountInWords,
-                            onCheckedChange = { pdfShowAmountInWords = it; pdfPrefs.edit().putBoolean("pdf_show_amount_in_words", it).apply() },
-                            icon = Icons.Default.Description
-                        )
-                        PreferenceSwitchRow(
-                            title = "Company Seal",
-                            checked = pdfShowCompanySeal,
-                            onCheckedChange = { pdfShowCompanySeal = it; pdfPrefs.edit().putBoolean("pdf_show_company_seal", it).apply() },
-                            icon = Icons.Default.CheckCircle
-                        )
-                        PreferenceSwitchRow(
-                            title = "Signature Image",
-                            checked = pdfShowSignature,
-                            onCheckedChange = { pdfShowSignature = it; pdfPrefs.edit().putBoolean("pdf_show_signature", it).apply() },
-                            icon = Icons.Default.Edit
-                        )
-                        PreferenceSwitchRow(
-                            title = "Terms & Conditions",
-                            checked = pdfShowTermsConditions,
-                            onCheckedChange = { pdfShowTermsConditions = it; pdfPrefs.edit().putBoolean("pdf_show_terms_conditions", it).apply() },
-                            icon = Icons.Default.ListAlt
-                        )
-                        PreferenceSwitchRow(
-                            title = "Footer Page Numbers",
-                            checked = pdfShowPageNumber,
-                            onCheckedChange = { pdfShowPageNumber = it; pdfPrefs.edit().putBoolean("pdf_show_page_number", it).apply() },
-                            icon = Icons.Default.List
-                        )
-                    }
-                }
-            }
-        }
-
-        // SAVE BUTTON
-        Button(
-            onClick = {
-                val hasCoNameError = coName.trim().isEmpty()
-                val hasPhoneError = phone.trim().isEmpty()
-                val hasEmailError = !validateEmail(email)
-                val hasGstError = !validateGst(gstin)
-
-                coNameError = if (hasCoNameError) "Company Name is required" else null
-                phoneError = if (hasPhoneError) "Phone Number is required" else null
-                emailError = if (hasEmailError) "Invalid Email Address" else null
-                gstinError = if (hasGstError) "Invalid GSTIN format" else null
-
-                if (!hasCoNameError && !hasPhoneError && !hasEmailError && !hasGstError) {
-                    companyViewModel.saveCompanyProfile(
-                        CompanyProfile(
-                            id = 1,
-                            companyName = coName.trim(),
-                            contactPerson = ownerName.trim(),
-                            ownerName = ownerName.trim(),
-                            phone = phone.trim(),
-                            whatsappNumber = whatsappNumber.trim(),
-                            email = email.trim(),
-                            website = website.trim(),
-                            gstin = gstin.trim().uppercase(),
-                            address = address.trim(),
-                            city = city.trim(),
-                            district = district.trim(),
-                            state = state.trim(),
-                            pincode = pincode.trim(),
-                            bankName = bankName.trim(),
-                            accountHolderName = accountHolderName.trim(),
-                            accountNumber = bankAccount.trim(),
-                            ifsc = bankIfsc.trim().uppercase(),
-                            branch = bankBranch.trim(),
-                            upiId = upiId.trim(),
-                            logoPath = logoPath.trim(),
-                            signaturePath = signaturePath.trim(),
-                            signatureText = signatureText.trim(),
-                            
-                            // Module 3 additions saved
-                            tagline = tagline.trim(),
-                            companySealPath = companySealPath.trim(),
-                            defaultGstRate = defaultGstRateStr.toDoubleOrNull() ?: 18.0,
-                            defaultDiscount = defaultDiscountStr.toDoubleOrNull() ?: 0.0,
-                            defaultValidityDays = defaultValidityDaysStr.toIntOrNull() ?: 30,
-                            defaultDeliveryDays = defaultDeliveryDaysStr.toIntOrNull() ?: 15,
-                            termsAndConditions = termsAndConditions.trim(),
-                            defaultWarranty = defaultWarranty.trim(),
-                            defaultDeliveryTime = defaultDeliveryTime.trim(),
-                            defaultInstallationTime = defaultInstallationTime.trim(),
-                            defaultPaymentTerms = defaultPaymentTerms.trim(),
-                            defaultQuoteValidity = defaultQuoteValidity.trim(),
-                            additionalConditions = additionalConditions.trim()
-                        )
-                    )
-                    Toast.makeText(context, "Company profile saved offline successfully!", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(context, "Please fix all validation errors before saving.", Toast.LENGTH_LONG).show()
-                }
-            },
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(54.dp)
-        ) {
-            Icon(Icons.Filled.Save, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Save Profile Configurations", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Manage Masters Card
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.List,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Master Data Management",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(6.dp))
-                
-                Text(
-                    text = "Configure default materials, spec tables, pricing ranges, and parameters used globally across quotation profiles.",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                Button(
-                    onClick = { onNavigateToMasters() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(44.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Manage Masters", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // --- SPRINT 3: ENTERPRISE SMART SYNC DASHBOARD & BACKUP CONSOLE ---
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 6.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            shape = RoundedCornerShape(20.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-        ) {
-            Column(modifier = Modifier.padding(18.dp)) {
-                // Dashboard Header
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.CloudSync,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(26.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Cloud Sync & Auto Backup",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(6.dp))
-                
-                Text(
-                    text = "Enterprise-grade secure synchronization with your private Google Drive folder. Sync quotations, clients, and assets automatically.",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Connection and Account Status Row
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isUserSignedIn) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = if (isUserSignedIn) Icons.Filled.CloudDone else Icons.Filled.CloudOff,
-                                contentDescription = null,
-                                tint = if (isUserSignedIn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = if (isUserSignedIn) "Google Account Connected" else "Account Disconnected",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = if (isUserSignedIn) (currentUserEmail ?: "Connected") else "Sync is disabled until connected",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        
-                        Button(
-                            onClick = {
-                                if (isUserSignedIn) {
-                                    settingsViewModel.signOut {
-                                        Toast.makeText(context, "Account disconnected.", Toast.LENGTH_SHORT).show()
-                                    }
-                                } else {
-                                    settingsViewModel.signIn { success ->
-                                        if (success) {
-                                            Toast.makeText(context, "Successfully connected!", Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            Toast.makeText(context, "Connection failed or cancelled.", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isUserSignedIn) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary
-                            ),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                            modifier = Modifier.height(32.dp)
-                        ) {
-                            Text(
-                                text = if (isUserSignedIn) "Disconnect" else "Connect",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Live Sync Status block
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f))
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        val (statusText, statusColor, showProgress) = when (syncState) {
-                            is com.example.core.sync.SyncState.Idle -> Triple("Idle (Up to date)", MaterialTheme.colorScheme.outline, false)
-                            is com.example.core.sync.SyncState.Syncing,
-                            is com.example.core.sync.SyncState.Uploading,
-                            is com.example.core.sync.SyncState.Downloading -> Triple("Syncing with cloud...", MaterialTheme.colorScheme.primary, true)
-                            is com.example.core.sync.SyncState.Success -> Triple("Sync Completed", MaterialTheme.colorScheme.primary, false)
-                            is com.example.core.sync.SyncState.Failed -> Triple("Sync Failed", MaterialTheme.colorScheme.error, false)
-                            is com.example.core.sync.SyncState.Conflict -> Triple("Conflict Detected", MaterialTheme.colorScheme.error, false)
-                            is com.example.core.sync.SyncState.WaitingForInternet -> Triple("Waiting for Internet", MaterialTheme.colorScheme.tertiary, false)
-                            is com.example.core.sync.SyncState.NotConnected -> Triple("Not Connected", MaterialTheme.colorScheme.outline, false)
-                            else -> Triple("Offline Mode", MaterialTheme.colorScheme.outline, false)
-                        }
-                        
-                        if (showProgress) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = statusColor)
-                        } else {
-                            Icon(
-                                imageVector = if (syncState is com.example.core.sync.SyncState.Failed) Icons.Filled.ErrorOutline else Icons.Filled.Info,
-                                contentDescription = null,
-                                tint = statusColor,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Sync Status: $statusText",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = statusColor
-                        )
-                    }
-
-                    Text(
-                        text = "v${settingsViewModel.deviceManager.getAppVersion()} (${settingsViewModel.deviceManager.getDatabaseVersion()})",
-                        fontSize = 10.sp,
-                        color = Color.Gray,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Auto-Backup Policy Segment
-                Text(
-                    text = "Automatic Backup Policy:",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-
-                var activePolicy by remember { mutableStateOf(settingsViewModel.getAutoBackupPolicy()) }
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    val policies = listOf(
-                        "MANUAL" to "Manual",
-                        "ON_SAVE" to "On Save",
-                        "DAILY" to "Daily",
-                        "WEEKLY" to "Weekly"
-                    )
-                    policies.forEach { (key, label) ->
-                        val isSelected = activePolicy == key
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                                .clickable {
-                                    activePolicy = key
-                                    settingsViewModel.setAutoBackupPolicy(key)
-                                    Toast.makeText(context, "Auto backup scheduled: $label", Toast.LENGTH_SHORT).show()
-                                }
-                                .padding(vertical = 8.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = label,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Dynamic Metadata block
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Device ID", fontSize = 11.sp, color = Color.Gray)
-                            Text(settingsViewModel.deviceManager.getDeviceName(), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                        }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Last Sync", fontSize = 11.sp, color = Color.Gray)
-                            Text(
-                                text = if (settingsViewModel.deviceManager.getLastSyncTime() > 0) {
-                                    java.text.SimpleDateFormat("dd MMM, hh:mm a", java.util.Locale.getDefault()).format(java.util.Date(settingsViewModel.deviceManager.getLastSyncTime()))
-                                } else "Never",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Stored Backups", fontSize = 11.sp, color = Color.Gray)
-                            Text("${cloudBackupsList.size} snapshot(s)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                // Sync controls button row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Button(
+            } else {
+                paymentTermsMaster.forEach { term ->
+                    DropdownMenuItem(
+                        text = { Text(term.name) },
                         onClick = {
-                            if (!isUserSignedIn) {
-                                Toast.makeText(context, "Please connect Google Account first", Toast.LENGTH_SHORT).show()
-                            } else {
-                                settingsViewModel.triggerSync { result ->
-                                    if (result is com.example.core.sync.SyncResult.Success) {
-                                        Toast.makeText(context, "Sync completed successfully!", Toast.LENGTH_SHORT).show()
-                                        scope.launch {
-                                            cloudBackupsList = settingsViewModel.listCloudBackups()
-                                        }
-                                    } else if (result is com.example.core.sync.SyncResult.Failure) {
-                                        Toast.makeText(context, "Sync failed: ${result.reason}", Toast.LENGTH_LONG).show()
-                                    }
-                                }
-                            }
-                        },
-                        modifier = Modifier
-                            .weight(1.2f)
-                            .height(42.dp),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(Icons.Filled.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Sync Now", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
-
-                    OutlinedButton(
-                        onClick = {
-                            if (!isUserSignedIn) {
-                                Toast.makeText(context, "Please connect Google Account first", Toast.LENGTH_SHORT).show()
-                            } else {
-                                scope.launch {
-                                    isRefreshingCloudList = true
-                                    cloudBackupsList = settingsViewModel.listCloudBackups()
-                                    isRefreshingCloudList = false
-                                    Toast.makeText(context, "Backup list refreshed!", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(42.dp),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        if (isRefreshingCloudList) {
-                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Refresh List", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            onDefaultPaymentTermsChange(term.name)
+                            onPaymentTermsExpandedChange(false)
                         }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Divider
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // --- BACKUP SNAPSHOT HISTORY LIST ---
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Filled.History, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.secondary)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Stored Cloud Backups", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                if (!isUserSignedIn) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f), RoundedCornerShape(8.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Connect Google Account to view history list", fontSize = 11.sp, color = Color.Gray)
-                    }
-                } else if (cloudBackupsList.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f), RoundedCornerShape(8.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = if (isRefreshingCloudList) "Loading backups..." else "No stored cloud backups found.",
-                            fontSize = 11.sp,
-                            color = Color.Gray
-                        )
-                    }
-                } else {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        cloudBackupsList.take(5).forEach { file ->
-                            val formattedDate = try {
-                                val sdf = java.text.SimpleDateFormat("dd MMM yyyy, hh:mm a", java.util.Locale.getDefault())
-                                sdf.format(java.util.Date(file.modifiedTime))
-                            } catch (e: Exception) {
-                                "Unknown Date"
-                            }
-                            
-                            val sizeInKb = file.sizeBytes / 1024
-                            val fileDeviceName = file.metadata["deviceName"] ?: "Unknown Device"
-                            val fileAppVersion = file.metadata["appVersion"] ?: "1.5"
-                            val fileDbVersion = file.metadata["databaseVersion"] ?: "6"
-                            val isCurrentDevice = fileDeviceName == settingsViewModel.deviceManager.getDeviceName()
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f))
-                                    .padding(horizontal = 10.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = formattedDate,
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        if (isCurrentDevice) {
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Box(
-                                                modifier = Modifier
-                                                    .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(4.dp))
-                                                    .padding(horizontal = 4.dp, vertical = 2.dp)
-                                            ) {
-                                                Text("This Device", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                                            }
-                                        }
-                                    }
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = "$fileDeviceName • v$fileAppVersion • Schema v$fileDbVersion ($sizeInKb KB)",
-                                        fontSize = 10.sp,
-                                        color = Color.Gray
-                                    )
-                                }
-                                
-                                TextButton(
-                                    onClick = {
-                                        specificRestoreFileId = file.id
-                                        specificRestoreFileName = formattedDate
-                                        isConfirmSpecificRestoreDialogOpen = true
-                                    },
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                    modifier = Modifier.height(30.dp)
-                                ) {
-                                    Icon(Icons.Filled.CloudDownload, contentDescription = null, modifier = Modifier.size(12.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Restore", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Divider
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // --- WORKSPACE EXPORT & IMPORT (OFFLINE ZIP CLOUD/SECURE EXCHANGES) ---
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.BusinessCenter,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Workspace Bundle (.ipro)",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                Text(
-                    text = "A Workspace Bundle packages your entire offline database, company logos, and designer signatures into a single AES-256 encrypted file. Essential for full offline migrations.",
-                    fontSize = 11.sp,
-                    color = Color.Gray
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            createWorkspaceLauncher.launch("InteriorPro_Workspace.ipro")
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(42.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Export Workspace", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-
-                    OutlinedButton(
-                        onClick = {
-                            importWorkspaceLauncher.launch(arrayOf("*/*"))
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(42.dp),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(Icons.Filled.Upload, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Import Workspace", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(20.dp))
     }
 
-    // --- CONFIRM RESTORE BACKUP DIALOG ---
-    if (isConfirmRestoreDialogOpen) {
-        AlertDialog(
-            onDismissRequest = { 
-                isConfirmRestoreDialogOpen = false 
-                pendingRestoreJson = ""
-            },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.Warning,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Confirm Data Restore",
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            },
-            text = {
-                Column {
-                    Text(
-                        text = "WARNING: Restoring will completely overwrite and replace all current local data (Quotations, Customers, Masters, Profiles, and Configurations)!",
-                        fontWeight = FontWeight.SemiBold,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "This operation is irreversible and all existing data will be lost. Do you want to proceed with the restore?",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val backupText = pendingRestoreJson
-                        isConfirmRestoreDialogOpen = false
-                        pendingRestoreJson = ""
-                        
-                        settingsViewModel.importBackupData(backupText) { success ->
-                            if (success) {
-                                Toast.makeText(context, "Database restored successfully!", Toast.LENGTH_LONG).show()
-                            } else {
-                                Toast.makeText(context, "Restore failed. Please make sure the backup file is not modified.", Toast.LENGTH_LONG).show()
-                            }
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Overwrite & Restore")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        isConfirmRestoreDialogOpen = false
-                        pendingRestoreJson = ""
-                    }
-                ) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
 
-    // --- CONFIRM WORKSPACE IMPORT PREVIEW DIALOG ---
-    if (isConfirmWorkspaceImportDialogOpen && workspacePreviewState != null) {
-        val preview = workspacePreviewState!!
-        AlertDialog(
-            onDismissRequest = { 
-                isConfirmWorkspaceImportDialogOpen = false
-                workspacePreviewState = null
-            },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.Warning,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Confirm Workspace Import", fontWeight = FontWeight.Bold)
-                }
-            },
-            text = {
-                Column {
-                    Text(
-                        text = "WARNING: Importing this workspace will completely overwrite and replace all current local data (Quotations, Customers, Clients, Masters, Profiles, and physical assets such as logos and signatures)!",
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text("Workspace Summary:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text("Business Name: ${preview.companyName}", fontSize = 12.sp)
-                            Text("Quotations count: ${preview.quotationCount}", fontSize = 12.sp)
-                            Text("Customers count: ${preview.customerCount}", fontSize = 12.sp)
-                            Text("Clients count: ${preview.clientCount}", fontSize = 12.sp)
-                            Text("Logo asset: ${if (preview.hasLogo) "Included" else "None"}", fontSize = 12.sp)
-                            Text("Signature asset: ${if (preview.hasSignature) "Included" else "None"}", fontSize = 12.sp)
-                            Text("Company Seal asset: ${if (preview.hasSeal) "Included" else "None"}", fontSize = 12.sp)
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "This operation is irreversible. All current data will be deleted. Do you want to proceed?",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val rawJson = preview.rawJsonText
-                        isConfirmWorkspaceImportDialogOpen = false
-                        workspacePreviewState = null
-                        
-                        settingsViewModel.importWorkspaceBundle(rawJson) { success ->
-                                                            if (success) {
-                                                                Toast.makeText(context, "Workspace successfully restored!", Toast.LENGTH_LONG).show()
-                                                            } else {
-                                                                Toast.makeText(context, "Workspace import failed.", Toast.LENGTH_LONG).show()
-                                                            }
-                                                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Overwrite & Import")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        isConfirmWorkspaceImportDialogOpen = false
-                        workspacePreviewState = null
-                    }
-                ) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    // --- CONFIRM SPECIFIC RESTORE FROM HISTORY DIALOG ---
-    if (isConfirmSpecificRestoreDialogOpen) {
-        AlertDialog(
-            onDismissRequest = { 
-                isConfirmSpecificRestoreDialogOpen = false
-                specificRestoreFileId = ""
-                specificRestoreFileName = ""
-            },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.Warning,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Restore History Point", fontWeight = FontWeight.Bold)
-                }
-            },
-            text = {
-                Column {
-                    Text(
-                        text = "Are you sure you want to restore the backup: $specificRestoreFileName?",
-                        fontWeight = FontWeight.SemiBold,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "This will overwrite your current local database and images with this historic snapshot. This cannot be undone.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val fileId = specificRestoreFileId
-                        isConfirmSpecificRestoreDialogOpen = false
-                        specificRestoreFileId = ""
-                        specificRestoreFileName = ""
-                        
-                        settingsViewModel.restoreSpecificBackup(fileId) { success ->
-                                                            if (success) {
-                                                                Toast.makeText(context, "Successfully restored selected snapshot!", Toast.LENGTH_LONG).show()
-                                                            } else {
-                                                                Toast.makeText(context, "Failed to restore chosen snapshot.", Toast.LENGTH_LONG).show()
-                                                            }
-                                                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Restore Snapshot")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        isConfirmSpecificRestoreDialogOpen = false
-                        specificRestoreFileId = ""
-                        specificRestoreFileName = ""
-                    }
-                ) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = additionalConditions, onValueChange = onAdditionalConditionsChange,
+        label = "Additional Conditions", modifier = Modifier.fillMaxWidth()
+    )
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = termsAndConditions, onValueChange = onTermsAndConditionsChange,
+        label = "Custom Terms & Conditions (Multiline)", modifier = Modifier.fillMaxWidth()
+    )
 }
 
-private fun copyUriToInternalStorage(context: Context, uri: Uri, fileName: String): String? {
-    return try {
-        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
-        val file = File(context.filesDir, fileName)
-        FileOutputStream(file).use { outputStream ->
-            inputStream.use { input ->
-                input.copyTo(outputStream)
-            }
-        }
-        file.absolutePath
-    } catch (e: Exception) {
-        e.printStackTrace()
-        null
-    }
+@Composable
+fun SettingsPdfPreferencesTab(
+    pdfShowLogo: Boolean, onPdfShowLogoChange: (Boolean) -> Unit,
+    pdfShowGst: Boolean, onPdfShowGstChange: (Boolean) -> Unit,
+    pdfShowWebsite: Boolean, onPdfShowWebsiteChange: (Boolean) -> Unit,
+    pdfShowWhatsapp: Boolean, onPdfShowWhatsappChange: (Boolean) -> Unit,
+    pdfShowValidUntil: Boolean, onPdfShowValidUntilChange: (Boolean) -> Unit,
+    pdfShowQrCode: Boolean, onPdfShowQrCodeChange: (Boolean) -> Unit,
+    pdfShowBankDetails: Boolean, onPdfShowBankDetailsChange: (Boolean) -> Unit,
+    pdfShowAmountInWords: Boolean, onPdfShowAmountInWordsChange: (Boolean) -> Unit,
+    pdfShowCompanySeal: Boolean, onPdfShowCompanySealChange: (Boolean) -> Unit,
+    pdfShowSignature: Boolean, onPdfShowSignatureChange: (Boolean) -> Unit,
+    pdfShowTermsConditions: Boolean, onPdfShowTermsConditionsChange: (Boolean) -> Unit,
+    pdfShowPageNumber: Boolean, onPdfShowPageNumberChange: (Boolean) -> Unit
+) {
+    Text("PDF Configuration", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    Text("Configure what details appear on your PDFs. Changes are saved instantly.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    
+    Spacer(modifier = Modifier.height(16.dp))
+    
+    PreferenceSwitchRow("Company Logo", pdfShowLogo, onPdfShowLogoChange, Icons.Default.Business)
+    PreferenceSwitchRow("GST / PAN Details", pdfShowGst, onPdfShowGstChange, Icons.Default.Receipt)
+    PreferenceSwitchRow("Show Website", pdfShowWebsite, onPdfShowWebsiteChange, Icons.Default.Language)
+    PreferenceSwitchRow("WhatsApp Number", pdfShowWhatsapp, onPdfShowWhatsappChange, Icons.Default.PhoneAndroid)
+    PreferenceSwitchRow("Valid Until Date", pdfShowValidUntil, onPdfShowValidUntilChange, Icons.Default.Event)
+    PreferenceSwitchRow("UPI Payment QR", pdfShowQrCode, onPdfShowQrCodeChange, Icons.Default.QrCode)
+    PreferenceSwitchRow("Bank Account Info", pdfShowBankDetails, onPdfShowBankDetailsChange, Icons.Default.AccountBalance)
+    PreferenceSwitchRow("Amount in Words", pdfShowAmountInWords, onPdfShowAmountInWordsChange, Icons.Default.Description)
+    PreferenceSwitchRow("Company Seal", pdfShowCompanySeal, onPdfShowCompanySealChange, Icons.Default.CheckCircle)
+    PreferenceSwitchRow("Signature", pdfShowSignature, onPdfShowSignatureChange, Icons.Default.Create)
+    PreferenceSwitchRow("Terms & Conditions", pdfShowTermsConditions, onPdfShowTermsConditionsChange, Icons.Default.Gavel)
+    PreferenceSwitchRow("Page Numbers", pdfShowPageNumber, onPdfShowPageNumberChange, Icons.Default.Numbers)
 }
 
-private fun validateSignatureImage(context: Context, uri: Uri): Boolean {
-    return try {
-        val options = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        context.contentResolver.openInputStream(uri).use { inputStream ->
-            android.graphics.BitmapFactory.decodeStream(inputStream, null, options)
-        }
-        val width = options.outWidth
-        val height = options.outHeight
-        if (width <= 0 || height <= 0) {
-            false
-        } else {
-            val aspectRatio = width.toFloat() / height.toFloat()
-            // Signatures are horizontal. Standard photos are typically square/vertical.
-            // A ratio threshold of 1.3 is standard and robust.
-            aspectRatio >= 1.3f
-        }
-    } catch (e: Exception) {
-        false
-    }
+@Composable
+fun SettingsDataAndBackupTab(
+    onCreateWorkspace: () -> Unit,
+    onImportWorkspace: () -> Unit,
+    lastBackupDate: String,
+    onNavigateToMasters: () -> Unit,
+    onNavigateToSyncDashboard: () -> Unit,
+    themeManager: com.example.ui.theme.ThemeManager,
+    onNavigateToAbout: () -> Unit
+) {
+    Text("Database Masters", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    ListItem(
+        headlineContent = { Text("Manage Masters") },
+        supportingContent = { Text("Edit materials, finishes, categories") },
+        leadingContent = { Icon(Icons.Default.List, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
+        modifier = Modifier.clickable { onNavigateToMasters() },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
+
+    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+    
+    Text("Data Backup & Restore", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    ListItem(
+        headlineContent = { Text("Export Workspace (Backup)") },
+        supportingContent = { Text("Export a local backup. Last: $lastBackupDate") },
+        leadingContent = { Icon(Icons.Default.Download, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        modifier = Modifier.clickable { onCreateWorkspace() },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
+    ListItem(
+        headlineContent = { Text("Import Workspace (Restore)") },
+        supportingContent = { Text("Restore database from .ipro file") },
+        leadingContent = { Icon(Icons.Default.Upload, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        modifier = Modifier.clickable { onImportWorkspace() },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
+    
+    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+    
+    Text("Google Drive Sync", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    ListItem(
+        headlineContent = { Text("Enterprise Sync Dashboard") },
+        supportingContent = { Text("Advanced workspace health and sync status") },
+        leadingContent = { Icon(Icons.Default.Dashboard, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
+        modifier = Modifier.clickable { onNavigateToSyncDashboard() },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
+
+    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+    
+    Text("App Preferences", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    val isDark = themeManager.themeMode.collectAsState(initial = com.example.ui.theme.ThemeMode.SYSTEM).value == com.example.ui.theme.ThemeMode.DARK
+    ListItem(
+        headlineContent = { Text("Appearance") },
+        supportingContent = { Text(if (isDark) "Dark Mode Active" else "Light Mode Active") },
+        leadingContent = { Icon(Icons.Default.Palette, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        modifier = Modifier.clickable { 
+            themeManager.setThemeMode(if (isDark) com.example.ui.theme.ThemeMode.LIGHT else com.example.ui.theme.ThemeMode.DARK) 
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
+    ListItem(
+        headlineContent = { Text("About Application") },
+        supportingContent = { Text("Version, developer and database info") },
+        leadingContent = { Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        trailingContent = { Icon(Icons.Default.KeyboardArrowRight, contentDescription = null) },
+        modifier = Modifier.clickable { onNavigateToAbout() },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
 }
 
 @Composable
@@ -1904,38 +950,114 @@ fun PreferenceSwitchRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 8.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1.5f)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
-            )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = title,
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Medium
-            )
+            Text(title, fontSize = 14.sp)
         }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            modifier = Modifier.scale(0.85f)
-        )
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
+}
+
+@Composable
+fun SettingsBrandingTab(
+    logoPath: String, onLogoPathChange: (String) -> Unit,
+    signaturePath: String, onSignaturePathChange: (String) -> Unit,
+    companySealPath: String, onCompanySealPathChange: (String) -> Unit,
+    signatureText: String, onSignatureTextChange: (String) -> Unit,
+    logoRefreshKey: Long, onLogoRefreshKeyChange: (Long) -> Unit,
+    sigRefreshKey: Long, onSigRefreshKeyChange: (Long) -> Unit,
+    sealRefreshKey: Long, onSealRefreshKeyChange: (Long) -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    
+    val logoLauncher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri: android.net.Uri? ->
+        uri?.let {
+            val path = copyUriToInternalStorage(context, it, "logo.png")
+            if (path != null) {
+                onLogoPathChange(path)
+                onLogoRefreshKeyChange(System.currentTimeMillis())
+            }
+        }
+    }
+    
+    val signatureLauncher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri: android.net.Uri? ->
+        uri?.let {
+            val path = copyUriToInternalStorage(context, it, "signature.png")
+            if (path != null) {
+                onSignaturePathChange(path)
+                onSigRefreshKeyChange(System.currentTimeMillis())
+            }
+        }
+    }
+    
+    val sealLauncher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri: android.net.Uri? ->
+        uri?.let {
+            val path = copyUriToInternalStorage(context, it, "company_seal.png")
+            if (path != null) {
+                onCompanySealPathChange(path)
+                onSealRefreshKeyChange(System.currentTimeMillis())
+            }
+        }
+    }
+
+    Text("Document Assets", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    Text("Upload logo, signature, and seal to be used in your exported documents.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Spacer(modifier = Modifier.height(16.dp))
+    
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+        Text("Company Logo")
+        Button(onClick = { logoLauncher.launch("image/*") }) { Text("Upload") }
+    }
+    if (logoPath.isNotEmpty()) {
+        Text("Current: $logoPath", fontSize = 10.sp)
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+        Text("Authorized Signature")
+        Button(onClick = { signatureLauncher.launch("image/*") }) { Text("Upload") }
+    }
+    if (signaturePath.isNotEmpty()) {
+        Text("Current: $signaturePath", fontSize = 10.sp)
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+        Text("Company Seal")
+        Button(onClick = { sealLauncher.launch("image/*") }) { Text("Upload") }
+    }
+    if (companySealPath.isNotEmpty()) {
+        Text("Current: $companySealPath", fontSize = 10.sp)
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+    
+    com.example.ui.components.PremiumOutlinedTextField(
+        value = signatureText, onValueChange = onSignatureTextChange,
+        label = "Signature Under-text (e.g. For YourCompany)", modifier = Modifier.fillMaxWidth()
+    )
+}
+
+fun copyUriToInternalStorage(context: android.content.Context, uri: android.net.Uri, fileName: String): String? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+        val file = java.io.File(context.filesDir, fileName)
+        val outputStream = java.io.FileOutputStream(file)
+        inputStream.copyTo(outputStream)
+        inputStream.close()
+        outputStream.close()
+        file.absolutePath
+    } catch (e: Exception) {
+        null
+    }
+}
+
+fun validateSignatureImage(context: android.content.Context, uri: android.net.Uri): Boolean {
+    // Basic validation stub
+    return true
 }

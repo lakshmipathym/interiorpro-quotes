@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "InteriorPro Quotes"
+rootProject.name = "InteriorPro ERP"
 
 include(":app")

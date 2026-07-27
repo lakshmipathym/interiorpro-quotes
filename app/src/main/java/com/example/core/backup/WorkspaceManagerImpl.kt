@@ -60,6 +60,15 @@ class WorkspaceManagerImpl(
                 graphicsObj.put("seal_base64", base64)
             }
 
+            val filesDir = context.filesDir
+            val designFiles = filesDir.listFiles { _, name -> name.startsWith("design_") || name.startsWith("laminate_") }
+            designFiles?.forEach { file ->
+                if (file.exists()) {
+                    val bytes = file.readBytes()
+                    val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                    graphicsObj.put(file.name, base64)
+                }
+            }
             rootJson.put("graphics", graphicsObj)
 
             // 3. Mark as a professional .ipro workspace package
@@ -88,11 +97,11 @@ class WorkspaceManagerImpl(
 
             // 7. Write to the destination file
             destinationFile.writeBytes(encryptedBytes)
-            Log.i(TAG, "Workspace package successfully compiled and written to: ${destinationFile.absolutePath}")
+            Log.i(TAG, "Workspace package successfully compiled and written to: ${destinationFile.name}")
 
             return destinationFile
         } catch (e: Exception) {
-            Log.e(TAG, "Workspace bundle creation failed: ${e.message}", e)
+
             throw e
         }
     }
@@ -101,6 +110,9 @@ class WorkspaceManagerImpl(
         return try {
             if (!workspaceBundleFile.exists() || workspaceBundleFile.length() == 0L) {
                 return WorkspacePreview(isValid = false, errorReason = "File is empty or does not exist.")
+            }
+            if (workspaceBundleFile.length() > 50 * 1024 * 1024) {
+                return WorkspacePreview(isValid = false, errorReason = "File exceeds maximum size (50MB).")
             }
 
             // 1. Read encrypted bytes
@@ -134,7 +146,6 @@ class WorkspaceManagerImpl(
 
             val quotationCount = if (root.has("quotations")) root.getJSONArray("quotations").length() else 0
             val customerCount = if (root.has("customers")) root.getJSONArray("customers").length() else 0
-            val clientCount = if (root.has("clients")) root.getJSONArray("clients").length() else 0
 
             var hasLogo = false
             var hasSignature = false
@@ -151,7 +162,6 @@ class WorkspaceManagerImpl(
                 isValid = true,
                 companyName = companyName,
                 quotationCount = quotationCount,
-                clientCount = clientCount,
                 customerCount = customerCount,
                 hasLogo = hasLogo,
                 hasSignature = hasSignature,
@@ -159,7 +169,7 @@ class WorkspaceManagerImpl(
                 rawJsonText = plainJsonText
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Workspace verification failed: ${e.message}", e)
+
             WorkspacePreview(isValid = false, errorReason = "Cryptographic decryption or signature verification failed. The file may be corrupt or encrypted differently.")
         }
     }
@@ -173,7 +183,7 @@ class WorkspaceManagerImpl(
             // 1. Restore standard database records (will transactional clear tables and fill them)
             val dbSuccess = com.example.backup.BackupManager.importBackup(db, repository, rawJsonText, password = "")
             if (!dbSuccess) {
-                Log.e(TAG, "Database records restoration failed during transaction.")
+
                 return false
             }
 
@@ -205,6 +215,17 @@ class WorkspaceManagerImpl(
                     }
                 }
 
+                val keys = graphics.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    if (key.startsWith("design_") || key.startsWith("laminate_")) {
+                        val base64 = graphics.getString(key)
+                        if (base64.isNotEmpty()) {
+                            val bytes = android.util.Base64.decode(base64, android.util.Base64.DEFAULT)
+                            java.io.File(context.filesDir, key).writeBytes(bytes)
+                        }
+                    }
+                }
                 // 3. Update paths in CompanyProfile table to match active staging paths on this specific system
                 val currentProfile = repository.getCompanyProfileDirect()
                 if (currentProfile != null) {
@@ -220,7 +241,7 @@ class WorkspaceManagerImpl(
             Log.i(TAG, "Workspace bundle successfully integrated and fully imported.")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to import workspace bundle: ${e.message}", e)
+
             false
         }
     }
@@ -236,7 +257,17 @@ class WorkspaceManagerImpl(
             val bis = ByteArrayInputStream(bytes)
             GZIPInputStream(bis).use { gzip ->
                 InputStreamReader(gzip, Charsets.UTF_8).use { reader ->
-                    reader.readText()
+                    val sb = java.lang.StringBuilder()
+                    val buffer = CharArray(8192)
+                    var charsRead: Int
+                    var totalChars = 0
+                    val maxChars = 100 * 1024 * 1024 // 100MB max limit to prevent zip bombs
+                    while (reader.read(buffer).also { charsRead = it } != -1) {
+                        totalChars += charsRead
+                        if (totalChars > maxChars) throw SecurityException("Payload exceeded maximum allowed size")
+                        sb.append(buffer, 0, charsRead)
+                    }
+                    sb.toString()
                 }
             }
         } catch (e: Exception) {

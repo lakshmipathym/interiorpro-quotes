@@ -1,0 +1,388 @@
+Reusing configuration cache.
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:processDebugGoogleServices UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+
+> Task :app:compileDebugKotlin FAILED
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:453:25 No parameter with name 'verticalArrangement' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:454:23 Argument type mismatch: actual type is 'Function0<Unit>', but 'Boolean' was expected.
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:455:51 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:463:25 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:485:51 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:494:51 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:502:51 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:510:51 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:518:51 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:526:25 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:546:25 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:567:51 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:576:25 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:602:21 Unresolved reference 'Spacer'.
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:602:28 Unresolved reference 'modifier'.
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:602:28 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:606:25 Unresolved reference 'modifier'.
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:606:25 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:606:59 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:607:25 No parameter with name 'horizontalArrangement' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/client/ClientsScreen.kt:608:25 No parameter with name 'verticalAlignment' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:587:17 No value passed for parameter 'content'.
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:592:3 Argument type mismatch: actual type is 'Function0<Unit>', but 'Boolean' was expected.
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:594:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:610:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:613:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:618:55 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:643:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:646:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:647:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:649:25 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:652:25 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:655:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:658:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:660:25 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:663:25 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:675:25 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:678:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:682:25 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:683:25 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:683:25 No value passed for parameter 'content'.
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:684:51 None of the following candidates is applicable:
+fun elevatedCardColors(): CardColors
+fun elevatedCardColors(containerColor: Color = ..., contentColor: Color = ..., disabledContainerColor: Color = ..., disabledContentColor: Color = ...): CardColors
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:684:101 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:690:29 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:694:55 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:697:25 Unresolved reference 'Spacer'.
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:697:32 Unresolved reference 'modifier'.
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:697:32 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:697:66 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:701:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:706:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:706:96 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:707:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:707:97 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:709:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:711:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt:746:18 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:187:38 None of the following candidates is applicable:
+fun Modifier.background(brush: Brush, shape: Shape = ..., alpha: Float = ...): Modifier
+fun Modifier.background(color: Color, shape: Shape = ...): Modifier
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:190:33 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:193:58 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:196:30 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:220:25 No value passed for parameter 'content'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:224:29 No parameter with name 'horizontalArrangement' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:225:29 No parameter with name 'verticalAlignment' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:226:27 Argument type mismatch: actual type is 'Function0<Unit>', but 'Boolean' was expected.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:230:33 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:234:65 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:235:80 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:236:76 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:241:26 Syntax error: Expecting ','.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:243:25 'if' must have both main and 'else' branches when used as an expression.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:243:25 Argument type mismatch: actual type is 'Unit', but 'Arrangement.Horizontal' was expected.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:288:26 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:567:37 No value passed for parameter 'content'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:572:63 None of the following candidates is applicable:
+fun elevatedCardColors(): CardColors
+fun elevatedCardColors(containerColor: Color = ..., contentColor: Color = ..., disabledContainerColor: Color = ..., disabledContentColor: Color = ...): CardColors
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:575:41 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:597:38 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:617:29 No value passed for parameter 'content'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:620:3 Argument type mismatch: actual type is 'Function0<Unit>', but 'Color' was expected.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:621:33 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:633:30 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1098:35 'when' expression must be exhaustive. Add an 'else' branch.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1098:54 None of the following candidates is applicable:
+fun String.lowercase(): String
+fun String.lowercase(locale: Locale): String
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1100:29 Syntax error: Unexpected tokens (use ';' to separate expressions on the same line).
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1101:33 Syntax error: Unexpected tokens (use ';' to separate expressions on the same line).
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1102:21 Syntax error: Expecting an element.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1102:26 Syntax error: Unexpected tokens (use ';' to separate expressions on the same line).
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1103:18 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1104:39 'when' expression must be exhaustive. Add an 'else' branch.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1104:58 None of the following candidates is applicable:
+fun String.lowercase(): String
+fun String.lowercase(locale: Locale): String
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1106:29 Syntax error: Unexpected tokens (use ';' to separate expressions on the same line).
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1107:33 Syntax error: Unexpected tokens (use ';' to separate expressions on the same line).
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1108:21 Syntax error: Expecting an element.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1108:26 Syntax error: Unexpected tokens (use ';' to separate expressions on the same line).
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1111:17 Unresolved reference 'Box'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1111:20 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1112:21 'val' cannot be reassigned.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1112:21 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1114:26 None of the following candidates is applicable:
+fun Modifier.background(brush: Brush, shape: Shape = ..., alpha: Float = ...): Modifier
+fun Modifier.background(color: Color, shape: Shape = ...): Modifier
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1118:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1123:49 None of the following candidates is applicable:
+fun String.uppercase(): String
+fun String.uppercase(locale: Locale): String
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1126:37 Unresolved reference 'statusTextColor'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1128:25 Unresolved reference 'Icon'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1129:29 Unresolved reference 'imageVector'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1129:29 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1129:69 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1131:36 Unresolved reference 'statusTextColor'.
+e: file:///app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt:1135:18 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:277:5 No value passed for parameter 'content'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:281:31 None of the following candidates is applicable:
+fun elevatedCardColors(): CardColors
+fun elevatedCardColors(containerColor: Color = ..., contentColor: Color = ..., disabledContainerColor: Color = ..., disabledContentColor: Color = ...): CardColors
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:284:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:314:6 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:858:9 No value passed for parameter 'content'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:862:13 No parameter with name 'verticalArrangement' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:863:11 Argument type mismatch: actual type is 'Function0<Unit>', but 'Boolean' was expected.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:865:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:868:43 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:868:93 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:976:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:979:43 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:979:93 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1013:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1016:43 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1016:93 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1059:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1061:43 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1063:43 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1068:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1073:47 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1074:60 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1117:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1163:41 No parameter with name 'horizontalArrangement' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1164:41 No parameter with name 'verticalAlignment' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1165:39 Argument type mismatch: actual type is 'Function0<Unit>', but 'Boolean' was expected.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1168:45 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1168:102 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1176:45 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1176:98 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1183:53 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1183:124 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1186:53 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1186:120 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1191:53 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1191:129 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1194:53 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1194:128 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1197:53 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1197:124 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1202:53 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1202:123 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1205:53 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1205:129 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1210:53 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1210:124 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1215:53 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1215:124 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1219:38 Syntax error: Expecting ','.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1221:37 'if' must have both main and 'else' branches when used as an expression.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1238:37 Unresolved reference 'Spacer'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1238:44 Unresolved reference 'modifier'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1238:44 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1239:55 Unresolved reference 'color'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1239:55 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1240:44 Unresolved reference 'modifier'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1240:44 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1243:41 Unresolved reference 'modifier'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1243:41 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1243:75 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1244:41 Argument already passed for this parameter.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1290:13 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1291:10 Syntax error: Expecting ','.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1294:9 'if' must have both main and 'else' branches when used as an expression.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1294:9 Argument type mismatch: actual type is 'Unit', but 'Arrangement.Vertical' was expected.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1308:10 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1349:5 No value passed for parameter 'content'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1353:9 No parameter with name 'verticalArrangement' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1354:7 Argument type mismatch: actual type is 'Function0<Unit>', but 'Boolean' was expected.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1355:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1358:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1358:85 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:1402:6 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2032:5 No value passed for parameter 'content'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2036:9 No parameter with name 'verticalArrangement' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2037:7 Argument type mismatch: actual type is 'Function0<Unit>', but 'Boolean' was expected.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2038:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2041:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2041:85 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2084:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2087:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2087:85 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2108:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2111:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2111:85 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2133:6 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2162:5 No value passed for parameter 'content'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2166:9 No parameter with name 'verticalArrangement' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2167:7 Argument type mismatch: actual type is 'Function0<Unit>', but 'Boolean' was expected.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2169:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2171:35 None of the following candidates is applicable:
+fun elevatedCardColors(): CardColors
+fun elevatedCardColors(containerColor: Color = ..., contentColor: Color = ..., disabledContainerColor: Color = ..., disabledContentColor: Color = ...): CardColors
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2171:85 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2174:13 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2183:26 None of the following candidates is applicable:
+fun Modifier.background(brush: Brush, shape: Shape = ..., alpha: Float = ...): Modifier
+fun Modifier.background(color: Color, shape: Shape = ...): Modifier
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2186:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2189:46 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2193:17 Unresolved reference 'Spacer'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2193:24 Unresolved reference 'modifier'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2193:24 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2195:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2197:47 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2199:47 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2201:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2203:47 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2204:47 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2206:18 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2211:9 Unresolved reference 'ElevatedCard'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2212:13 Unresolved reference 'modifier'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2212:13 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2212:47 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2214:13 Argument already passed for this parameter.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2214:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2214:85 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2243:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2246:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2246:85 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2290:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2293:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2293:85 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2314:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2317:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2317:85 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2341:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2344:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2344:85 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2395:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2407:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2408:6 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2563:13 No value passed for parameter 'quantity'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2563:13 No value passed for parameter 'unit'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2563:13 No value passed for parameter 'rate'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2563:13 No value passed for parameter 'amount'.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2568:17 No parameter with name 'material' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2569:17 No parameter with name 'finish' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2570:17 No parameter with name 'quantity' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2571:17 No parameter with name 'unit' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2572:17 No parameter with name 'rate' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2573:17 No parameter with name 'amount' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt:2574:14 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:408:3 Argument type mismatch: actual type is 'Function0<Unit>', but 'Boolean' was expected.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:409:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:413:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:417:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:420:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:426:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:431:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:431:85 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:485:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:490:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:490:85 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:693:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:698:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:698:85 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:799:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:804:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:804:85 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:888:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:893:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:893:85 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:992:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:997:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:997:85 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1066:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1071:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1071:85 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1167:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1237:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1238:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1239:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1242:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1246:35 None of the following candidates is applicable:
+fun elevatedCardColors(): CardColors
+fun elevatedCardColors(containerColor: Color = ..., contentColor: Color = ..., disabledContainerColor: Color = ..., disabledContentColor: Color = ...): CardColors
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1246:85 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1249:13 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1293:9 Unresolved reference 'Spacer'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1293:16 Unresolved reference 'modifier'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1293:16 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1296:13 Unresolved reference 'modifier'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1296:13 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1298:42 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1299:13 Argument already passed for this parameter.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1299:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1299:85 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1337:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1340:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1340:9 No value passed for parameter 'content'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1344:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1344:85 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1345:21 None of the following candidates is applicable:
+fun RoundedCornerShape(topStart: Dp = ..., topEnd: Dp = ..., bottomEnd: Dp = ..., bottomStart: Dp = ...): RoundedCornerShape
+fun RoundedCornerShape(topStart: Float = ..., topEnd: Float = ..., bottomEnd: Float = ..., bottomStart: Float = ...): RoundedCornerShape
+fun RoundedCornerShape(topStartPercent: Int = ..., topEndPercent: Int = ..., bottomEndPercent: Int = ..., bottomStartPercent: Int = ...): RoundedCornerShape
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1347:13 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1570:43 None of the following candidates is applicable:
+fun elevatedCardColors(): CardColors
+fun elevatedCardColors(containerColor: Color = ..., contentColor: Color = ..., disabledContainerColor: Color = ..., disabledContentColor: Color = ...): CardColors
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1573:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1601:17 Unresolved reference 'Spacer'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1601:24 Unresolved reference 'modifier'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1601:24 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1605:21 Unresolved reference 'modifier'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1605:21 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1605:55 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1606:21 No parameter with name 'horizontalArrangement' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1994:9 Unresolved reference 'Spacer'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1994:16 Unresolved reference 'modifier'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1994:16 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1994:50 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1995:6 Syntax error: Expecting ','.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1998:5 'if' must have both main and 'else' branches when used as an expression.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:1998:5 Argument type mismatch: actual type is 'Unit', but 'Arrangement.Vertical' was expected.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:2066:6 Syntax error: Expecting ','.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:2069:5 'if' must have both main and 'else' branches when used as an expression.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:2069:5 Argument type mismatch: actual type is 'Unit', but 'Alignment.Horizontal' was expected.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:2115:3 Argument type mismatch: actual type is 'Function0<Unit>', but 'Color' was expected.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:2116:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:2128:13 Unresolved reference 'Spacer'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:2128:20 Unresolved reference 'modifier'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:2128:20 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:2130:17 Unresolved reference 'text'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:2130:17 Only expressions are allowed in this context.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:2130:115 Syntax error: Expecting ')'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:2131:17 No parameter with name 'style' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:2132:17 No parameter with name 'color' found.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:2132:17 No value passed for parameter 'content'.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:2135:6 Syntax error: Expecting ','.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:2138:5 'if' must have both main and 'else' branches when used as an expression.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:2138:5 Argument type mismatch: actual type is 'Unit', but '@Composable() ComposableFunction1<ColumnScope, Unit>' was expected.
+e: file:///app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt:2205:6 Syntax error: Expecting ')'.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 8s
+9 actionable tasks: 1 executed, 8 up-to-date
+Configuration cache entry reused.

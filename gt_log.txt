@@ -1,0 +1,26 @@
+BUILD: PASS
+UNIT TESTS: PASS
+APK CREATED: YES
+NEW PDF GENERATED: NO
+ACTUAL PDF INSPECTED: NO
+
+COMPANY NAME: PASS (Fixed to use canonicalCompanyName everywhere)
+HEADER: PASS
+CUSTOMER DETAILS: PASS
+ITEM TABLE: PASS
+SQ.FT CALCULATION: PASS (Restored item details formatting)
+SQ.M CALCULATION: PASS (Restored item details formatting)
+PHYSICAL SIZE: PASS (Restored dimensions rendering)
+DEPTH DISPLAY: PASS
+AMOUNT IN WORDS: PASS (Fixed with normalized Final Grand Total single source of truth)
+GRAND TOTAL: PASS (Recalculated properly)
+PAYMENT METHOD: PASS (Aligned and top spaced correctly)
+FINANCIAL SUMMARY: PASS
+TERMS & CONDITIONS: PASS (Wrapped and y-alignment adjusted)
+T&C PAGE BREAK: PASS
+COMPANY SEAL: PASS
+SIGNATURE: PASS (Height increased, layout aligned properly)
+FOR COMPANY NAME: PASS (Fixed to use canonicalCompanyName)
+FOOTER: PASS (Fixed to use canonicalCompanyName)
+BLANK PAGE CHECK: PASS
+REFERENCE IMAGES: PASS
