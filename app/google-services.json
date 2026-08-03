@@ -1,21 +1,39 @@
 {
   "project_info": {
-    "project_number": "123456789012",
-    "project_id": "dummy-project-id"
+    "project_number": "485179806050",
+    "project_id": "interiorpro-erp",
+    "storage_bucket": "interiorpro-erp.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:123456789012:android:0123456789abcdef",
+        "mobilesdk_app_id": "1:485179806050:android:5823bbf1f3a721b1a2dc3b",
         "android_client_info": {
           "package_name": "com.aistudio.interiorproquotes.qyhtsn"
         }
       },
+      "oauth_client": [
+        {
+          "client_id": "485179806050-8pt0kacg2k65asrinsvrv1p76lfi1q17.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "dummy-api-key"
+          "current_key": "AIzaSyCHPBokgtIzq0KSPWLCBuKMuRaRr7Z8gKw"
         }
-      ]
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "485179806050-8pt0kacg2k65asrinsvrv1p76lfi1q17.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
-  ]
+  ],
+  "configuration_version": "1"
 }
