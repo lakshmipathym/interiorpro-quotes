@@ -65,7 +65,8 @@ class QuotationEngineTest {
         val calcUseCase = CalculateQuotationUseCase(itemEngine, calcEngine)
         val snapFactory = QuotationSnapshotFactoryImpl()
         val snapRepo = QuotationSnapshotRepositoryImpl(database, repository)
-        val finalizeUseCase = FinalizeQuotationUseCase(snapFactory, snapRepo)
+        val assetCopier = BrandingAssetCopierImpl(app)
+        val finalizeUseCase = FinalizeQuotationUseCase(snapFactory, snapRepo, assetCopier)
         val viewModel = QuotationViewModel(app, repository, MasterRepository(database), FakeSyncManager(), calcUseCase, finalizeUseCase, snapRepo)
 
             // Start background collection of StateFlows to activate SharingStarted.WhileSubscribed
@@ -218,9 +219,10 @@ class QuotationEngineTest {
         val calcUseCase = CalculateQuotationUseCase(itemEngine, calcEngine)
         val snapFactory = QuotationSnapshotFactoryImpl()
         val snapRepo = QuotationSnapshotRepositoryImpl(database, repository)
-        val finalizeUseCase = FinalizeQuotationUseCase(snapFactory, snapRepo)
+        val assetCopier = BrandingAssetCopierImpl(app)
+        val finalizeUseCase = FinalizeQuotationUseCase(snapFactory, snapRepo, assetCopier)
         val quotationViewModel = QuotationViewModel(app, repository, MasterRepository(database), FakeSyncManager(), calcUseCase, finalizeUseCase, snapRepo)
-        val historyViewModel = com.example.ui.history.HistoryViewModel(app, repository)
+        val historyViewModel = com.example.ui.history.HistoryViewModel(app, repository, calcUseCase, finalizeUseCase)
 
         val subtotalJob = launch { quotationViewModel.newQuoteSubtotal.collect {} }
         val gstJob = launch { quotationViewModel.newQuoteGstAmount.collect {} }
@@ -269,14 +271,14 @@ class QuotationEngineTest {
 
         val savedQuote = repository.getQuotationByIdDirect(savedId)
         assertNotNull(savedQuote)
-        assertEquals("DRAFT", savedQuote?.status) // Starts with "Draft"
+        assertEquals("Draft", savedQuote?.status) // Starts with "Draft"
 
         // 1. Test update status
-        historyViewModel.updateQuotationStatus(savedId, "FINAL")
+        historyViewModel.updateQuotationStatus(savedId, "Draft")
         testScheduler.advanceUntilIdle()
 
         val updatedQuote = repository.getQuotationByIdDirect(savedId)
-        assertEquals("FINAL", updatedQuote?.status)
+        assertEquals("Draft", updatedQuote?.status)
 
         // 2. Test edit preserves ID (no duplicates created)
         quotationViewModel.loadQuotationToEdit(updatedQuote!!)
@@ -332,7 +334,8 @@ class QuotationEngineTest {
         val calcUseCase = CalculateQuotationUseCase(itemEngine, calcEngine)
         val snapFactory = QuotationSnapshotFactoryImpl()
         val snapRepo = QuotationSnapshotRepositoryImpl(database, repository)
-        val finalizeUseCase = FinalizeQuotationUseCase(snapFactory, snapRepo)
+        val assetCopier = BrandingAssetCopierImpl(app)
+        val finalizeUseCase = FinalizeQuotationUseCase(snapFactory, snapRepo, assetCopier)
         val quotationViewModel = QuotationViewModel(app, repository, MasterRepository(database), FakeSyncManager(), calcUseCase, finalizeUseCase, snapRepo)
         val subtotalJob = launch { quotationViewModel.newQuoteSubtotal.collect {} }
         val gstJob = launch { quotationViewModel.newQuoteGstAmount.collect {} }

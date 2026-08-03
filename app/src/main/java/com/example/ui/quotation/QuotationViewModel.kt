@@ -215,6 +215,18 @@ class QuotationViewModel(
     private val _newQuoteWarranty = MutableStateFlow("")
     val newQuoteWarranty: StateFlow<String> = _newQuoteWarranty.asStateFlow()
 
+    private val _newQuoteDeliveryTime = MutableStateFlow("")
+    val newQuoteDeliveryTime: StateFlow<String> = _newQuoteDeliveryTime.asStateFlow()
+
+    private val _newQuoteInstallationTime = MutableStateFlow("")
+    val newQuoteInstallationTime: StateFlow<String> = _newQuoteInstallationTime.asStateFlow()
+
+    private val _newQuotePaymentTerms = MutableStateFlow("")
+    val newQuotePaymentTerms: StateFlow<String> = _newQuotePaymentTerms.asStateFlow()
+
+    private val _newQuoteAdditionalConditions = MutableStateFlow("")
+    val newQuoteAdditionalConditions: StateFlow<String> = _newQuoteAdditionalConditions.asStateFlow()
+
     private val _newQuoteNumber = MutableStateFlow("")
     val newQuoteNumber: StateFlow<String> = _newQuoteNumber.asStateFlow()
 
@@ -264,7 +276,7 @@ class QuotationViewModel(
 
             RawItemInput(
                 itemName = it.itemName,
-                description = userDesc,
+                description = it.description,
                 material = it.material,
                 finish = it.finish,
                 width = w,
@@ -319,6 +331,10 @@ class QuotationViewModel(
             _newQuoteDiscount.value = company?.defaultDiscount ?: 0.0
             _newQuoteGstRate.value = company?.defaultGstRate ?: 18.0
             _newQuoteWarranty.value = company?.defaultWarranty ?: ""
+            _newQuoteDeliveryTime.value = company?.defaultDeliveryTime ?: ""
+            _newQuoteInstallationTime.value = company?.defaultInstallationTime ?: ""
+            _newQuotePaymentTerms.value = company?.defaultPaymentTerms ?: ""
+            _newQuoteAdditionalConditions.value = company?.additionalConditions ?: ""
             _newQuoteTerms.value = company?.termsAndConditions ?: ""
             
             _newQuoteTransport.value = 0.0
@@ -337,6 +353,12 @@ class QuotationViewModel(
         _newQuoteCustomer.value = customer
         _newQuoteSiteName.value = customer.siteLocation
         _newQuoteSiteAddress.value = customer.siteAddress.ifBlank { customer.address }
+    }
+
+    fun clearCustomer() {
+        _newQuoteCustomer.value = null
+        _newQuoteSiteName.value = ""
+        _newQuoteSiteAddress.value = ""
     }
 
     fun updateSiteDetails(name: String, address: String) {
@@ -547,6 +569,22 @@ class QuotationViewModel(
         _newQuoteWarranty.value = warranty
     }
 
+    fun setDeliveryTime(value: String) {
+        _newQuoteDeliveryTime.value = value
+    }
+
+    fun setInstallationTime(value: String) {
+        _newQuoteInstallationTime.value = value
+    }
+
+    fun setPaymentTerms(value: String) {
+        _newQuotePaymentTerms.value = value
+    }
+
+    fun setAdditionalConditions(value: String) {
+        _newQuoteAdditionalConditions.value = value
+    }
+
     fun setTransport(value: Double) {
         _newQuoteTransport.value = value
     }
@@ -614,21 +652,27 @@ class QuotationViewModel(
     fun saveQuotation(onComplete: (Int) -> Unit) {
         viewModelScope.launch {
             val customerEntity = _newQuoteCustomer.value ?: return@launch
-            val companyProfile = repository.getCompanyProfileDirect() ?: return@launch
-            
             val quoteNumber = _newQuoteNumber.value.ifEmpty { repository.generateNextQuotationNumber() }
-            val qIdStr = (_editingQuotationId.value ?: 0).toString()
+            val qIdStr = _editingQuotationId.value?.toString() ?: "0"
 
-            val customerSnapshot = CustomerSnapshot(
+            val companyProfile = repository.getCompanyProfileDirect() ?: com.example.data.CompanyProfile()
+            
+            val customerSnapshot = com.example.domain.models.CustomerSnapshot(
                 customerId = customerEntity.customerId.toString(),
                 customerName = customerEntity.customerName,
                 customerPhone = customerEntity.mobileNumber,
                 customerAddress = customerEntity.address,
                 siteName = _newQuoteSiteName.value,
-                siteAddress = _newQuoteSiteAddress.value
+                siteAddress = _newQuoteSiteAddress.value,
+                customerEmail = customerEntity.email,
+                customerWhatsapp = customerEntity.whatsappNumber,
+                contactPerson = customerEntity.contactPerson,
+                companyName = customerEntity.companyName,
+                gstin = customerEntity.gstin,
+                projectName = _newQuoteProjectName.value
             )
-
-            val companySnapshot = CompanySnapshot(
+            
+            val companySnapshot = com.example.domain.models.CompanySnapshot(
                 companyName = companyProfile.companyName,
                 ownerName = companyProfile.ownerName,
                 phone = companyProfile.phone,
@@ -640,10 +684,15 @@ class QuotationViewModel(
                 accountNumber = companyProfile.accountNumber,
                 ifsc = companyProfile.ifsc,
                 branch = companyProfile.branch,
-                upiId = companyProfile.upiId
+                upiId = companyProfile.upiId,
+                website = companyProfile.website,
+                whatsappNumber = companyProfile.whatsappNumber,
+                logoPath = companyProfile.logoPath,
+                signaturePath = companyProfile.signaturePath,
+                companySealPath = companyProfile.companySealPath
             )
 
-            val rawInput = RawQuotationInput(
+            val rawInput = com.example.domain.models.RawQuotationInput(
                 discount = _newQuoteDiscount.value,
                 gstRate = _newQuoteGstRate.value,
                 transport = _newQuoteTransport.value,
@@ -663,18 +712,22 @@ class QuotationViewModel(
                 company = companySnapshot,
                 termsAndConditions = _newQuoteTerms.value,
                 warranty = _newQuoteWarranty.value,
+                deliveryTime = _newQuoteDeliveryTime.value,
+                installationTime = _newQuoteInstallationTime.value,
+                paymentTerms = _newQuotePaymentTerms.value,
+                additionalConditions = _newQuoteAdditionalConditions.value,
                 validityDays = _newQuoteValidityDays.value,
                 notes = _newQuoteCustomerNotes.value,
                 rawInput = rawInput,
                 calculatedQuotation = calcQuote
             )
             
-            // To maintain compatibility with legacy onComplete(Int), fetch the saved snapshot
             val savedSnapshot = snapshotRepository.getSnapshotByNumber(quoteNumber)
             val newId = savedSnapshot?.id?.toIntOrNull() ?: _editingQuotationId.value ?: 0
             
             syncManager.onQuotationSaved()
-            onComplete(newId)
+            
+                onComplete(newId)
         }
     }
 
@@ -698,6 +751,10 @@ class QuotationViewModel(
             _newQuoteGstRate.value = quotation.gstRate
             _newQuoteTerms.value = quotation.termsAndConditions
             _newQuoteWarranty.value = quotation.warranty
+            _newQuoteDeliveryTime.value = quotation.deliveryTime
+            _newQuoteInstallationTime.value = quotation.installationTime
+            _newQuotePaymentTerms.value = quotation.paymentTerms
+            _newQuoteAdditionalConditions.value = quotation.additionalConditions
             
             _newQuoteSiteName.value = quotation.siteName
             _newQuoteSiteAddress.value = quotation.siteAddress

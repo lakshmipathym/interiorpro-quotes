@@ -628,7 +628,7 @@ fun SettingsProfileAndBankTab(
     Text("Company Profile", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
     com.example.ui.components.PremiumOutlinedTextField(
         value = coName, onValueChange = onCoNameChange,
-        label = "Company Name *", modifier = Modifier.fillMaxWidth(),
+        label = "Company Name *", placeholder = "Eg: InteriorPro Services", modifier = Modifier.fillMaxWidth(),
         isError = coNameError != null, errorMessage = coNameError
     )
     com.example.ui.components.PremiumOutlinedTextField(
@@ -637,33 +637,33 @@ fun SettingsProfileAndBankTab(
     )
     com.example.ui.components.PremiumOutlinedTextField(
         value = ownerName, onValueChange = onOwnerNameChange,
-        label = "Owner / Contact Person", modifier = Modifier.fillMaxWidth()
+        label = "Owner / Contact Person", placeholder = "Eg: Mr. Ramesh", modifier = Modifier.fillMaxWidth()
     )
     com.example.ui.components.PremiumOutlinedTextField(
         value = phone, onValueChange = onPhoneChange,
-        label = "Phone Number *", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+        label = "Phone Number *", placeholder = "Eg: 9876543210", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
         modifier = Modifier.fillMaxWidth(),
         isError = phoneError != null, errorMessage = phoneError
     )
     com.example.ui.components.PremiumOutlinedTextField(
         value = whatsappNumber, onValueChange = onWhatsappChange,
-        label = "WhatsApp Number", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+        label = "WhatsApp Number", placeholder = "Eg: 9876543210", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
         modifier = Modifier.fillMaxWidth()
     )
     com.example.ui.components.PremiumOutlinedTextField(
         value = email, onValueChange = onEmailChange,
-        label = "Email Address *", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+        label = "Email Address *", placeholder = "Eg: contact@company.com", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
         modifier = Modifier.fillMaxWidth(),
         isError = emailError != null, errorMessage = emailError
     )
     com.example.ui.components.PremiumOutlinedTextField(
         value = website, onValueChange = onWebsiteChange,
-        label = "Website", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+        label = "Website", placeholder = "Eg: www.company.com", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
         modifier = Modifier.fillMaxWidth()
     )
     com.example.ui.components.PremiumOutlinedTextField(
         value = gstin, onValueChange = onGstinChange,
-        label = "GSTIN / TAX ID", modifier = Modifier.fillMaxWidth(),
+        label = "GSTIN / TAX ID", placeholder = "Eg: 33ABCDE1234F1Z5", modifier = Modifier.fillMaxWidth(),
         isError = gstinError != null, errorMessage = gstinError
     )
 
@@ -671,7 +671,7 @@ fun SettingsProfileAndBankTab(
     Text("Address", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
     com.example.ui.components.PremiumOutlinedTextField(
         value = address, onValueChange = onAddressChange,
-        label = "Street Address", modifier = Modifier.fillMaxWidth()
+        label = "Street Address", placeholder = "Eg: 123, ABC Street, Near Landmark", modifier = Modifier.fillMaxWidth()
     )
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         com.example.ui.components.PremiumOutlinedTextField(
@@ -699,30 +699,30 @@ fun SettingsProfileAndBankTab(
     Text("Bank Details", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
     com.example.ui.components.PremiumOutlinedTextField(
         value = bankName, onValueChange = onBankNameChange,
-        label = "Bank Name", modifier = Modifier.fillMaxWidth()
+        label = "Bank Name", placeholder = "Eg: HDFC Bank", modifier = Modifier.fillMaxWidth()
     )
     com.example.ui.components.PremiumOutlinedTextField(
         value = accountHolderName, onValueChange = onAccountHolderNameChange,
-        label = "Account Holder Name", modifier = Modifier.fillMaxWidth()
+        label = "Account Holder Name", placeholder = "Eg: InteriorPro Services", modifier = Modifier.fillMaxWidth()
     )
     com.example.ui.components.PremiumOutlinedTextField(
         value = bankAccount, onValueChange = onBankAccountChange,
-        label = "Account Number", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        label = "Account Number", placeholder = "Eg: 1234567890", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth()
     )
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         com.example.ui.components.PremiumOutlinedTextField(
             value = bankIfsc, onValueChange = onBankIfscChange,
-            label = "IFSC Code", modifier = Modifier.weight(1f)
+            label = "IFSC Code", placeholder = "Eg: HDFC0001234", modifier = Modifier.weight(1f)
         )
         com.example.ui.components.PremiumOutlinedTextField(
             value = bankBranch, onValueChange = onBankBranchChange,
-            label = "Branch", modifier = Modifier.weight(1f)
+            label = "Branch", placeholder = "Eg: Main Branch", modifier = Modifier.weight(1f)
         )
     }
     com.example.ui.components.PremiumOutlinedTextField(
         value = upiId, onValueChange = onUpiIdChange,
-        label = "UPI ID", modifier = Modifier.fillMaxWidth()
+        label = "UPI ID", placeholder = "Eg: interiorpro@upi", modifier = Modifier.fillMaxWidth()
     )
 }
 

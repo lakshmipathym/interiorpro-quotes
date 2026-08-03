@@ -1,0 +1,440 @@
+Initialized native services in: /opt/gradle/.gradle/native
+Initialized jansi services in: /opt/gradle/.gradle/native
+The client will now receive all logging from the daemon (pid: 487). The daemon log file: /opt/gradle/.gradle/daemon/9.3.1/daemon-487.out.log
+Starting 5th build in daemon [uptime: 5 mins 25.915 secs, performance: 100%, GC rate: 0.00/s, heap usage: 0% of 4 GiB]
+Using 4 worker leases.
+Operational build model parameters: {requiresToolingModels=false, parallelProjectExecution=true, configureOnDemand=false, configurationCache=true, configurationCacheParallelStore=false, configurationCacheParallelLoad=true, isolatedProjects=false, parallelProjectConfiguration=false, intermediateModelCache=false, parallelToolingApiActions=true, invalidateCoupledProjects=false, modelAsProjectDependency=false, resilientModelBuilding=false}
+Encryption key source: default Gradle keystore (pkcs12)
+Reusing configuration cache.
+Watching the file system is configured to be enabled if available
+Unable to list file systems to check whether they can be watched. Disabling watching. Reason: Could not query file systems: could not open mount file (errno 2: No such file or directory)
+File system watching is inactive
+Using local directory build cache for the root build (location = /opt/gradle/.gradle/caches/build-cache-1, remove unused entries = after 7 days).
+Tasks to be executed: [task ':app:preBuild', task ':app:preDebugBuild', task ':app:generateDebugBuildConfig', task ':app:generateDebugResources', task ':app:processDebugGoogleServices', task ':app:packageDebugResources', task ':app:processDebugNavigationResources', task ':app:parseDebugLocalResources', task ':app:generateDebugRFile', task ':app:kspDebugKotlin', task ':app:compileDebugKotlin', task ':app:javaPreCompileDebug', task ':app:compileDebugJavaWithJavac', task ':app:checkDebugAarMetadata', task ':app:mapDebugSourceSetPaths', task ':app:compileDebugNavigationResources', task ':app:mergeDebugResources', task ':app:createDebugCompatibleScreenManifests', task ':app:extractDeepLinksDebug', task ':app:processDebugMainManifest', task ':app:processDebugManifest', task ':app:processDebugManifestForPackage', task ':app:processDebugResources', task ':app:bundleDebugClassesToRuntimeJar', task ':app:bundleDebugClassesToCompileJar', task ':app:kspDebugUnitTestKotlin', task ':app:preDebugUnitTestBuild', task ':app:compileDebugUnitTestKotlin', task ':app:javaPreCompileDebugUnitTest', task ':app:compileDebugUnitTestJavaWithJavac', task ':app:generateDebugAssets', task ':app:mergeDebugAssets', task ':app:packageDebugUnitTestForUnitTest', task ':app:processDebugUnitTestManifest', task ':app:generateDebugUnitTestConfig', task ':app:processDebugJavaRes', task ':app:processDebugUnitTestJavaRes', task ':app:testDebugUnitTest', task ':app:finalizeTestRoborazziDebug']
+Tasks that were excluded: []
+Resolve mutations for :app:preBuild (Thread[#286,Execution worker,5,main]) started.
+Resolve mutations for :app:processDebugGoogleServices (Thread[#287,Execution worker Thread 2,5,main]) started.
+Resolve mutations for :app:generateDebugAssets (Thread[#285,included builds,5,main]) started.
+:app:preBuild (Thread[#286,Execution worker,5,main]) started.
+:app:generateDebugAssets (Thread[#285,included builds,5,main]) started.
+:app:processDebugGoogleServices (Thread[#287,Execution worker Thread 2,5,main]) started.
+
+> Task :app:preBuild UP-TO-DATE
+Skipping task ':app:preBuild' as it has no actions.
+
+> Task :app:generateDebugAssets UP-TO-DATE
+Skipping task ':app:generateDebugAssets' as it has no actions.
+Resolve mutations for :app:preDebugBuild (Thread[#286,Execution worker,5,main]) started.
+Build ec045597-8863-45c4-bcb4-7854a744ed83 is started
+Resolve mutations for :app:preDebugUnitTestBuild (Thread[#288,Execution worker Thread 3,5,main]) started.
+:app:preDebugBuild (Thread[#286,Execution worker,5,main]) started.
+:app:preDebugUnitTestBuild (Thread[#285,included builds,5,main]) started.
+
+> Task :app:preDebugBuild UP-TO-DATE
+Skipping task ':app:preDebugBuild' as it has no actions.
+
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+Skipping task ':app:preDebugUnitTestBuild' as it has no actions.
+Resolve mutations for :app:generateDebugBuildConfig (Thread[#286,Execution worker,5,main]) started.
+Resolve mutations for :app:generateDebugResources (Thread[#285,included builds,5,main]) started.
+Resolve mutations for :app:processDebugNavigationResources (Thread[#288,Execution worker Thread 3,5,main]) started.
+:app:processDebugNavigationResources (Thread[#288,Execution worker Thread 3,5,main]) started.
+:app:generateDebugBuildConfig (Thread[#286,Execution worker,5,main]) started.
+:app:generateDebugResources (Thread[#285,included builds,5,main]) started.
+
+> Task :app:processDebugGoogleServices UP-TO-DATE
+Build cache key for task ':app:processDebugGoogleServices' is 67b8bcb05d61f7723d2d98780ed22990
+Skipping task ':app:processDebugGoogleServices' as it is up-to-date.
+Resolve mutations for :app:javaPreCompileDebug (Thread[#287,Execution worker Thread 2,5,main]) started.
+:app:javaPreCompileDebug (Thread[#287,Execution worker Thread 2,5,main]) started.
+
+> Task :app:generateDebugResources UP-TO-DATE
+Build cache key for task ':app:generateDebugResources' is 780db201b332db6d887206825e2ac818
+Skipping task ':app:generateDebugResources' as it is up-to-date.
+
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+Build cache key for task ':app:generateDebugBuildConfig' is e13ebb864af88e1c494951abe7d1e4fa
+Skipping task ':app:generateDebugBuildConfig' as it is up-to-date.
+Resolve mutations for :app:kspDebugKotlin (Thread[#286,Execution worker,5,main]) started.
+Resolve mutations for :app:packageDebugResources (Thread[#285,included builds,5,main]) started.
+:app:packageDebugResources (Thread[#286,Execution worker,5,main]) started.
+:app:kspDebugKotlin (Thread[#285,included builds,5,main]) started.
+
+> Task :app:javaPreCompileDebug UP-TO-DATE
+Build cache key for task ':app:javaPreCompileDebug' is 4e2f540d8ccb28c30e956d4908f1d3aa
+Skipping task ':app:javaPreCompileDebug' as it is up-to-date.
+Resolve mutations for :app:checkDebugAarMetadata (Thread[#287,Execution worker Thread 2,5,main]) started.
+
+> Task :app:packageDebugResources UP-TO-DATE
+Build cache key for task ':app:packageDebugResources' is 0edb0a562a0701dd65172f8cebb2d278
+Skipping task ':app:packageDebugResources' as it is up-to-date.
+Resolve mutations for :app:mapDebugSourceSetPaths (Thread[#286,Execution worker,5,main]) started.
+:app:checkDebugAarMetadata (Thread[#287,Execution worker Thread 2,5,main]) started.
+:app:mapDebugSourceSetPaths (Thread[#286,Execution worker,5,main]) started.
+
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+Caching disabled for task ':app:mapDebugSourceSetPaths' because:
+  Caching has been disabled for the task
+Skipping task ':app:mapDebugSourceSetPaths' as it is up-to-date.
+Resolve mutations for :app:mergeDebugResources (Thread[#286,Execution worker,5,main]) started.
+:app:mergeDebugResources (Thread[#286,Execution worker,5,main]) started.
+
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+Caching disabled for task ':app:checkDebugAarMetadata' because:
+  Caching has been disabled for the task
+Skipping task ':app:checkDebugAarMetadata' as it is up-to-date.
+Resolve mutations for :app:createDebugCompatibleScreenManifests (Thread[#287,Execution worker Thread 2,5,main]) started.
+:app:createDebugCompatibleScreenManifests (Thread[#287,Execution worker Thread 2,5,main]) started.
+
+> Task :app:mergeDebugResources UP-TO-DATE
+Build cache key for task ':app:mergeDebugResources' is d7675e0a64ac22ae8e06b5646e219fb8
+Skipping task ':app:mergeDebugResources' as it is up-to-date.
+Resolve mutations for :app:extractDeepLinksDebug (Thread[#286,Execution worker,5,main]) started.
+:app:extractDeepLinksDebug (Thread[#286,Execution worker,5,main]) started.
+
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+Caching disabled for task ':app:createDebugCompatibleScreenManifests' because:
+  Caching has been disabled for the task
+Skipping task ':app:createDebugCompatibleScreenManifests' as it is up-to-date.
+Resolve mutations for :app:javaPreCompileDebugUnitTest (Thread[#287,Execution worker Thread 2,5,main]) started.
+
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+Build cache key for task ':app:extractDeepLinksDebug' is fc3d436c54cbc8b0cf4d8bb1afcd5ff3
+Skipping task ':app:extractDeepLinksDebug' as it is up-to-date.
+Resolve mutations for :app:processDebugMainManifest (Thread[#286,Execution worker,5,main]) started.
+:app:javaPreCompileDebugUnitTest (Thread[#287,Execution worker Thread 2,5,main]) started.
+:app:processDebugMainManifest (Thread[#286,Execution worker,5,main]) started.
+
+> Task :app:javaPreCompileDebugUnitTest UP-TO-DATE
+Build cache key for task ':app:javaPreCompileDebugUnitTest' is b33a941abb27ed579e1ce552396f2d0e
+Skipping task ':app:javaPreCompileDebugUnitTest' as it is up-to-date.
+Resolve mutations for :app:mergeDebugAssets (Thread[#287,Execution worker Thread 2,5,main]) started.
+:app:mergeDebugAssets (Thread[#287,Execution worker Thread 2,5,main]) started.
+
+> Task :app:mergeDebugAssets UP-TO-DATE
+Caching disabled for task ':app:mergeDebugAssets' because:
+  Simple merging task
+Skipping task ':app:mergeDebugAssets' as it is up-to-date.
+
+> Task :app:processDebugMainManifest UP-TO-DATE
+Build cache key for task ':app:processDebugMainManifest' is fb47e1ec5b4e20257a66510fdeeaede9
+Skipping task ':app:processDebugMainManifest' as it is up-to-date.
+Resolve mutations for :app:processDebugManifest (Thread[#286,Execution worker,5,main]) started.
+work action resolve navigation.json (project :app) (Thread[#287,Execution worker Thread 2,5,main]) started.
+Resolve mutations for :app:processDebugUnitTestManifest (Thread[#287,Execution worker Thread 2,5,main]) started.
+
+> Task :app:processDebugNavigationResources UP-TO-DATE
+Build cache key for task ':app:processDebugNavigationResources' is 93d1c50e51b4a703e379231be04e55e6
+Skipping task ':app:processDebugNavigationResources' as it is up-to-date.
+:app:processDebugUnitTestManifest (Thread[#287,Execution worker Thread 2,5,main]) started.
+Resolve mutations for :app:parseDebugLocalResources (Thread[#288,Execution worker Thread 3,5,main]) started.
+Resolve mutations for :app:compileDebugNavigationResources (Thread[#286,Execution worker,5,main]) started.
+:app:parseDebugLocalResources (Thread[#288,Execution worker Thread 3,5,main]) started.
+:app:compileDebugNavigationResources (Thread[#286,Execution worker,5,main]) started.
+
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+Build cache key for task ':app:compileDebugNavigationResources' is 02107931246c8e51c8c4b65bf1a9033a
+Skipping task ':app:compileDebugNavigationResources' as it is up-to-date.
+
+> Task :app:parseDebugLocalResources UP-TO-DATE
+Build cache key for task ':app:parseDebugLocalResources' is 2e2a0517a6fd4e02bbc5b9620d93a86c
+Skipping task ':app:parseDebugLocalResources' as it is up-to-date.
+:app:processDebugManifest (Thread[#286,Execution worker,5,main]) started.
+Resolve mutations for :app:generateDebugRFile (Thread[#288,Execution worker Thread 3,5,main]) started.
+:app:generateDebugRFile (Thread[#288,Execution worker Thread 3,5,main]) started.
+
+> Task :app:processDebugManifest UP-TO-DATE
+Build cache key for task ':app:processDebugManifest' is 92977ac0e3ade7960afe8f7be9b7ba8e
+Skipping task ':app:processDebugManifest' as it is up-to-date.
+Resolve mutations for :app:processDebugManifestForPackage (Thread[#286,Execution worker,5,main]) started.
+:app:processDebugManifestForPackage (Thread[#286,Execution worker,5,main]) started.
+
+> Task :app:generateDebugRFile UP-TO-DATE
+Build cache key for task ':app:generateDebugRFile' is 658067662211a9854455ab2d106c0ae3
+Skipping task ':app:generateDebugRFile' as it is up-to-date.
+
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+Build cache key for task ':app:processDebugManifestForPackage' is 6fe1909efae43f87005733669eacf98e
+Skipping task ':app:processDebugManifestForPackage' as it is up-to-date.
+Resolve mutations for :app:processDebugResources (Thread[#286,Execution worker,5,main]) started.
+:app:processDebugResources (Thread[#286,Execution worker,5,main]) started.
+
+> Task :app:processDebugUnitTestManifest UP-TO-DATE
+Caching disabled for task ':app:processDebugUnitTestManifest' because:
+  Caching has been disabled for the task
+Skipping task ':app:processDebugUnitTestManifest' as it is up-to-date.
+
+> Task :app:processDebugResources UP-TO-DATE
+Build cache key for task ':app:processDebugResources' is c22a082fc112970ec3955b949053b772
+Skipping task ':app:processDebugResources' as it is up-to-date.
+Resolve mutations for :app:packageDebugUnitTestForUnitTest (Thread[#286,Execution worker,5,main]) started.
+:app:packageDebugUnitTestForUnitTest (Thread[#286,Execution worker,5,main]) started.
+
+> Task :app:packageDebugUnitTestForUnitTest UP-TO-DATE
+Caching disabled for task ':app:packageDebugUnitTestForUnitTest' because:
+  Simple merging task
+Skipping task ':app:packageDebugUnitTestForUnitTest' as it is up-to-date.
+Resolve mutations for :app:generateDebugUnitTestConfig (Thread[#286,Execution worker,5,main]) started.
+:app:generateDebugUnitTestConfig (Thread[#286,Execution worker,5,main]) started.
+
+> Task :app:generateDebugUnitTestConfig UP-TO-DATE
+Caching disabled for task ':app:generateDebugUnitTestConfig' because:
+  Caching has been disabled for the task
+Skipping task ':app:generateDebugUnitTestConfig' as it is up-to-date.
+
+> Task :app:kspDebugKotlin
+Build cache key for task ':app:kspDebugKotlin' is eeb6c88980a14fdf39fb995dc1c92ee9
+Task ':app:kspDebugKotlin' is not up-to-date because:
+  Input property 'kspConfig.javaSourceRoots' file /app/applet/app/src/main/java/com/example/ui/history/HistoryViewModel.kt has changed.
+Stored cache entry for task ':app:kspDebugKotlin' with cache key eeb6c88980a14fdf39fb995dc1c92ee9
+Resolve mutations for :app:compileDebugKotlin (Thread[#285,included builds,5,main]) started.
+:app:compileDebugKotlin (Thread[#285,included builds,5,main]) started.
+
+> Task :app:compileDebugKotlin
+file or directory '/app/applet/app/src/main/kotlin', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/src/debug/kotlin', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/src/main/kotlin', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/src/debug/kotlin', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/src/main/kotlin', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/src/debug/kotlin', not found
+file or directory '/app/applet/app/src/debug/java', not found
+Build cache key for task ':app:compileDebugKotlin' is 53ad82b90359221dd80a9ba2c3809ea4
+Task ':app:compileDebugKotlin' is not up-to-date because:
+  Input property 'sources' file /app/applet/app/src/main/java/com/example/ui/history/HistoryViewModel.kt has changed.
+file or directory '/app/applet/app/src/main/kotlin', not found
+file or directory '/app/applet/app/src/main/kotlin', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/src/debug/kotlin', not found
+file or directory '/app/applet/app/src/debug/kotlin', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/build/generated/ksp/debug/java', not found
+file or directory '/app/applet/app/src/main/kotlin', not found
+file or directory '/app/applet/app/src/main/kotlin', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/src/debug/kotlin', not found
+file or directory '/app/applet/app/src/debug/kotlin', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/build/generated/ksp/debug/java', not found
+file or directory '/app/applet/app/src/main/kotlin', not found
+file or directory '/app/applet/app/src/main/kotlin', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/src/debug/kotlin', not found
+file or directory '/app/applet/app/src/debug/kotlin', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/build/generated/ksp/debug/java', not found
+file or directory '/app/applet/app/src/main/kotlin', not found
+file or directory '/app/applet/app/src/main/kotlin', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/src/debug/kotlin', not found
+file or directory '/app/applet/app/src/debug/kotlin', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/src/debug/java', not found
+file or directory '/app/applet/app/build/generated/ksp/debug/java', not found
+Kotlin source files: /app/applet/app/src/main/java/com/example/core/drive/upload/DriveUploadRepository.kt, /app/applet/app/src/main/java/com/example/core/drive/upload/UploadRequest.kt, /app/applet/app/src/main/java/com/example/core/drive/upload/DriveUploadRepositoryImpl.kt, /app/applet/app/src/main/java/com/example/core/drive/upload/DriveUploadProvider.kt, /app/applet/app/src/main/java/com/example/core/drive/upload/UploadResult.kt, /app/applet/app/src/main/java/com/example/core/drive/upload/UploadProgress.kt, /app/applet/app/src/main/java/com/example/core/drive/upload/DriveUploadManager.kt, /app/applet/app/src/main/java/com/example/core/drive/GoogleDriveService.kt, /app/applet/app/src/main/java/com/example/core/drive/GoogleSignInManagerImpl.kt, /app/applet/app/src/main/java/com/example/core/drive/GoogleDriveServiceImpl.kt, /app/applet/app/src/main/java/com/example/core/drive/GoogleSignInManager.kt, /app/applet/app/src/main/java/com/example/core/sync/device/DeviceStatus.kt, /app/applet/app/src/main/java/com/example/core/sync/device/CurrentDevice.kt, /app/applet/app/src/main/java/com/example/core/sync/device/DeviceRegistrationResult.kt, /app/applet/app/src/main/java/com/example/core/sync/device/DeviceInfo.kt, /app/applet/app/src/main/java/com/example/core/sync/device/DeviceRegistrationProvider.kt, /app/applet/app/src/main/java/com/example/core/sync/device/DeviceManager.kt, /app/applet/app/src/main/java/com/example/core/sync/device/DeviceProvider.kt, /app/applet/app/src/main/java/com/example/core/sync/device/DeviceRegistrationManager.kt, /app/applet/app/src/main/java/com/example/core/sync/device/LinkedDevice.kt, /app/applet/app/src/main/java/com/example/core/sync/device/DeviceRepositoryImpl.kt, /app/applet/app/src/main/java/com/example/core/sync/device/DeviceRepository.kt, /app/applet/app/src/main/java/com/example/core/sync/retention/RetentionRepository.kt, /app/applet/app/src/main/java/com/example/core/sync/retention/CleanupCandidate.kt, /app/applet/app/src/main/java/com/example/core/sync/retention/CleanupPolicyProvider.kt, /app/applet/app/src/main/java/com/example/core/sync/retention/RetentionStatistics.kt, /app/applet/app/src/main/java/com/example/core/sync/retention/RetentionPolicyProvider.kt, /app/applet/app/src/main/java/com/example/core/sync/retention/CleanupPolicyManager.kt, /app/applet/app/src/main/java/com/example/core/sync/retention/RetentionPolicy.kt, /app/applet/app/src/main/java/com/example/core/sync/retention/RetentionPolicyManager.kt, /app/applet/app/src/main/java/com/example/core/sync/retention/RetentionRepositoryImpl.kt, /app/applet/app/src/main/java/com/example/core/sync/history/BackupHistoryRepositoryImpl.kt, /app/applet/app/src/main/java/com/example/core/sync/history/BackupHistorySummary.kt, /app/applet/app/src/main/java/com/example/core/sync/history/BackupHistoryRepository.kt, /app/applet/app/src/main/java/com/example/core/sync/history/BackupHistoryCollection.kt, /app/applet/app/src/main/java/com/example/core/sync/history/BackupHistoryItem.kt, /app/applet/app/src/main/java/com/example/core/sync/history/BackupHistoryProvider.kt, /app/applet/app/src/main/java/com/example/core/sync/history/BackupHistoryManager.kt, /app/applet/app/src/main/java/com/example/core/sync/import/WorkspaceImportRepository.kt, /app/applet/app/src/main/java/com/example/core/sync/import/ImportMetadata.kt, /app/applet/app/src/main/java/com/example/core/sync/import/WorkspaceImportPackage.kt, /app/applet/app/src/main/java/com/example/core/sync/import/ImportSummary.kt, /app/applet/app/src/main/java/com/example/core/sync/import/ImportResult.kt, /app/applet/app/src/main/java/com/example/core/sync/import/WorkspaceImportProvider.kt, /app/applet/app/src/main/java/com/example/core/sync/import/WorkspaceImportRepositoryImpl.kt, /app/applet/app/src/main/java/com/example/core/sync/import/WorkspaceImportManager.kt, /app/applet/app/src/main/java/com/example/core/sync/monitor/ConnectionRepositoryImpl.kt, /app/applet/app/src/main/java/com/example/core/sync/monitor/ConnectionRepository.kt, /app/applet/app/src/main/java/com/example/core/sync/monitor/ConnectionState.kt, /app/applet/app/src/main/java/com/example/core/sync/monitor/ConnectionMonitorManager.kt, /app/applet/app/src/main/java/com/example/core/sync/monitor/HealthIndicator.kt, /app/applet/app/src/main/java/com/example/core/sync/monitor/DriveStatus.kt, /app/applet/app/src/main/java/com/example/core/sync/monitor/ConnectionMonitorProvider.kt, /app/applet/app/src/main/java/com/example/core/sync/monitor/WorkspaceHealthManager.kt, /app/applet/app/src/main/java/com/example/core/sync/monitor/WorkspaceHealthRepositoryImpl.kt, /app/applet/app/src/main/java/com/example/core/sync/monitor/NetworkStatus.kt, /app/applet/app/src/main/java/com/example/core/sync/monitor/WorkspaceHealthRepository.kt, /app/applet/app/src/main/java/com/example/core/sync/monitor/WorkspaceHealthReport.kt, /app/applet/app/src/main/java/com/example/core/sync/monitor/HealthMonitorProvider.kt, /app/applet/app/src/main/java/com/example/core/sync/monitor/GoogleAccountStatus.kt, /app/applet/app/src/main/java/com/example/core/sync/SyncState.kt, /app/applet/app/src/main/java/com/example/core/sync/status/SyncStatusManager.kt, /app/applet/app/src/main/java/com/example/core/sync/status/SyncStatusProvider.kt, /app/applet/app/src/main/java/com/example/core/sync/status/SyncStatusRepository.kt, /app/applet/app/src/main/java/com/example/core/sync/status/SyncProgress.kt, /app/applet/app/src/main/java/com/example/core/sync/status/SyncError.kt, /app/applet/app/src/main/java/com/example/core/sync/status/SyncStatusRepositoryImpl.kt, /app/applet/app/src/main/java/com/example/core/sync/status/SyncState.kt, /app/applet/app/src/main/java/com/example/core/sync/status/SyncStatistics.kt, /app/applet/app/src/main/java/com/example/core/sync/search/BackupFilterOptions.kt, /app/applet/app/src/main/java/com/example/core/sync/search/BackupSearchQuery.kt, /app/applet/app/src/main/java/com/example/core/sync/search/BackupFilterProvider.kt, /app/applet/app/src/main/java/com/example/core/sync/search/BackupSearchResult.kt, /app/applet/app/src/main/java/com/example/core/sync/search/BackupSearchRepositoryImpl.kt, /app/applet/app/src/main/java/com/example/core/sync/search/BackupFilterManager.kt, /app/applet/app/src/main/java/com/example/core/sync/search/BackupSearchRepository.kt, /app/applet/app/src/main/java/com/example/core/sync/search/BackupSearchManager.kt, /app/applet/app/src/main/java/com/example/core/sync/search/BackupSearchProvider.kt, /app/applet/app/src/main/java/com/example/core/sync/validation/ValidationError.kt, /app/applet/app/src/main/java/com/example/core/sync/validation/BackupValidationProvider.kt, /app/applet/app/src/main/java/com/example/core/sync/validation/ValidationReport.kt, /app/applet/app/src/main/java/com/example/core/sync/validation/ValidationResultType.kt, /app/applet/app/src/main/java/com/example/core/sync/validation/BackupValidationManager.kt, /app/applet/app/src/main/java/com/example/core/sync/validation/PackageIntegrityManager.kt, /app/applet/app/src/main/java/com/example/core/sync/validation/IntegrityReport.kt, /app/applet/app/src/main/java/com/example/core/sync/validation/BackupValidationRepository.kt, /app/applet/app/src/main/java/com/example/core/sync/validation/BackupValidationRepositoryImpl.kt, /app/applet/app/src/main/java/com/example/core/sync/validation/PackageIntegrityProvider.kt, /app/applet/app/src/main/java/com/example/core/sync/validation/PackageStructure.kt, /app/applet/app/src/main/java/com/example/core/sync/export/WorkspaceExportRepository.kt, /app/applet/app/src/main/java/com/example/core/sync/export/ExportMetadata.kt, /app/applet/app/src/main/java/com/example/core/sync/export/WorkspaceExportRepositoryImpl.kt, /app/applet/app/src/main/java/com/example/core/sync/export/WorkspaceExportProvider.kt, /app/applet/app/src/main/java/com/example/core/sync/export/WorkspaceExportManager.kt, /app/applet/app/src/main/java/com/example/core/sync/export/WorkspaceExportPackage.kt, /app/applet/app/src/main/java/com/example/core/sync/export/ExportSummary.kt, /app/applet/app/src/main/java/com/example/core/sync/dashboard/DashboardState.kt, /app/applet/app/src/main/java/com/example/core/sync/dashboard/WorkspaceHealth.kt, /app/applet/app/src/main/java/com/example/core/sync/dashboard/SyncSummary.kt, /app/applet/app/src/main/java/com/example/core/sync/dashboard/SyncDashboardViewModel.kt, /app/applet/app/src/main/java/com/example/core/sync/dashboard/DashboardStateManager.kt, /app/applet/app/src/main/java/com/example/core/sync/dashboard/DashboardRepository.kt, /app/applet/app/src/main/java/com/example/core/sync/dashboard/ui/SyncDashboardScreen.kt, /app/applet/app/src/main/java/com/example/core/sync/dashboard/DashboardRepositoryImpl.kt, /app/applet/app/src/main/java/com/example/core/sync/explorer/BackupLocation.kt, /app/applet/app/src/main/java/com/example/core/sync/explorer/BackupExplorerProvider.kt, /app/applet/app/src/main/java/com/example/core/sync/explorer/BackupExplorerCollection.kt, /app/applet/app/src/main/java/com/example/core/sync/explorer/BackupExplorerItem.kt, /app/applet/app/src/main/java/com/example/core/sync/explorer/BackupCategory.kt, /app/applet/app/src/main/java/com/example/core/sync/explorer/BackupExplorerRepositoryImpl.kt, /app/applet/app/src/main/java/com/example/core/sync/explorer/BackupExplorerManager.kt, /app/applet/app/src/main/java/com/example/core/sync/explorer/BackupExplorerRepository.kt, /app/applet/app/src/main/java/com/example/core/sync/migration/MigrationSession.kt, /app/applet/app/src/main/java/com/example/core/sync/migration/MigrationResult.kt, /app/applet/app/src/main/java/com/example/core/sync/migration/WorkspaceMigrationManager.kt, /app/applet/app/src/main/java/com/example/core/sync/migration/WorkspaceMigrationProvider.kt, /app/applet/app/src/main/java/com/example/core/sync/migration/MigrationProgress.kt, /app/applet/app/src/main/java/com/example/core/sync/migration/WorkspaceMigrationRepository.kt, /app/applet/app/src/main/java/com/example/core/sync/migration/WorkspaceMigrationRepositoryImpl.kt, /app/applet/app/src/main/java/com/example/core/sync/migration/MigrationSummary.kt, /app/applet/app/src/main/java/com/example/core/sync/migration/MigrationRequest.kt, /app/applet/app/src/main/java/com/example/core/sync/SyncManager.kt, /app/applet/app/src/main/java/com/example/core/sync/SyncResult.kt, /app/applet/app/src/main/java/com/example/core/sync/SyncCoordinatorImpl.kt, /app/applet/app/src/main/java/com/example/core/sync/SyncManagerImpl.kt, /app/applet/app/src/main/java/com/example/core/sync/SyncCoordinator.kt, /app/applet/app/src/main/java/com/example/core/backup/restore/execution/RestoreExecutionRepositoryImpl.kt, /app/applet/app/src/main/java/com/example/core/backup/restore/execution/RestoreExecutionProvider.kt, /app/applet/app/src/main/java/com/example/core/backup/restore/execution/RestoreExecutionResult.kt, /app/applet/app/src/main/java/com/example/core/backup/restore/execution/RestoreExecutionManager.kt, /app/applet/app/src/main/java/com/example/core/backup/restore/execution/RestoreTransaction.kt, /app/applet/app/src/main/java/com/example/core/backup/restore/execution/RestoreRollbackResult.kt, /app/applet/app/src/main/java/com/example/core/backup/restore/execution/RestoreExecutionRepository.kt, /app/applet/app/src/main/java/com/example/core/backup/restore/execution/RestoreExecutionRequest.kt, /app/applet/app/src/main/java/com/example/core/backup/restore/RestoreValidationProvider.kt, /app/applet/app/src/main/java/com/example/core/backup/restore/ValidationResult.kt, /app/applet/app/src/main/java/com/example/core/backup/restore/ValidationRequest.kt, /app/applet/app/src/main/java/com/example/core/backup/restore/RestoreValidationRepository.kt, /app/applet/app/src/main/java/com/example/core/backup/restore/CompatibilityReport.kt, /app/applet/app/src/main/java/com/example/core/backup/restore/RestoreValidationRepositoryImpl.kt, /app/applet/app/src/main/java/com/example/core/backup/restore/RestoreValidationManager.kt, /app/applet/app/src/main/java/com/example/core/backup/discovery/BackupDiscoveryProvider.kt, /app/applet/app/src/main/java/com/example/core/backup/discovery/CloudBackupInfo.kt, /app/applet/app/src/main/java/com/example/core/backup/discovery/BackupDiscoveryManager.kt, /app/applet/app/src/main/java/com/example/core/backup/discovery/BackupDiscoveryRepositoryImpl.kt, /app/applet/app/src/main/java/com/example/core/backup/discovery/BackupDiscoveryRepository.kt, /app/applet/app/src/main/java/com/example/core/backup/discovery/CloudBackupList.kt, /app/applet/app/src/main/java/com/example/core/backup/pkg/BackupManifest.kt, /app/applet/app/src/main/java/com/example/core/backup/pkg/MetadataGenerator.kt, /app/applet/app/src/main/java/com/example/core/backup/pkg/BackupPackageProvider.kt, /app/applet/app/src/main/java/com/example/core/backup/pkg/BackupMetadata.kt, /app/applet/app/src/main/java/com/example/core/backup/pkg/BackupPackageManager.kt, /app/applet/app/src/main/java/com/example/core/backup/pkg/BackupPackage.kt, /app/applet/app/src/main/java/com/example/core/backup/pkg/CompressionManager.kt, /app/applet/app/src/main/java/com/example/core/backup/policy/BackupPolicy.kt, /app/applet/app/src/main/java/com/example/core/backup/policy/BackupPolicyManagerImpl.kt, /app/applet/app/src/main/java/com/example/core/backup/policy/BackupPolicyViewModel.kt, /app/applet/app/src/main/java/com/example/core/backup/policy/BackupPolicyManager.kt, /app/applet/app/src/main/java/com/example/core/backup/policy/BackupPolicyRepository.kt, /app/applet/app/src/main/java/com/example/core/backup/preview/RestoreSummary.kt, /app/applet/app/src/main/java/com/example/core/backup/preview/RestoreImpact.kt, /app/applet/app/src/main/java/com/example/core/backup/preview/RestorePreview.kt, /app/applet/app/src/main/java/com/example/core/backup/preview/RestorePreviewProvider.kt, /app/applet/app/src/main/java/com/example/core/backup/preview/RestorePreviewRepositoryImpl.kt, /app/applet/app/src/main/java/com/example/core/backup/preview/RestorePreviewRepository.kt, /app/applet/app/src/main/java/com/example/core/backup/preview/RestoreDifference.kt, /app/applet/app/src/main/java/com/example/core/backup/preview/RestorePreviewManager.kt, /app/applet/app/src/main/java/com/example/core/backup/sandbox/RestoreSandboxRepositoryImpl.kt, /app/applet/app/src/main/java/com/example/core/backup/sandbox/RestoreSandboxProvider.kt, /app/applet/app/src/main/java/com/example/core/backup/sandbox/RestoreSandboxRepository.kt, /app/applet/app/src/main/java/com/example/core/backup/sandbox/RestoreSandboxManager.kt, /app/applet/app/src/main/java/com/example/core/backup/sandbox/SandboxSession.kt, /app/applet/app/src/main/java/com/example/core/backup/sandbox/SandboxValidationResult.kt, /app/applet/app/src/main/java/com/example/core/backup/sandbox/SandboxDatabase.kt, /app/applet/app/src/main/java/com/example/core/backup/BackupWorker.kt, /app/applet/app/src/main/java/com/example/core/backup/RestoreManagerImpl.kt, /app/applet/app/src/main/java/com/example/core/backup/WorkspaceManagerImpl.kt, /app/applet/app/src/main/java/com/example/core/backup/RestoreManager.kt, /app/applet/app/src/main/java/com/example/core/backup/BackupScheduler.kt, /app/applet/app/src/main/java/com/example/core/backup/BackupMetadata.kt, /app/applet/app/src/main/java/com/example/core/backup/BackupScheduleRepository.kt, /app/applet/app/src/main/java/com/example/core/backup/WorkspaceManager.kt, /app/applet/app/src/main/java/com/example/core/backup/BackupManagerImpl.kt, /app/applet/app/src/main/java/com/example/core/backup/BackupManager.kt, /app/applet/app/src/main/java/com/example/core/security/EncryptionResult.kt, /app/applet/app/src/main/java/com/example/core/security/EncryptionConfig.kt, /app/applet/app/src/main/java/com/example/core/security/AESEncryptionProvider.kt, /app/applet/app/src/main/java/com/example/core/security/ChecksumManagerImpl.kt, /app/applet/app/src/main/java/com/example/core/security/EncryptionManager.kt, /app/applet/app/src/main/java/com/example/core/security/ChecksumProvider.kt, /app/applet/app/src/main/java/com/example/core/security/EncryptionManagerImpl.kt, /app/applet/app/src/main/java/com/example/core/security/IntegrityValidatorImpl.kt, /app/applet/app/src/main/java/com/example/core/security/IntegrityValidator.kt, /app/applet/app/src/main/java/com/example/core/security/SHA256ChecksumProvider.kt, /app/applet/app/src/main/java/com/example/core/security/ChecksumManager.kt, /app/applet/app/src/main/java/com/example/core/security/EncryptionProvider.kt, /app/applet/app/src/main/java/com/example/core/security/ChecksumResult.kt, /app/applet/app/src/main/java/com/example/core/device/DeviceManagerImpl.kt, /app/applet/app/src/main/java/com/example/core/device/DeviceManager.kt, /app/applet/app/src/main/java/com/example/data/AppDatabase.kt, /app/applet/app/src/main/java/com/example/data/BrandingAssetCopierImpl.kt, /app/applet/app/src/main/java/com/example/data/Entities.kt, /app/applet/app/src/main/java/com/example/data/Daos.kt, /app/applet/app/src/main/java/com/example/data/QuotesRepository.kt, /app/applet/app/src/main/java/com/example/data/MasterRepository.kt, /app/applet/app/src/main/java/com/example/data/snapshot/QuotationSnapshotMapper.kt, /app/applet/app/src/main/java/com/example/data/snapshot/QuotationSnapshotRepositoryImpl.kt, /app/applet/app/src/main/java/com/example/domain/engine/QuotationSnapshotFactoryImpl.kt, /app/applet/app/src/main/java/com/example/domain/engine/AmountInWordsConverterImpl.kt, /app/applet/app/src/main/java/com/example/domain/engine/DimensionParserImpl.kt, /app/applet/app/src/main/java/com/example/domain/engine/ItemCalculationEngineImpl.kt, /app/applet/app/src/main/java/com/example/domain/engine/QuotationCalculationEngineImpl.kt, /app/applet/app/src/main/java/com/example/domain/contracts/SnapshotContracts.kt, /app/applet/app/src/main/java/com/example/domain/contracts/CalculationContracts.kt, /app/applet/app/src/main/java/com/example/domain/contracts/BrandingAssetCopier.kt, /app/applet/app/src/main/java/com/example/domain/models/RawInputModels.kt, /app/applet/app/src/main/java/com/example/domain/models/QuotationSnapshotModels.kt, /app/applet/app/src/main/java/com/example/domain/models/DimensionModels.kt, /app/applet/app/src/main/java/com/example/domain/models/CalculationResultModels.kt, /app/applet/app/src/main/java/com/example/domain/usecases/CalculateQuotationUseCase.kt, /app/applet/app/src/main/java/com/example/domain/usecases/FinalizeQuotationUseCase.kt, /app/applet/app/src/main/java/com/example/ui/company/MasterViewModel.kt, /app/applet/app/src/main/java/com/example/ui/company/MasterDataScreen.kt, /app/applet/app/src/main/java/com/example/ui/company/CompanyViewModel.kt, /app/applet/app/src/main/java/com/example/ui/customer/CustomersScreen.kt, /app/applet/app/src/main/java/com/example/ui/customer/CustomerViewModel.kt, /app/applet/app/src/main/java/com/example/ui/theme/Type.kt, /app/applet/app/src/main/java/com/example/ui/theme/Color.kt, /app/applet/app/src/main/java/com/example/ui/theme/ThemeManager.kt, /app/applet/app/src/main/java/com/example/ui/theme/Tokens.kt, /app/applet/app/src/main/java/com/example/ui/theme/Theme.kt, /app/applet/app/src/main/java/com/example/ui/settings/SettingsCard.kt, /app/applet/app/src/main/java/com/example/ui/settings/SettingsViewModel.kt, /app/applet/app/src/main/java/com/example/ui/settings/SettingsScreen.kt, /app/applet/app/src/main/java/com/example/ui/settings/AboutScreen.kt, /app/applet/app/src/main/java/com/example/ui/quotation/QuotationViewModel.kt, /app/applet/app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt, /app/applet/app/src/main/java/com/example/ui/history/QuotationHistoryScreen.kt, /app/applet/app/src/main/java/com/example/ui/history/HistoryViewModel.kt, /app/applet/app/src/main/java/com/example/ui/components/UIComponents.kt, /app/applet/app/src/main/java/com/example/ui/TestFile.kt, /app/applet/app/src/main/java/com/example/ui/TestFile2.kt, /app/applet/app/src/main/java/com/example/utils/CurrencyFormatter.kt, /app/applet/app/src/main/java/com/example/utils/ValidationManager.kt, /app/applet/app/src/main/java/com/example/utils/ImageManager.kt, /app/applet/app/src/main/java/com/example/utils/ShareManager.kt, /app/applet/app/src/main/java/com/example/MainActivity.kt, /app/applet/app/src/main/java/com/example/pdf/PdfGenerator.kt, /app/applet/app/src/main/java/com/example/pdf/PdfExtensions.kt, /app/applet/app/src/main/java/com/example/pdf/PdfQuotationSnapshot.kt, /app/applet/app/src/main/java/com/example/engine/TaxEngine.kt, /app/applet/app/src/main/java/com/example/engine/QuotationCalculationEngine.kt, /app/applet/app/src/main/java/com/example/backup/BackupManager.kt, /app/applet/app/build/generated/ksp/debug/kotlin/com/example/data/CompanyProfileDao_Impl.kt, /app/applet/app/build/generated/ksp/debug/kotlin/com/example/data/CustomerDao_Impl.kt, /app/applet/app/build/generated/ksp/debug/kotlin/com/example/data/MasterDao_Impl.kt, /app/applet/app/build/generated/ksp/debug/kotlin/com/example/data/QuotationTemplateDao_Impl.kt, /app/applet/app/build/generated/ksp/debug/kotlin/com/example/data/QuotationDao_Impl.kt, /app/applet/app/build/generated/ksp/debug/kotlin/com/example/data/QuotationItemDao_Impl.kt, /app/applet/app/build/generated/ksp/debug/kotlin/com/example/data/AppDatabase_Impl.kt
+Java source files: /app/applet/app/build/generated/source/buildConfig/debug/com/example/BuildConfig.java
+Script source files: 
+Script file extensions: 
+Using Kotlin/JVM incremental compilation
+[KOTLIN] Kotlin compilation 'jdkHome' argument: /usr/lib/jvm/temurin-21-jdk-amd64
+Options for KOTLIN DAEMON: IncrementalCompilationOptions(super=CompilationOptions(compilerMode=INCREMENTAL_COMPILER, targetPlatform=JVM, reportCategories=[0, 3], reportSeverity=2, requestedCompilationResults=[0], kotlinScriptExtensions=[]), sourceChanges=org.jetbrains.kotlin.buildtools.api.SourcesChanges$Known@49ed5fd2, classpathChanges=NoChanges, workingDir=/app/applet/app/build/kotlin/compileDebugKotlin/cacheable, multiModuleICSettings=MultiModuleICSettings(buildHistoryFile=/app/applet/app/build/kotlin/compileDebugKotlin/local-state/build-history.bin, useModuleDetection=true), icFeatures=IncrementalCompilationFeatures(usePreciseJavaTracking=true, withAbiSnapshot=false, preciseCompilationResultsBackup=true, keepIncrementalCompilationCachesInMemory=true, enableUnsafeIncrementalCompilationForMultiplatform=false, enableMonotonousIncrementalCompileSetExpansion=true), outputFiles=[/app/applet/app/build/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes, /app/applet/app/build/kotlin/compileDebugKotlin/cacheable, /app/applet/app/build/kotlin/compileDebugKotlin/local-state])
+Finished executing kotlin compiler using DAEMON strategy
+Stored cache entry for task ':app:compileDebugKotlin' with cache key 53ad82b90359221dd80a9ba2c3809ea4
+Resolve mutations for :app:compileDebugJavaWithJavac (Thread[#285,included builds,5,main]) started.
+Resolve mutations for :app:processDebugJavaRes (Thread[#286,Execution worker,5,main]) started.
+:app:processDebugJavaRes (Thread[#286,Execution worker,5,main]) started.
+:app:compileDebugJavaWithJavac (Thread[#285,included builds,5,main]) started.
+
+> Task :app:processDebugJavaRes UP-TO-DATE
+file or directory '/app/applet/app/src/main/resources', not found
+file or directory '/app/applet/app/src/debug/resources', not found
+Caching disabled for task ':app:processDebugJavaRes' because:
+  Caching has been disabled for the task
+Skipping task ':app:processDebugJavaRes' as it is up-to-date.
+work action resolve out (project :app) (Thread[#286,Execution worker,5,main]) started.
+
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+Build cache key for task ':app:compileDebugJavaWithJavac' is 944410bc3f611c7b6436db8cc3eac82e
+Skipping task ':app:compileDebugJavaWithJavac' as it is up-to-date.
+No compile result for :app:compileDebugJavaWithJavac
+Resolve mutations for :app:bundleDebugClassesToRuntimeJar (Thread[#285,included builds,5,main]) started.
+:app:bundleDebugClassesToRuntimeJar (Thread[#285,included builds,5,main]) started.
+Resolve mutations for :app:bundleDebugClassesToCompileJar (Thread[#286,Execution worker,5,main]) started.
+:app:bundleDebugClassesToCompileJar (Thread[#286,Execution worker,5,main]) started.
+
+> Task :app:bundleDebugClassesToCompileJar
+Caching disabled for task ':app:bundleDebugClassesToCompileJar' because:
+  Caching has been disabled for the task
+Task ':app:bundleDebugClassesToCompileJar' is not up-to-date because:
+  Input property 'inputDirs' file /app/applet/app/build/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes/com/example/ui/history/HistoryViewModel$duplicateQuotation$1.class has changed.
+  Input property 'inputDirs' file /app/applet/app/build/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes/com/example/ui/history/HistoryViewModel$updateQuotationStatus$1.class has changed.
+file or directory '/app/applet/app/build/generated/ksp/debug/resources', not found
+file or directory '/app/applet/app/build/generated/ksp/debug/classes', not found
+work action resolve classes.jar (project :app) (Thread[#286,Execution worker,5,main]) started.
+Resolve mutations for :app:kspDebugUnitTestKotlin (Thread[#286,Execution worker,5,main]) started.
+:app:kspDebugUnitTestKotlin (Thread[#286,Execution worker,5,main]) started.
+
+> Task :app:bundleDebugClassesToRuntimeJar
+Caching disabled for task ':app:bundleDebugClassesToRuntimeJar' because:
+  Caching has been disabled for the task
+Task ':app:bundleDebugClassesToRuntimeJar' is not up-to-date because:
+  Input property 'inputDirs' file /app/applet/app/build/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes/com/example/ui/history/HistoryViewModel$duplicateQuotation$1.class has changed.
+  Input property 'inputDirs' file /app/applet/app/build/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes/com/example/ui/history/HistoryViewModel$updateQuotationStatus$1.class has changed.
+work action resolve classes.jar (project :app) (Thread[#285,included builds,5,main]) started.
+
+> Task :app:kspDebugUnitTestKotlin UP-TO-DATE
+Build cache key for StructureTransformAction: /app/applet/app/build/intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar is f32a0c963acae618810ae73503bc408c
+Stored cache entry for StructureTransformAction: /app/applet/app/build/intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar with cache key f32a0c963acae618810ae73503bc408c
+Build cache key for task ':app:kspDebugUnitTestKotlin' is 796b8cb2bae8971ee4bad470c78f03ea
+Skipping task ':app:kspDebugUnitTestKotlin' as it is up-to-date.
+Resolve mutations for :app:compileDebugUnitTestKotlin (Thread[#286,Execution worker,5,main]) started.
+:app:compileDebugUnitTestKotlin (Thread[#286,Execution worker,5,main]) started.
+
+> Task :app:compileDebugUnitTestKotlin UP-TO-DATE
+file or directory '/app/applet/app/src/test/kotlin', not found
+file or directory '/app/applet/app/src/testDebug/java', not found
+file or directory '/app/applet/app/src/testDebug/kotlin', not found
+file or directory '/app/applet/app/src/testDebug/java', not found
+file or directory '/app/applet/app/src/test/kotlin', not found
+file or directory '/app/applet/app/src/testDebug/java', not found
+file or directory '/app/applet/app/src/testDebug/kotlin', not found
+file or directory '/app/applet/app/src/testDebug/java', not found
+Build cache key for BuildToolsApiClasspathEntrySnapshotTransform: /app/applet/app/build/intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar is 642d141515c3cac97e1c456edcfdca19
+Stored cache entry for BuildToolsApiClasspathEntrySnapshotTransform: /app/applet/app/build/intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar with cache key 642d141515c3cac97e1c456edcfdca19
+file or directory '/app/applet/app/src/test/kotlin', not found
+file or directory '/app/applet/app/src/testDebug/java', not found
+file or directory '/app/applet/app/src/testDebug/kotlin', not found
+file or directory '/app/applet/app/src/testDebug/java', not found
+Build cache key for task ':app:compileDebugUnitTestKotlin' is 71b8f5e93e12927b102f748a61b85dcc
+Skipping task ':app:compileDebugUnitTestKotlin' as it is up-to-date.
+Resolve mutations for :app:compileDebugUnitTestJavaWithJavac (Thread[#286,Execution worker,5,main]) started.
+Resolve mutations for :app:processDebugUnitTestJavaRes (Thread[#285,included builds,5,main]) started.
+:app:processDebugUnitTestJavaRes (Thread[#285,included builds,5,main]) started.
+:app:compileDebugUnitTestJavaWithJavac (Thread[#286,Execution worker,5,main]) started.
+
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+Skipping task ':app:compileDebugUnitTestJavaWithJavac' as it has no source files and no previous output files.
+
+> Task :app:processDebugUnitTestJavaRes UP-TO-DATE
+file or directory '/app/applet/app/src/testDebug/resources', not found
+Caching disabled for task ':app:processDebugUnitTestJavaRes' because:
+  Caching has been disabled for the task
+Skipping task ':app:processDebugUnitTestJavaRes' as it is up-to-date.
+Resolve mutations for :app:testDebugUnitTest (Thread[#285,included builds,5,main]) started.
+:app:testDebugUnitTest (Thread[#285,included builds,5,main]) started.
+Gradle Test Executor 4 started executing tests.
+
+> Task :app:testDebugUnitTest
+Build cache key for task ':app:testDebugUnitTest' is f236b8b892645b71c705af7ceb4044bf
+Task ':app:testDebugUnitTest' is not up-to-date because:
+  Task has failed previously.
+file or directory '/app/applet/app/build/generated/ksp/debugUnitTest/resources', not found
+file or directory '/app/applet/app/build/generated/ksp/debugUnitTest/classes', not found
+file or directory '/app/applet/app/build/intermediates/javac/debugUnitTest/compileDebugUnitTestJavaWithJavac/classes', not found
+Starting process 'Gradle Test Executor 4'. Working directory: /app/applet/app Command: /usr/lib/jvm/temurin-21-jdk-amd64/bin/java -Djava.awt.headless=true -Djava.library.path=/usr/java/packages/lib:/usr/lib64:/lib64:/lib:/usr/lib:/app/applet/app/src/testDebug/jniLibs:/app/applet/app/src/test/jniLibs -Dorg.gradle.internal.worker.tmpdir=/app/applet/app/build/tmp/testDebugUnitTest/work --add-opens=java.base/java.io=ALL-UNNAMED @/opt/gradle/.gradle/.tmp/gradle-worker-classpath6837805296393223025txt -Xmx1024m -Dfile.encoding=UTF-8 -Duser.country=US -Duser.language=en -Duser.variant -ea worker.org.gradle.process.internal.worker.GradleWorkerMain 'Gradle Test Executor 4'
+Successfully started process 'Gradle Test Executor 4'
+
+FinalizeWorkflowTest > testFinalizeWorkflowCreatesSnapshotAndUpdatesStatus STANDARD_OUT
+    Update Status called: 1 Final
+    Current status: Draft
+    Got items
+    Got customer entity
+    Got company profile
+    Calculated quotation
+    Calling finalize
+
+FinalizeWorkflowTest > testFinalizeWorkflowCreatesSnapshotAndUpdatesStatus STANDARD_ERROR
+    System.logW: A resource was acquired at attached stack trace but never released. See java.io.Closeable for information on avoiding resource leaks.
+    java.lang.Throwable: Explicit termination method 'close' not called
+    	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$openWithCallSite(CloseGuard.java:288)
+    	at dalvik.system.CloseGuard.openWithCallSite(CloseGuard.java)
+    	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$open(CloseGuard.java:257)
+    	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+    	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+    	at org.robolectric.shadows.ShadowCloseGuard$CloseGuardReflector$$Reflector16.open(Unknown Source)
+    	at org.robolectric.shadows.ShadowCloseGuard.open(ShadowCloseGuard.java:38)
+    	at dalvik.system.CloseGuard.open(CloseGuard.java)
+    	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openInner(SQLiteDatabase.java:1088)
+    	at android.database.sqlite.SQLiteDatabase.openInner(SQLiteDatabase.java)
+    	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$open(SQLiteDatabase.java:1067)
+    	at android.database.sqlite.SQLiteDatabase.open(SQLiteDatabase.java)
+    	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:931)
+    	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+    	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$createInMemory(SQLiteDatabase.java:1127)
+    	at android.database.sqlite.SQLiteDatabase.createInMemory(SQLiteDatabase.java)
+    	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getDatabaseLocked(SQLiteOpenHelper.java:368)
+    	at android.database.sqlite.SQLiteOpenHelper.getDatabaseLocked(SQLiteOpenHelper.java)
+    	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getWritableDatabase(SQLiteOpenHelper.java:316)
+    	at android.database.sqlite.SQLiteOpenHelper.getWritableDatabase(SQLiteOpenHelper.java)
+    	at androidx.sqlite.db.framework.FrameworkSQLiteOpenHelper$OpenHelper.getWritableOrReadableDatabase(FrameworkSQLiteOpenHelper.android.kt:224)
+    	at androidx.sqlite.db.framework.FrameworkSQLiteOpenHelper$OpenHelper.innerGetDatabase(FrameworkSQLiteOpenHelper.android.kt:167)
+    	at androidx.sqlite.db.framework.FrameworkSQLiteOpenHelper$OpenHelper.getSupportDatabase(FrameworkSQLiteOpenHelper.android.kt:141)
+    	at androidx.sqlite.db.framework.FrameworkSQLiteOpenHelper.getWritableDatabase(FrameworkSQLiteOpenHelper.android.kt:96)
+    	at androidx.room.driver.SupportSQLiteDriver.open(SupportSQLiteDriver.android.kt:26)
+    	at androidx.room.driver.SupportSQLiteConnectionPool.getSupportConnection(SupportSQLiteConnectionPool.android.kt:35)
+    	at androidx.room.driver.SupportSQLiteConnectionPool.useConnection(SupportSQLiteConnectionPool.android.kt:42)
+    	at androidx.room.RoomConnectionManager.useConnection(RoomConnectionManager.android.kt:126)
+    	at androidx.room.RoomDatabase.useConnection$room_runtime_release(RoomDatabase.android.kt:588)
+    	at androidx.room.util.DBUtil__DBUtil_androidKt$performSuspending$$inlined$compatCoroutineExecute$DBUtil__DBUtil_androidKt$1.invokeSuspend(DBUtil.android.kt:109)
+    	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+    	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+    	at androidx.room.TransactionExecutor.execute$lambda$1$lambda$0(TransactionExecutor.android.kt:38)
+    	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+    	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+    	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+
+Gradle Test Executor 4 finished executing tests.
+
+> Task :app:testDebugUnitTest FAILED
+
+FinalizeWorkflowTest > testFinalizeWorkflowCreatesSnapshotAndUpdatesStatus FAILED
+    org.junit.ComparisonFailure: expected:<[FINALIZED]> but was:<[DRAFT]>
+        at app//org.junit.Assert.assertEquals(Assert.java:117)
+        at app//org.junit.Assert.assertEquals(Assert.java:146)
+        at com.example.ui.history.FinalizeWorkflowTest$testFinalizeWorkflowCreatesSnapshotAndUpdatesStatus$1.invokeSuspend(FinalizeWorkflowTest.kt:82)
+        at app//kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+        at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+        at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:263)
+        at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:94)
+        at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:70)
+        at kotlinx.coroutines.BuildersKt.runBlocking(Unknown Source)
+        at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:48)
+        at kotlinx.coroutines.BuildersKt.runBlocking$default(Unknown Source)
+        at com.example.ui.history.FinalizeWorkflowTest.testFinalizeWorkflowCreatesSnapshotAndUpdatesStatus(FinalizeWorkflowTest.kt:29)
+
+1 test completed, 1 failed
+Generating HTML test report...
+Finished generating test html results (0.011 secs) into: /app/applet/app/build/reports/tests/testDebugUnitTest
+Finished generating test XML results (0.003 secs) into: /app/applet/app/build/test-results/testDebugUnitTest
+Resolve mutations for :app:finalizeTestRoborazziDebug (Thread[#285,included builds,5,main]) started.
+:app:finalizeTestRoborazziDebug (Thread[#285,included builds,5,main]) started.
+
+> Task :app:finalizeTestRoborazziDebug SKIPPED
+Roborazzi: roborazziTestFinalizer.onlyIf doesRoborazziRun false
+Skipping task ':app:finalizeTestRoborazziDebug' as task onlyIf 'Task satisfies onlyIf spec' is false.
+Build ec045597-8863-45c4-bcb4-7854a744ed83 is closed
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:testDebugUnitTest'.
+> There were failing tests. See the report at: file:///app/applet/app/build/reports/tests/testDebugUnitTest/index.html
+
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+
+BUILD FAILED in 17s
+33 actionable tasks: 5 executed, 28 up-to-date
+Configuration cache entry reused.

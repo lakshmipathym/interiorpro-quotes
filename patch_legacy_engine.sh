@@ -1,0 +1,4 @@
+sed -i 's/val amount = calculateQuantity(width, height, qtyCount, unit, depth) \* safeRate/val rawAmount = calculateQuantity(width, height, qtyCount, unit, depth) \* safeRate\n        val amount = com.example.utils.CurrencyFormatter.normalizeCurrency(rawAmount)/g' app/src/main/java/com/example/engine/QuotationCalculationEngine.kt
+sed -i 's/return Math.round(sum \* 100.0) \/ 100.0/return com.example.utils.CurrencyFormatter.normalizeCurrency(sum)/g' app/src/main/java/com/example/engine/QuotationCalculationEngine.kt
+sed -i 's/return Math.round((grandTotalRaw + roundOff) \* 100.0) \/ 100.0/return com.example.utils.CurrencyFormatter.normalizeCurrency(grandTotalRaw + roundOff)/g' app/src/main/java/com/example/engine/QuotationCalculationEngine.kt
+sed -i 's/val taxable = maxOf(0.0, subtotal - discount)/val taxable = com.example.utils.CurrencyFormatter.normalizeCurrency(maxOf(0.0, subtotal - discount))/g' app/src/main/java/com/example/engine/QuotationCalculationEngine.kt

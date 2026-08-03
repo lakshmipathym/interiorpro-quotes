@@ -74,13 +74,14 @@ object QuotationCalculationEngine {
 
     fun calculateItemAmount(width: String, height: String, qtyCount: Double, unit: String, rate: Double, depth: String = "0"): Double {
         val safeRate = maxOf(0.0, rate)
-        val amount = calculateQuantity(width, height, qtyCount, unit, depth) * safeRate
+        val rawAmount = calculateQuantity(width, height, qtyCount, unit, depth) * safeRate
+        val amount = com.example.utils.CurrencyFormatter.normalizeCurrency(rawAmount)
         return if (amount.isNaN() || amount.isInfinite()) 0.0 else amount
     }
 
     fun calculateSubtotal(items: List<QuotationItem>): Double {
         val sum = items.sumOf { it.amount }
-        return Math.round(sum * 100.0) / 100.0
+        return com.example.utils.CurrencyFormatter.normalizeCurrency(sum)
     }
         
     fun calculateGrandTotal(
@@ -92,9 +93,9 @@ object QuotationCalculationEngine {
         extraCharges: Double = 0.0,
         roundOff: Double = 0.0
     ): Double {
-        val taxable = maxOf(0.0, subtotal - discount)
+        val taxable = com.example.utils.CurrencyFormatter.normalizeCurrency(maxOf(0.0, subtotal - discount))
         val grandTotalRaw = taxable + gstAmount + transport + installation + extraCharges
         // Return exact decimal to avoid ₹0 on small amounts
-        return Math.round((grandTotalRaw + roundOff) * 100.0) / 100.0
+        return com.example.utils.CurrencyFormatter.normalizeCurrency(grandTotalRaw + roundOff)
     }
 }

@@ -1,0 +1,46 @@
+                    val matchedRule = rules.find { it.material.equals(m, ignoreCase = true) || resolveMaterialType(it.material) == resolveMaterialType(m) }
+                    
+                    material = m
+                    unit = matchedRule?.recommendedUnit ?: getRecommendedUnitForMaterial(m, allMasterData)
+                    
+                    // Auto-update grade
+                    val allowedGrades = getGradesForMaterial(m, allMasterData)
+                    if (matchedRule != null && matchedRule.defaultGrade.isNotBlank() && allowedGrades.contains(matchedRule.defaultGrade)) {
+                        grade = matchedRule.defaultGrade
+                        grade = allowedGrades.first()
+                        grade = ""
+                    
+                    // Auto-update finish
+                    val allowedFinishes = getFinishesForMaterial(m, finishes, allMasterData)
+                    if (matchedRule != null && matchedRule.defaultFinish.isNotBlank() && allowedFinishes.contains(matchedRule.defaultFinish)) {
+                        finish = matchedRule.defaultFinish
+                        finish = allowedFinishes.first()
+                        finish = ""
+                    
+                    // Auto-update thickness
+                    }
+                    val allowedThicknesses = getThicknessOptionsForMaterial(m, allMasterData)
+                    if (matchedRule != null && matchedRule.defaultThickness.isNotBlank() && allowedThicknesses.contains(matchedRule.defaultThickness)) {
+                        thickness = matchedRule.defaultThickness
+                        thickness = allowedThicknesses.first()
+                        thickness = ""
+                    
+                    // Auto-update brand (optional)
+                    }
+                    if (matchedRule != null && matchedRule.recommendedBrand.isNotBlank()) {
+                        brand = matchedRule.recommendedBrand
+                        brand = ""
+                    
+                    // Auto-update hardware
+                    }
+                    if (matchedRule != null && matchedRule.recommendedHardware.isNotEmpty()) {
+                        hardware = matchedRule.recommendedHardware.joinToString(", ")
+                        hardware = getRecommendedHardware(itemName, projectType, category).joinToString(", ")
+                    
+                    }
+                    profileSeries = ""
+                    profileColour = ""
+                    glassType = ""
+                    glassThickness = ""
+                    acpColour = ""
+                    cncDesign = ""

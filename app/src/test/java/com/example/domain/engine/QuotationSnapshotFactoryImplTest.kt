@@ -91,6 +91,10 @@ class QuotationSnapshotFactoryImplTest {
             company = company,
             termsAndConditions = "Terms",
             warranty = "1 Year",
+            deliveryTime = "7 Days",
+            installationTime = "2 Days",
+            paymentTerms = "50% Advance",
+            additionalConditions = "None",
             validityDays = 30,
             notes = "Notes",
             rawInput = rawInput,
@@ -105,6 +109,10 @@ class QuotationSnapshotFactoryImplTest {
             company = company,
             termsAndConditions = "Terms",
             warranty = "1 Year",
+            deliveryTime = "7 Days",
+            installationTime = "2 Days",
+            paymentTerms = "50% Advance",
+            additionalConditions = "None",
             validityDays = 30,
             notes = "Notes",
             rawInput = rawInput,
@@ -124,6 +132,7 @@ class QuotationSnapshotFactoryImplTest {
         assertEquals(1, snapshot1.items.size)
         val snapItem = snapshot1.items[0]
         assertEquals("Wardrobe", snapItem.itemName)
+        assertEquals("Master Bedroom", snapItem.description) // Explicit regression check
         assertEquals(10.0, snapItem.parsedWidth, 0.001)
         assertEquals(1.0, snapItem.quantity, 0.001)
         assertEquals(100.0, snapItem.billableQuantity, 0.001)

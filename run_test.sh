@@ -1,0 +1,2 @@
+sed -i 's/repository = QuotesRepository(db)/repository = QuotesRepository(db)\n        kotlinx.coroutines.runBlocking { db.companyProfileDao().insertOrUpdate(com.example.data.CompanyProfile(1, "Default", "Test", "Test", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 18.0, 0.0, 30, 15, "", "", "", "", "", "", "")) }/g' app/src/test/java/com/example/GoogleDriveSyncTest.kt
+gradle :app:testDebugUnitTest --tests "com.example.GoogleDriveSyncTest"

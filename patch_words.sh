@@ -1,0 +1,1 @@
+sed -i 's/fun convertNumberToWords(amount: Double): String {/fun convertNumberToWords(rawAmount: Double): String {\n        val amount = normalizeCurrency(rawAmount)/g' app/src/main/java/com/example/utils/CurrencyFormatter.kt

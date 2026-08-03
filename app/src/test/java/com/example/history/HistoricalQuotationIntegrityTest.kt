@@ -36,7 +36,7 @@ class HistoricalQuotationIntegrityTest {
     @Before
     fun setup() {
         val application = ApplicationProvider.getApplicationContext<Application>()
-        db = AppDatabase.getDatabase(application)
+        db = androidx.room.Room.inMemoryDatabaseBuilder(application, AppDatabase::class.java).allowMainThreadQueries().build()
         repository = QuotesRepository(db)
         
         val itemEngine = ItemCalculationEngineImpl(DimensionParserImpl())

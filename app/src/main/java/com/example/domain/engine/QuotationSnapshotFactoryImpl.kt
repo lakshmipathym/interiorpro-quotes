@@ -20,6 +20,10 @@ class QuotationSnapshotFactoryImpl : QuotationSnapshotFactory {
         company: CompanySnapshot,
         termsAndConditions: String,
         warranty: String,
+        deliveryTime: String,
+        installationTime: String,
+        paymentTerms: String,
+        additionalConditions: String,
         validityDays: Int,
         notes: String,
         rawInput: RawQuotationInput,
@@ -73,6 +77,10 @@ class QuotationSnapshotFactoryImpl : QuotationSnapshotFactory {
             financial = financialSnapshot,
             termsAndConditions = termsAndConditions,
             warranty = warranty,
+            deliveryTime = deliveryTime,
+            installationTime = installationTime,
+            paymentTerms = paymentTerms,
+            additionalConditions = additionalConditions,
             validityDays = validityDays,
             notes = notes
         )

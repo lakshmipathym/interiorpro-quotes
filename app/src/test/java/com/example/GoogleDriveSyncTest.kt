@@ -1,7 +1,12 @@
 package com.example
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.shadows.ShadowNetworkCapabilities
 import com.example.data.AppDatabase
 import com.example.data.QuotesRepository
 import com.example.core.backup.*
@@ -44,8 +49,17 @@ class GoogleDriveSyncTest {
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
         androidx.work.testing.WorkManagerTestInitHelper.initializeTestWorkManager(context)
-        db = AppDatabase.getDatabase(context)
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val shadowCm = shadowOf(cm)
+        shadowCm.setDefaultNetworkActive(true)
+        val activeNetwork = cm.activeNetwork
+        val networkCapabilities = ShadowNetworkCapabilities.newInstance()
+        shadowOf(networkCapabilities).addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        shadowCm.setNetworkCapabilities(activeNetwork, networkCapabilities)
+
+        db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
         repository = QuotesRepository(db)
+        kotlinx.coroutines.runBlocking { db.companyProfileDao().insertOrUpdate(com.example.data.CompanyProfile(1, "Default", "Test", "Test", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 18.0, 0.0, 30, 15, "", "", "", "", "", "", "")) }
         
         encryptionManager = EncryptionManagerImpl()
         checksumManager = ChecksumManagerImpl()

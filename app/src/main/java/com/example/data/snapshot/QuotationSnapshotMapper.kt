@@ -11,6 +11,7 @@ object QuotationSnapshotMapper {
             id = snapshot.id.toIntOrNull() ?: 0,
             quotationNumber = snapshot.quotationNumber,
             date = snapshot.date,
+            status = "Draft",
             
             customerId = snapshot.customer.customerId.toLongOrNull() ?: 0L,
             customerName = snapshot.customer.customerName,
@@ -18,6 +19,12 @@ object QuotationSnapshotMapper {
             customerAddress = snapshot.customer.customerAddress,
             siteName = snapshot.customer.siteName,
             siteAddress = snapshot.customer.siteAddress,
+            customerEmail = snapshot.customer.customerEmail,
+            customerWhatsapp = snapshot.customer.customerWhatsapp,
+            customerContactPerson = snapshot.customer.contactPerson,
+            customerCompanyName = snapshot.customer.companyName,
+            customerGstin = snapshot.customer.gstin,
+            projectName = snapshot.customer.projectName,
             
             companyNameSnapshot = snapshot.company.companyName,
             companyOwnerNameSnapshot = snapshot.company.ownerName,
@@ -31,6 +38,11 @@ object QuotationSnapshotMapper {
             companyIfscSnapshot = snapshot.company.ifsc,
             companyBranchSnapshot = snapshot.company.branch,
             companyUpiIdSnapshot = snapshot.company.upiId,
+            companyWebsiteSnapshot = snapshot.company.website,
+            companyWhatsappSnapshot = snapshot.company.whatsappNumber,
+            companyLogoPathSnapshot = snapshot.company.logoPath,
+            companySignaturePathSnapshot = snapshot.company.signaturePath,
+            companySealPathSnapshot = snapshot.company.companySealPath,
             
             subtotal = snapshot.financial.subtotal,
             discount = snapshot.financial.discount,
@@ -48,8 +60,13 @@ object QuotationSnapshotMapper {
             
             termsAndConditions = snapshot.termsAndConditions,
             warranty = snapshot.warranty,
+            deliveryTime = snapshot.deliveryTime,
+            installationTime = snapshot.installationTime,
+            paymentTerms = snapshot.paymentTerms,
+            additionalConditions = snapshot.additionalConditions,
             validityDays = snapshot.validityDays,
-            internalNotes = snapshot.notes
+            customerNotes = snapshot.notes,
+            internalNotes = ""
         )
         
         val items = snapshot.items.map { item ->
@@ -68,7 +85,7 @@ object QuotationSnapshotMapper {
                 parsedDepth = item.parsedDepth,
                 rawQuantity = item.quantity,
                 billableQuantity = item.billableQuantity,
-                quantity = item.billableQuantity,
+                quantity = item.quantity,
                 unit = item.parsedUnit.name,
                 rate = item.rate,
                 amount = item.itemAmount
@@ -89,7 +106,13 @@ object QuotationSnapshotMapper {
                 customerPhone = quotation.customerPhone,
                 customerAddress = quotation.customerAddress,
                 siteName = quotation.siteName,
-                siteAddress = quotation.siteAddress
+                siteAddress = quotation.siteAddress,
+                customerEmail = quotation.customerEmail,
+                customerWhatsapp = quotation.customerWhatsapp,
+                contactPerson = quotation.customerContactPerson,
+                companyName = quotation.customerCompanyName,
+                gstin = quotation.customerGstin,
+                projectName = quotation.projectName
             ),
             company = CompanySnapshot(
                 companyName = quotation.companyNameSnapshot,
@@ -103,7 +126,12 @@ object QuotationSnapshotMapper {
                 accountNumber = quotation.companyAccountNumberSnapshot,
                 ifsc = quotation.companyIfscSnapshot,
                 branch = quotation.companyBranchSnapshot,
-                upiId = quotation.companyUpiIdSnapshot
+                upiId = quotation.companyUpiIdSnapshot,
+                website = quotation.companyWebsiteSnapshot,
+                whatsappNumber = quotation.companyWhatsappSnapshot,
+                logoPath = quotation.companyLogoPathSnapshot,
+                signaturePath = quotation.companySignaturePathSnapshot,
+                companySealPath = quotation.companySealPathSnapshot
             ),
             financial = FinancialSnapshot(
                 subtotal = quotation.subtotal,
@@ -142,8 +170,12 @@ object QuotationSnapshotMapper {
             },
             termsAndConditions = quotation.termsAndConditions,
             warranty = quotation.warranty,
+            deliveryTime = quotation.deliveryTime,
+            installationTime = quotation.installationTime,
+            paymentTerms = quotation.paymentTerms,
+            additionalConditions = quotation.additionalConditions,
             validityDays = quotation.validityDays,
-            notes = quotation.internalNotes
+            notes = quotation.customerNotes
         )
     }
 }

@@ -280,8 +280,7 @@ fun CompactLiveSummary(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)),
-        shape = RoundedCornerShape(12.dp)
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f))
     ) {
         Row(
             modifier = Modifier
@@ -648,8 +647,7 @@ fun NewQuotationScreen(
                         onClick = { activeStep-- },
                         modifier = Modifier
                             .weight(1f)
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp)
+                            .height(48.dp)
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -697,7 +695,7 @@ fun NewQuotationScreen(
                             modifier = Modifier.padding(bottom = 2.dp)
                         )
                     }
-                    Button(
+                    com.example.ui.components.PremiumPrimaryButton(
                         onClick = {
                             when (activeStep) {
                                 1 -> activeStep = 2
@@ -708,8 +706,7 @@ fun NewQuotationScreen(
                         enabled = isNextEnabled,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp)
+                            .height(48.dp)
                     ) {
                         Text(text = if (activeStep == 1) "Next to Items" else if (activeStep == 2) "Next to Review" else "Save Quotation")
                         if (activeStep < 3) {
@@ -771,7 +768,6 @@ fun NewQuotationScreen(
                         colors = CardDefaults.elevatedCardColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
                         ),
-                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
@@ -824,7 +820,7 @@ fun NewQuotationScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         // 1. Open PDF
-                        Button(
+                        com.example.ui.components.PremiumPrimaryButton(
                             onClick = {
                                 scope.launch {
                                     val pdfFile = com.example.utils.ShareManager.generateQuotationPdf(context, quotationViewModel.repository, id)
@@ -833,8 +829,7 @@ fun NewQuotationScreen(
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(44.dp),
-                            shape = RoundedCornerShape(10.dp)
+                                .height(44.dp)
                         ) {
                             Icon(Icons.AutoMirrored.Filled.Launch, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
@@ -853,7 +848,6 @@ fun NewQuotationScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(44.dp),
-                            shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color(0xFF25D366), // WhatsApp Green
                                 contentColor = Color.White
@@ -874,8 +868,7 @@ fun NewQuotationScreen(
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(44.dp),
-                            shape = RoundedCornerShape(10.dp)
+                                .height(44.dp)
                         ) {
                             Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
@@ -885,14 +878,13 @@ fun NewQuotationScreen(
                 }
             },
             confirmButton = {
-                Button(
+                com.example.ui.components.PremiumPrimaryButton(
                     onClick = {
                         savedQuotationId = null
                         quotationViewModel.startNewQuotation()
                         onSuccessReturn()
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Done")
                 }
@@ -941,7 +933,6 @@ fun WizardStepDetails(
         if (selectedCustomer == null) {
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -952,13 +943,12 @@ fun WizardStepDetails(
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
 
-                    OutlinedTextField(
+                    com.example.ui.components.PremiumOutlinedTextField(
                         value = searchQuery,
                         onValueChange = { customerViewModel.searchQuery.value = it },
-                        label = { Text("Search Customer (Name, Phone...)") },
+                        label = "Search Customer (Name, Phone...)",
                         leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
                         trailingIcon = {
                             if (searchQuery.isNotEmpty()) {
                                 IconButton(onClick = { customerViewModel.searchQuery.value = "" }) {
@@ -992,8 +982,7 @@ fun WizardStepDetails(
                                         .clickable { quotationViewModel.selectCustomer(cust) },
                                     colors = CardDefaults.elevatedCardColors(
                                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
-                                    ),
-                                    shape = RoundedCornerShape(12.dp)
+                                    )
                                 ) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth().padding(12.dp),
@@ -1015,7 +1004,6 @@ fun WizardStepDetails(
                     Button(
                         onClick = onOpenQuickAdd,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.secondaryContainer,
                             contentColor = MaterialTheme.colorScheme.onSecondaryContainer
@@ -1030,7 +1018,6 @@ fun WizardStepDetails(
         } else {
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f))
             ) {
                 Row(
@@ -1043,7 +1030,7 @@ fun WizardStepDetails(
                         Text(text = "Phone: ${selectedCustomer!!.mobileNumber}", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     OutlinedButton(
-                        onClick = { quotationViewModel.startNewQuotation() }, // Needs to clear customer really, but startNewQuotation works for now
+                        onClick = { quotationViewModel.clearCustomer() },
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         modifier = Modifier.height(32.dp)
@@ -1056,54 +1043,51 @@ fun WizardStepDetails(
             // --- SITE & PROJECT DETAILS ---
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(text = "Project & Site Details", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
-                    OutlinedTextField(
+                    com.example.ui.components.PremiumOutlinedTextField(
                         value = projectName,
                         onValueChange = { quotationViewModel.updateProjectName(it) },
-                        label = { Text("Project Name") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        label = "Project Name",
+                        placeholder = "Eg: Modular Kitchen",
+                        modifier = Modifier.fillMaxWidth()
                     )
                     
                     val dateStr = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date(dateMillis))
-                    OutlinedTextField(
+                    com.example.ui.components.PremiumOutlinedTextField(
                         value = dateStr,
                         onValueChange = { },
-                        label = { Text("Quotation Date") },
+                        label = "Quotation Date",
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
                         readOnly = true,
                         trailingIcon = { Icon(Icons.Filled.DateRange, contentDescription = null) }
                     )
 
-                    OutlinedTextField(
+                    com.example.ui.components.PremiumOutlinedTextField(
                         value = validityDays.toString(),
                         onValueChange = { quotationViewModel.updateValidityDays(it.toIntOrNull() ?: 30) },
-                        label = { Text("Validity (Days)") },
+                        label = "Validity (Days)",
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
                     )
 
-                    OutlinedTextField(
+                    com.example.ui.components.PremiumOutlinedTextField(
                         value = siteName,
                         onValueChange = { quotationViewModel.updateSiteDetails(it, siteAddress) },
-                        label = { Text("Site Name *") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        label = "Site Name *",
+                        placeholder = "Eg: Green Villa",
+                        modifier = Modifier.fillMaxWidth()
                     )
 
-                    OutlinedTextField(
+                    com.example.ui.components.PremiumOutlinedTextField(
                         value = siteAddress,
                         onValueChange = { quotationViewModel.updateSiteDetails(siteName, it) },
-                        label = { Text("Site Address *") },
+                        label = "Site Address *",
+                        placeholder = "Eg: 123, ABC Street, Near Landmark, City",
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
                         minLines = 2
                     )
                 }
@@ -1137,13 +1121,12 @@ fun WizardStepItems(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Button(
+            com.example.ui.components.PremiumPrimaryButton(
                 onClick = {
                     editingItemIndex = null
                     showItemConfigDialog = true
                 },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp)
+                modifier = Modifier.weight(1f)
             ) {
                 Icon(Icons.Filled.Add, contentDescription = null)
                 Spacer(modifier = Modifier.width(6.dp))
@@ -1151,8 +1134,7 @@ fun WizardStepItems(
             }
             OutlinedButton(
                 onClick = { showSuggestionsDialog = true },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp)
+                modifier = Modifier.weight(1f)
             ) {
                 Icon(Icons.Filled.Lightbulb, contentDescription = null)
                 Spacer(modifier = Modifier.width(6.dp))
@@ -1169,7 +1151,6 @@ fun WizardStepItems(
             ) {
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.elevatedCardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
                     )
@@ -1185,8 +1166,7 @@ fun WizardStepItems(
                             modifier = Modifier
                                 .size(80.dp)
                                 .background(
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                                    shape = RoundedCornerShape(24.dp)
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
@@ -1664,6 +1644,9 @@ fun resolveMaterialType(material: String): String {
         mLower.contains("acp") -> "acp"
         mLower.contains("aluminium") || mLower.contains("aluminum") -> "aluminium"
         mLower.contains("glass") -> "glass"
+        mLower.contains("wpc") -> "wpc"
+        mLower.contains("pvc") -> "pvc"
+        mLower.contains("blockboard") || mLower.contains("block board") -> "blockboard"
         mLower.contains("edge band") || mLower.contains("edgeband") -> "edgeband"
         mLower.contains("hinge") -> "hinges"
         mLower.contains("handle") -> "handles"
@@ -1746,30 +1729,30 @@ fun getMaterialRules(allMasterData: List<com.example.data.MasterEntity>): List<M
         ),
         MaterialRule(
             material = "Particle Board",
-            allowedGrades = listOf("Standard", "Prelam", "Moisture Resistant"),
+            allowedGrades = listOf("Standard / Plain", "Pre-Laminated", "Moisture Resistant"),
             allowedFinishes = listOf("Laminate", "Veneer", "PU"),
-            allowedThicknesses = listOf("9 mm", "12 mm", "18 mm", "25 mm"),
-            defaultGrade = "Prelam",
-            defaultFinish = "Laminate",
+            allowedThicknesses = listOf("6 mm", "8 mm", "9 mm", "12 mm", "15 mm", "17 mm", "18 mm", "25 mm"),
+            defaultGrade = "Pre-Laminated",
+            defaultFinish = "",
             defaultThickness = "18 mm",
             recommendedUnit = "Sq.Ft"
         ),
         MaterialRule(
             material = "ACP",
-            allowedGrades = listOf("3mm", "4mm", "6mm"),
+            allowedGrades = listOf("Interior Grade", "Exterior Grade"),
             allowedFinishes = listOf("Matt", "Gloss", "PVDF", "Metallic"),
             allowedThicknesses = listOf("3 mm", "4 mm", "6 mm"),
-            defaultGrade = "4mm",
+            defaultGrade = "Exterior Grade",
             defaultFinish = "Matt",
             defaultThickness = "4 mm",
             recommendedUnit = "Sq.Ft"
         ),
         MaterialRule(
             material = "Aluminium Composite Panel (ACP)",
-            allowedGrades = listOf("3mm", "4mm", "6mm"),
+            allowedGrades = listOf("Interior Grade", "Exterior Grade"),
             allowedFinishes = listOf("Matt", "Gloss", "PVDF", "Metallic"),
             allowedThicknesses = listOf("3 mm", "4 mm", "6 mm"),
-            defaultGrade = "4mm",
+            defaultGrade = "Exterior Grade",
             defaultFinish = "Matt",
             defaultThickness = "4 mm",
             recommendedUnit = "Sq.Ft"
@@ -1798,14 +1781,44 @@ fun getMaterialRules(allMasterData: List<com.example.data.MasterEntity>): List<M
         ),
         MaterialRule(
             material = "Glass",
-            allowedGrades = listOf("Clear", "Frosted", "Toughened", "Lacquered", "Fluted"),
-            allowedFinishes = listOf("Clear", "Frosted", "Tinted", "Etched", "Toughened"),
+            allowedGrades = listOf("Clear", "Frosted", "Toughened", "Lacquered", "Fluted", "Laminated"),
+            allowedFinishes = listOf("Plain", "Tinted", "Etched", "Back-Painted"),
             allowedThicknesses = listOf("5 mm", "8 mm", "10 mm", "12 mm"),
             defaultGrade = "Toughened",
-            defaultFinish = "Clear",
+            defaultFinish = "Plain",
             defaultThickness = "8 mm",
             recommendedUnit = "Sq.Ft",
             recommendedHardware = listOf("Shower Hinges", "SS Connectors", "Water Barriers")
+        ),
+        MaterialRule(
+            material = "WPC",
+            allowedGrades = listOf("Standard", "High Density"),
+            allowedFinishes = listOf("Plain", "PVC Laminate", "PU Paint", "Acrylic"),
+            allowedThicknesses = listOf("6 mm", "12 mm", "18 mm", "25 mm", "28 mm"),
+            defaultGrade = "High Density",
+            defaultFinish = "Plain",
+            defaultThickness = "18 mm",
+            recommendedUnit = "Sq.Ft"
+        ),
+        MaterialRule(
+            material = "PVC Board",
+            allowedGrades = listOf("Standard", "Premium"),
+            allowedFinishes = listOf("Plain", "PVC Laminate"),
+            allowedThicknesses = listOf("6 mm", "12 mm", "18 mm"),
+            defaultGrade = "Premium",
+            defaultFinish = "Plain",
+            defaultThickness = "18 mm",
+            recommendedUnit = "Sq.Ft"
+        ),
+        MaterialRule(
+            material = "Blockboard",
+            allowedGrades = listOf("MR", "BWP"),
+            allowedFinishes = listOf("Laminate", "Veneer", "PU"),
+            allowedThicknesses = listOf("19 mm", "25 mm"),
+            defaultGrade = "BWP",
+            defaultFinish = "Laminate",
+            defaultThickness = "19 mm",
+            recommendedUnit = "Sq.Ft"
         )
     )
 
@@ -1867,15 +1880,24 @@ fun getGradesForMaterial(material: String, allMasterData: List<com.example.data.
     return when (resolveMaterialType(material)) {
         "plywood" -> listOf("MR", "BWR", "BWP", "Marine Ply", "Commercial Ply")
         "mdf" -> listOf("Standard MDF", "HDMR", "HDF", "Exterior MDF")
-        "particle" -> listOf("Standard", "Prelam", "Moisture Resistant")
-        "acp" -> listOf("3mm", "4mm", "6mm")
+        "particle" -> listOf("Standard / Plain", "Pre-Laminated", "Moisture Resistant")
+        "acp" -> listOf("Interior Grade", "Exterior Grade")
         "aluminium" -> listOf("Slim", "Standard", "Heavy", "Modular")
-        "glass" -> listOf("Clear", "Frosted", "Toughened", "Lacquered", "Fluted")
+        "glass" -> listOf("Clear", "Frosted", "Toughened", "Lacquered", "Fluted", "Laminated")
+        "wpc" -> listOf("Standard", "High Density")
+        "pvc" -> listOf("Standard", "Premium")
+        "blockboard" -> listOf("MR", "BWP")
         else -> emptyList()
     }
 }
 
-fun getFinishesForMaterial(material: String, masterFinishes: List<String>, allMasterData: List<com.example.data.MasterEntity> = emptyList()): List<String> {
+fun getFinishesForMaterial(material: String, grade: String, masterFinishes: List<String>, allMasterData: List<com.example.data.MasterEntity> = emptyList()): List<String> {
+    val mLower = resolveMaterialType(material)
+    val gLower = grade.lowercase(java.util.Locale.US)
+    if (mLower == "particle" && (gLower.contains("pre-laminated") || gLower.contains("prelam"))) {
+        return emptyList()
+    }
+
     val rules = getMaterialRules(allMasterData)
     val matched = rules.find { it.material.equals(material, ignoreCase = true) || resolveMaterialType(it.material) == resolveMaterialType(material) }
     if (matched != null && matched.allowedFinishes.isNotEmpty()) {
@@ -1884,9 +1906,12 @@ fun getFinishesForMaterial(material: String, masterFinishes: List<String>, allMa
     return when (resolveMaterialType(material)) {
         "plywood" -> listOf("Laminate", "Veneer", "PU", "Acrylic", "Membrane")
         "aluminium" -> listOf("Powder Coating", "Anodized", "PVDF", "Matt", "Gloss")
-        "glass" -> listOf("Clear", "Frosted", "Tinted", "Etched", "Toughened")
+        "glass" -> listOf("Plain", "Tinted", "Etched", "Back-Painted")
         "mdf" -> listOf("Laminate", "Veneer", "PU", "Acrylic", "Membrane")
         "particle" -> listOf("Laminate", "Veneer", "PU")
+        "wpc" -> listOf("Plain", "PVC Laminate", "PU Paint", "Acrylic")
+        "pvc" -> listOf("Plain", "PVC Laminate")
+        "blockboard" -> listOf("Laminate", "Veneer", "PU")
         "other" -> masterFinishes.ifEmpty { listOf("Laminate", "PU", "Acrylic") }
         else -> emptyList()
     }
@@ -1903,7 +1928,10 @@ fun getThicknessOptionsForMaterial(material: String, allMasterData: List<com.exa
         "acp" -> listOf("3 mm", "4 mm", "6 mm")
         "glass" -> listOf("5 mm", "8 mm", "10 mm", "12 mm")
         "mdf" -> listOf("6 mm", "9 mm", "12 mm", "17 mm", "18 mm", "25 mm")
-        "particle" -> listOf("9 mm", "12 mm", "18 mm", "25 mm")
+        "particle" -> listOf("6 mm", "8 mm", "9 mm", "12 mm", "15 mm", "17 mm", "18 mm", "25 mm")
+        "wpc" -> listOf("6 mm", "12 mm", "18 mm", "25 mm", "28 mm")
+        "pvc" -> listOf("6 mm", "12 mm", "18 mm")
+        "blockboard" -> listOf("19 mm", "25 mm")
         else -> emptyList()
     }
 }
@@ -2024,7 +2052,8 @@ fun ItemConfigDialog(
             heightStr = specs.height
             depthStr = specs.depth
             designPath = specs.designImageUri
-            quantityStr = if (existing.quantity % 1.0 == 0.0) existing.quantity.toInt().toString() else existing.quantity.toString()
+            val displayQty = if (existing.rawQuantity > 0.0) existing.rawQuantity else existing.quantity
+            quantityStr = if (displayQty % 1.0 == 0.0) displayQty.toInt().toString() else displayQty.toString()
 
             val builtIn = getBuiltInTemplates()
             val custom = getCustomItemTemplates(allMasterData)
@@ -2068,6 +2097,10 @@ fun ItemConfigDialog(
                         Toast.makeText(context, "Item Name is required", Toast.LENGTH_SHORT).show()
                         return@PremiumPrimaryButton
                     }
+                    if (itemName.isBlank()) {
+                        Toast.makeText(context, "Item Name is required", Toast.LENGTH_SHORT).show()
+                        return@PremiumPrimaryButton
+                    }
                     if (qtyVal < 0 || rateVal < 0) {
                         Toast.makeText(context, "Values cannot be negative", Toast.LENGTH_SHORT).show()
                         return@PremiumPrimaryButton
@@ -2078,6 +2111,21 @@ fun ItemConfigDialog(
                     }
                     if (material.isBlank()) {
                         Toast.makeText(context, "Material is required", Toast.LENGTH_SHORT).show()
+                        return@PremiumPrimaryButton
+                    }
+                    val currentGradeOpts = getGradesForMaterial(material, allMasterData)
+                    if (currentGradeOpts.isNotEmpty() && grade.isBlank()) {
+                        Toast.makeText(context, "Grade/Type is required for $material", Toast.LENGTH_SHORT).show()
+                        return@PremiumPrimaryButton
+                    }
+                    val currentFinishOpts = getFinishesForMaterial(material, grade, finishes, allMasterData)
+                    if (currentFinishOpts.isNotEmpty() && finish.isBlank()) {
+                        Toast.makeText(context, "Finish Type is required for $material", Toast.LENGTH_SHORT).show()
+                        return@PremiumPrimaryButton
+                    }
+                    val currentThicknessOpts = getThicknessOptionsForMaterial(material, allMasterData)
+                    if (currentThicknessOpts.isNotEmpty() && thickness.isBlank()) {
+                        Toast.makeText(context, "Thickness is required for $material", Toast.LENGTH_SHORT).show()
                         return@PremiumPrimaryButton
                     }
                     if (wFeet < 0 || hFeet < 0 || dFeet < 0) {
@@ -2278,36 +2326,37 @@ fun ItemConfigDialog(
                     val allowedGrades = getGradesForMaterial(m, allMasterData)
                     if (matchedRule != null && matchedRule.defaultGrade.isNotBlank() && allowedGrades.contains(matchedRule.defaultGrade)) {
                         grade = matchedRule.defaultGrade
-                        grade = allowedGrades.first()
-                        grade = ""
+                    } else if (!allowedGrades.contains(grade)) {
+                        grade = allowedGrades.firstOrNull() ?: ""
+                    }
                     
                     // Auto-update finish
-                    val allowedFinishes = getFinishesForMaterial(m, finishes, allMasterData)
+                    val allowedFinishes = getFinishesForMaterial(m, grade, finishes, allMasterData)
                     if (matchedRule != null && matchedRule.defaultFinish.isNotBlank() && allowedFinishes.contains(matchedRule.defaultFinish)) {
                         finish = matchedRule.defaultFinish
-                        finish = allowedFinishes.first()
-                        finish = ""
+                    } else if (!allowedFinishes.contains(finish)) {
+                        finish = allowedFinishes.firstOrNull() ?: ""
+                    }
                     
                     // Auto-update thickness
-                    }
                     val allowedThicknesses = getThicknessOptionsForMaterial(m, allMasterData)
                     if (matchedRule != null && matchedRule.defaultThickness.isNotBlank() && allowedThicknesses.contains(matchedRule.defaultThickness)) {
                         thickness = matchedRule.defaultThickness
-                        thickness = allowedThicknesses.first()
-                        thickness = ""
+                    } else if (!allowedThicknesses.contains(thickness)) {
+                        thickness = allowedThicknesses.firstOrNull() ?: ""
+                    }
                     
                     // Auto-update brand (optional)
-                    }
                     if (matchedRule != null && matchedRule.recommendedBrand.isNotBlank()) {
                         brand = matchedRule.recommendedBrand
+                    } else {
                         brand = ""
+                    }
                     
                     // Auto-update hardware
-                    }
                     if (matchedRule != null && matchedRule.recommendedHardware.isNotEmpty()) {
-                        hardware = matchedRule.recommendedHardware.joinToString(", ")
-                        hardware = getRecommendedHardware(itemName, projectType, category).joinToString(", ")
-                    
+                        val suggested = getRecommendedHardware(itemName, projectType, category)
+                        hardware = if (suggested.isNotEmpty()) suggested.joinToString(", ") else matchedRule.recommendedHardware.joinToString(", ")
                     }
                     profileSeries = ""
                     profileColour = ""
@@ -2316,12 +2365,11 @@ fun ItemConfigDialog(
                     acpColour = ""
                     cncDesign = ""
                 }
-            }
             )
 
             val mLower = material.lowercase(Locale.US)
             val gradeOptions = getGradesForMaterial(material, allMasterData)
-            val finishOptions = getFinishesForMaterial(material, finishes, allMasterData)
+            val finishOptions = getFinishesForMaterial(material, grade, finishes, allMasterData)
             val thicknessOptions = getThicknessOptionsForMaterial(material, allMasterData)
 
             // Dynamic Grade / Type Dropdown
@@ -2335,7 +2383,13 @@ fun ItemConfigDialog(
                     label = gradeLabel,
                     value = grade,
                     options = gradeOptions,
-                    onValueChange = { grade = it }
+                    onValueChange = { 
+                        grade = it 
+                        val newFinishes = getFinishesForMaterial(material, it, finishes, allMasterData)
+                        if (finish.isNotBlank() && !newFinishes.contains(finish)) {
+                            finish = newFinishes.firstOrNull() ?: ""
+                        }
+                    }
                 )
                 
                 // Smart Warning for Grade Compatibility
@@ -2368,7 +2422,13 @@ fun ItemConfigDialog(
                                 gradeOptions.forEach { opt ->
                                     FilterChip(
                                         selected = false,
-                                        onClick = { grade = opt },
+                                        onClick = { 
+                                            grade = opt 
+                                            val newFinishes = getFinishesForMaterial(material, opt, finishes, allMasterData)
+                                            if (finish.isNotBlank() && !newFinishes.contains(finish)) {
+                                                finish = newFinishes.firstOrNull() ?: ""
+                                            }
+                                        },
                                         label = { Text(opt) }
                                     )
 
@@ -2430,7 +2490,7 @@ fun ItemConfigDialog(
             }
             if (thicknessOptions.isNotEmpty()) {
                 com.example.ui.components.PremiumDropdown(
-                    label = "Thickness",
+                    label = "Thickness *",
                     value = thickness,
                     options = thicknessOptions,
                     onValueChange = { thickness = it }
@@ -2552,9 +2612,9 @@ fun ItemConfigDialog(
                         }
                         if (grade.isNotBlank()) {
                             val gradeLbl = when {
-                                mLower.contains("aluminium") || mLower.contains("aluminum") -> "Profile Type"
-                                mLower.contains("glass") -> "Glass Type"
-                                else -> "Grade"
+                                mLower.contains("aluminium") || mLower.contains("aluminum") -> "Profile Type *"
+                                mLower.contains("glass") -> "Glass Type *"
+                                else -> "Grade *"
                             }
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(gradeLbl, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f))
@@ -2857,7 +2917,6 @@ fun WizardStepTaxesTerms(
     ) {
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2873,29 +2932,27 @@ fun WizardStepTaxesTerms(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     // Flat Discount
-                    OutlinedTextField(
+                    com.example.ui.components.PremiumOutlinedTextField(
                         value = discountStr,
                         onValueChange = {
                             discountStr = it
                             onDiscountChange(it.toDoubleOrNull() ?: 0.0)
                         },
-                        label = { Text("Flat Discount (₹)") },
+                        label = "Flat Discount (₹)",
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
+                        modifier = Modifier.weight(1f)
                     )
 
                     // GST Rate
-                    OutlinedTextField(
+                    com.example.ui.components.PremiumOutlinedTextField(
                         value = gstRateStr,
                         onValueChange = {
                             gstRateStr = it
                             onGstChange(it.toDoubleOrNull() ?: 0.0)
                         },
-                        label = { Text("GST Rate (%)") },
+                        label = "GST Rate (%)",
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
@@ -2903,7 +2960,6 @@ fun WizardStepTaxesTerms(
 
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2927,7 +2983,6 @@ fun WizardStepTaxesTerms(
 
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2938,15 +2993,14 @@ fun WizardStepTaxesTerms(
                     color = MaterialTheme.colorScheme.primary
                 )
 
-                OutlinedTextField(
+                com.example.ui.components.PremiumOutlinedTextField(
                     value = terms,
                     onValueChange = onTermsChange,
-                    label = { Text("Terms & Conditions") },
-                    placeholder = { Text("Leave blank to use default Company Terms & Conditions") },
+                    label = "Terms & Conditions",
+                    placeholder = "Leave blank to use default Company Terms & Conditions",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(140.dp),
-                    shape = RoundedCornerShape(12.dp)
+                        .height(140.dp)
                 )
             }
         }
@@ -2996,7 +3050,6 @@ fun WizardStepReview(
     ) {
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
         ) {
             Column(
@@ -3015,75 +3068,67 @@ fun WizardStepReview(
         // Adjustments / Additions
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(text = "Billing Adjustments", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
+                    com.example.ui.components.PremiumOutlinedTextField(
                         value = discountStr,
                         onValueChange = { discountStr = it; quotationViewModel.setDiscount(it.toDoubleOrNull() ?: 0.0) },
-                        label = { Text("Discount Amount (₹)") },
+                        label = "Discount Amount (₹)",
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
                     )
-                    OutlinedTextField(
+                    com.example.ui.components.PremiumOutlinedTextField(
                         value = gstRateStr,
                         onValueChange = { gstRateStr = it; quotationViewModel.setGstRate(it.toDoubleOrNull() ?: 0.0) },
-                        label = { Text("GST Rate (%)") },
+                        label = "GST Rate (%)",
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
                     )
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
+                    com.example.ui.components.PremiumOutlinedTextField(
                         value = transportStr,
                         onValueChange = { transportStr = it; quotationViewModel.setTransport(it.toDoubleOrNull() ?: 0.0) },
-                        label = { Text("Transport (₹)") },
+                        label = "Transport (₹)",
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
                     )
-                    OutlinedTextField(
+                    com.example.ui.components.PremiumOutlinedTextField(
                         value = installationStr,
                         onValueChange = { installationStr = it; quotationViewModel.setInstallation(it.toDoubleOrNull() ?: 0.0) },
-                        label = { Text("Installation (₹)") },
+                        label = "Installation (₹)",
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
                     )
                 }
                 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
+                    com.example.ui.components.PremiumOutlinedTextField(
                         value = extraStr,
                         onValueChange = { extraStr = it; quotationViewModel.setExtraCharges(it.toDoubleOrNull() ?: 0.0) },
-                        label = { Text("Extra Charges (₹)") },
+                        label = "Extra Charges (₹)",
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
                     )
-                    OutlinedTextField(
+                    com.example.ui.components.PremiumOutlinedTextField(
                         value = roundOffStr,
                         onValueChange = { roundOffStr = it; quotationViewModel.setRoundOff(it.toDoubleOrNull() ?: 0.0) },
-                        label = { Text("Round Off (₹)") },
+                        label = "Round Off (₹)",
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
                     )
                 }
                 
-                OutlinedTextField(
+                com.example.ui.components.PremiumOutlinedTextField(
                     value = advanceStr,
                     onValueChange = { advanceStr = it; quotationViewModel.setAdvance(it.toDoubleOrNull() ?: 0.0) },
-                    label = { Text("Advance Received (₹)") },
+                    label = "Advance Received (₹)",
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
                 )
             }
@@ -3092,7 +3137,6 @@ fun WizardStepReview(
         // Summary
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -3162,44 +3206,69 @@ fun WizardStepReview(
         // Notes & Terms
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(text = "Terms & Notes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 
-                OutlinedTextField(
+                com.example.ui.components.PremiumOutlinedTextField(
                     value = customerNotes,
                     onValueChange = { quotationViewModel.setCustomerNotes(it) },
-                    label = { Text("Customer Notes (Visible on PDF)") },
+                    label = "Customer Notes (Visible on PDF)",
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
                     minLines = 2
                 )
                 
-                OutlinedTextField(
+                com.example.ui.components.PremiumOutlinedTextField(
                     value = internalNotes,
                     onValueChange = { quotationViewModel.setInternalNotes(it) },
-                    label = { Text("Internal Notes (Private)") },
+                    label = "Internal Notes (Private)",
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
                     minLines = 2
                 )
                 
-                OutlinedTextField(
+                com.example.ui.components.PremiumOutlinedTextField(
                     value = terms,
                     onValueChange = { quotationViewModel.setTerms(it) },
-                    label = { Text("Terms & Conditions") },
+                    label = "Terms & Conditions",
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
                     minLines = 3
                 )
-                OutlinedTextField(
+                com.example.ui.components.PremiumOutlinedTextField(
                     value = warranty,
                     onValueChange = { quotationViewModel.setWarranty(it) },
-                    label = { Text("Warranty Terms") },
+                    label = "Warranty Terms",
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    minLines = 2
+                )
+                
+                com.example.ui.components.PremiumOutlinedTextField(
+                    value = quotationViewModel.newQuoteDeliveryTime.collectAsState().value,
+                    onValueChange = { quotationViewModel.setDeliveryTime(it) },
+                    label = "Delivery Time",
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                com.example.ui.components.PremiumOutlinedTextField(
+                    value = quotationViewModel.newQuoteInstallationTime.collectAsState().value,
+                    onValueChange = { quotationViewModel.setInstallationTime(it) },
+                    label = "Installation Time",
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                com.example.ui.components.PremiumOutlinedTextField(
+                    value = quotationViewModel.newQuotePaymentTerms.collectAsState().value,
+                    onValueChange = { quotationViewModel.setPaymentTerms(it) },
+                    label = "Payment Terms",
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2
+                )
+
+                com.example.ui.components.PremiumOutlinedTextField(
+                    value = quotationViewModel.newQuoteAdditionalConditions.collectAsState().value,
+                    onValueChange = { quotationViewModel.setAdditionalConditions(it) },
+                    label = "Additional Conditions",
+                    modifier = Modifier.fillMaxWidth(),
                     minLines = 2
                 )
             }
@@ -3211,7 +3280,6 @@ fun WizardStepReview(
                 .fillMaxWidth()
                 .padding(vertical = 16.dp)
                 .height(56.dp),
-            shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
             Icon(Icons.Filled.Save, contentDescription = null)
@@ -3235,7 +3303,6 @@ fun QuotationItemCard(
     
     ElevatedCard(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -3320,8 +3387,23 @@ fun QuotationItemCard(
                     SpecRow("Glass", specs.glassType)
                 
                 }
-                val qtyLabel = if (item.quantity % 1.0 == 0.0) item.quantity.toInt().toString() else item.quantity.toString()
-                SpecRow("Qty", "$qtyLabel ${item.unit}")
+                val rawQty = if (item.rawQuantity > 0.0) item.rawQuantity else item.quantity
+                val qtyLabel = if (rawQty % 1.0 == 0.0) rawQty.toInt().toString() else rawQty.toString()
+                
+                if (item.unit == "LUMPSUM" || item.unit == "NOS" || item.unit == "PCS") {
+                    SpecRow("Qty", "$qtyLabel ${item.unit}")
+                } else {
+                    SpecRow("Qty", qtyLabel)
+                    val billableQty = if (item.billableQuantity > 0.0) item.billableQuantity else item.quantity
+                    val billableLabel = if (billableQty % 1.0 == 0.0) billableQty.toInt().toString() else billableQty.toString()
+                    val billablePrefix = when (item.unit) {
+                        "SQ_FT", "SQ_M" -> "Area"
+                        "CU_FT", "CU_M" -> "Volume"
+                        "R_FT", "METER" -> "Length"
+                        else -> "Billable Qty"
+                    }
+                    SpecRow(billablePrefix, "$billableLabel ${item.unit}")
+                }
                 
                 SpecRow("Rate", "₹${com.example.utils.CurrencyFormatter.formatIndianCurrency(item.rate)}")
             

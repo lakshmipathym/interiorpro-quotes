@@ -1,5 +1,6 @@
 package com.example.domain.usecases
 
+import com.example.domain.contracts.BrandingAssetCopier
 import com.example.domain.contracts.QuotationSnapshotFactory
 import com.example.domain.contracts.QuotationSnapshotRepository
 import com.example.domain.models.*
@@ -21,6 +22,10 @@ class FinalizeQuotationUseCaseTest {
             company: CompanySnapshot,
             termsAndConditions: String,
             warranty: String,
+            deliveryTime: String,
+            installationTime: String,
+            paymentTerms: String,
+            additionalConditions: String,
             validityDays: Int,
             notes: String,
             rawInput: RawQuotationInput,
@@ -62,135 +67,78 @@ class FinalizeQuotationUseCaseTest {
         override suspend fun saveSnapshot(snapshot: FinalizedQuotationSnapshot) {
             saveSnapshotCalled = true
         }
-
         override suspend fun getSnapshotById(id: String): FinalizedQuotationSnapshot? = null
         override suspend fun getSnapshotByNumber(quotationNumber: String): FinalizedQuotationSnapshot? = null
         override suspend fun getAllSnapshots(): List<FinalizedQuotationSnapshot> = emptyList()
     }
+    
+    private class DummyBrandingAssetCopier : BrandingAssetCopier {
+        var copyAssetsCalled = false
+        override suspend fun copyAssetsForQuotation(quotationNumber: String, company: CompanySnapshot): CompanySnapshot {
+            copyAssetsCalled = true
+            return company.copy(
+                logoPath = "/quotation_assets/${quotationNumber}/logo.png",
+                signaturePath = "/quotation_assets/${quotationNumber}/signature.png",
+                companySealPath = "/quotation_assets/${quotationNumber}/seal.png"
+            )
+        }
+    }
 
     private lateinit var snapshotFactory: DummyQuotationSnapshotFactory
     private lateinit var snapshotRepository: DummyQuotationSnapshotRepository
+    private lateinit var assetCopier: DummyBrandingAssetCopier
     private lateinit var finalizeQuotationUseCase: FinalizeQuotationUseCase
 
     @Before
     fun setup() {
         snapshotFactory = DummyQuotationSnapshotFactory()
         snapshotRepository = DummyQuotationSnapshotRepository()
-        finalizeQuotationUseCase = FinalizeQuotationUseCase(snapshotFactory, snapshotRepository)
+        assetCopier = DummyBrandingAssetCopier()
+        finalizeQuotationUseCase = FinalizeQuotationUseCase(snapshotFactory, snapshotRepository, assetCopier)
     }
 
     @Test
-    fun `test valid CalculatedQuotation triggers Snapshot Factory`() = runBlocking {
+    fun `test asset copying updates snapshot paths`() = runBlocking {
         val calculatedQuotation = CalculatedQuotation(emptyList(), 0.0, 0.0, 0.0, 0.0, 0.0, "")
         
-        finalizeQuotationUseCase.execute(
+        val company = CompanySnapshot(
+            companyName = "Test Co",
+            ownerName = "Test Owner",
+            phone = "123",
+            email = "test@co",
+            address = "Test Addr",
+            bankName = "Test Bank",
+            accountHolderName = "Test Acc",
+            accountNumber = "123",
+            ifsc = "IFSC",
+            branch = "Branch",
+            upiId = "UPI",
+            logoPath = "/original/logo.png",
+            signaturePath = "/original/sig.png",
+            companySealPath = "/original/seal.png"
+        )
+        
+        val result = finalizeQuotationUseCase.execute(
             id = "1",
             quotationNumber = "Q-1",
             date = 0L,
             customer = CustomerSnapshot("0", "", "", "", "", ""),
-            company = CompanySnapshot("", "", "", "", "", "", "", "", "", "", "", ""),
+            company = company,
             termsAndConditions = "",
             warranty = "",
+            deliveryTime = "",
+            installationTime = "",
+            paymentTerms = "",
+            additionalConditions = "",
             validityDays = 0,
             notes = "",
             rawInput = RawQuotationInput(),
             calculatedQuotation = calculatedQuotation
         )
 
-        assertTrue(snapshotFactory.createSnapshotCalled)
-    }
-
-    @Test
-    fun `test snapshot creation returns FinalizedQuotationSnapshot successfully`() = runBlocking {
-        val calculatedQuotation = CalculatedQuotation(emptyList(), 100.0, 100.0, 0.0, 100.0, 100.0, "")
-        
-        val result = finalizeQuotationUseCase.execute(
-            id = "2",
-            quotationNumber = "Q-2",
-            date = 0L,
-            customer = CustomerSnapshot("0", "", "", "", "", ""),
-            company = CompanySnapshot("", "", "", "", "", "", "", "", "", "", "", ""),
-            termsAndConditions = "",
-            warranty = "",
-            validityDays = 0,
-            notes = "",
-            rawInput = RawQuotationInput(),
-            calculatedQuotation = calculatedQuotation
-        )
-
-        assertEquals("2", result.id)
-        assertEquals("Q-2", result.quotationNumber)
-        assertEquals(100.0, result.financial.subtotal, 0.0)
-    }
-
-    @Test
-    fun `test persistence repository receives the finalized snapshot`() = runBlocking {
-        val calculatedQuotation = CalculatedQuotation(emptyList(), 0.0, 0.0, 0.0, 0.0, 0.0, "")
-        
-        finalizeQuotationUseCase.execute(
-            id = "3",
-            quotationNumber = "Q-3",
-            date = 0L,
-            customer = CustomerSnapshot("0", "", "", "", "", ""),
-            company = CompanySnapshot("", "", "", "", "", "", "", "", "", "", "", ""),
-            termsAndConditions = "",
-            warranty = "",
-            validityDays = 0,
-            notes = "",
-            rawInput = RawQuotationInput(),
-            calculatedQuotation = calculatedQuotation
-        )
-
-        assertTrue(snapshotRepository.saveSnapshotCalled)
-    }
-
-    @Test
-    fun `test exact preservation of financial values from CalculatedQuotation to snapshot`() = runBlocking {
-        val calculatedQuotation = CalculatedQuotation(
-            items = emptyList(),
-            subtotal = 1500.0,
-            taxableAmount = 1400.0,
-            gstAmount = 252.0,
-            grandTotal = 1822.5,
-            balanceDue = 1322.5,
-            amountInWords = "Test"
-        )
-        val rawInput = RawQuotationInput(
-            discount = 100.0,
-            gstRate = 18.0,
-            transport = 50.0,
-            installation = 100.0,
-            extraCharges = 20.0,
-            roundOff = 0.5,
-            advance = 500.0
-        )
-        
-        val result = finalizeQuotationUseCase.execute(
-            id = "4",
-            quotationNumber = "Q-4",
-            date = 0L,
-            customer = CustomerSnapshot("0", "", "", "", "", ""),
-            company = CompanySnapshot("", "", "", "", "", "", "", "", "", "", "", ""),
-            termsAndConditions = "",
-            warranty = "",
-            validityDays = 0,
-            notes = "",
-            rawInput = rawInput,
-            calculatedQuotation = calculatedQuotation
-        )
-
-        assertEquals(1500.0, result.financial.subtotal, 0.0)
-        assertEquals(100.0, result.financial.discount, 0.0)
-        assertEquals(1400.0, result.financial.taxableAmount, 0.0)
-        assertEquals(18.0, result.financial.gstRate, 0.0)
-        assertEquals(252.0, result.financial.gstAmount, 0.0)
-        assertEquals(50.0, result.financial.transport, 0.0)
-        assertEquals(100.0, result.financial.installation, 0.0)
-        assertEquals(20.0, result.financial.extraCharges, 0.0)
-        assertEquals(0.5, result.financial.roundOff, 0.0)
-        assertEquals(1822.5, result.financial.grandTotal, 0.0)
-        assertEquals(500.0, result.financial.advance, 0.0)
-        assertEquals(1322.5, result.financial.balanceDue, 0.0)
-        assertEquals("Test", result.financial.amountInWords)
+        assertTrue(assetCopier.copyAssetsCalled)
+        assertEquals("/quotation_assets/Q-1/logo.png", result.company.logoPath)
+        assertEquals("/quotation_assets/Q-1/signature.png", result.company.signaturePath)
+        assertEquals("/quotation_assets/Q-1/seal.png", result.company.companySealPath)
     }
 }

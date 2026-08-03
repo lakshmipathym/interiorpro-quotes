@@ -50,7 +50,7 @@ class GoogleSignInManagerImpl(private val context: Context) : GoogleSignInManage
     }
 
     override suspend fun signIn(activityContext: Context): Boolean = withContext(Dispatchers.IO) {
-        if (android.os.Build.FINGERPRINT == "robotolectric" || DEFAULT_CLIENT_ID.contains("sampleclientid")) {
+        if (android.os.Build.FINGERPRINT == "robolectric" || DEFAULT_CLIENT_ID.contains("sampleclientid")) {
             performSandboxSignIn()
             return@withContext true
         }
@@ -105,7 +105,7 @@ class GoogleSignInManagerImpl(private val context: Context) : GoogleSignInManage
     }
 
     override suspend fun silentSignIn(): Boolean = withContext(Dispatchers.IO) {
-        if (android.os.Build.FINGERPRINT == "robotolectric" || DEFAULT_CLIENT_ID.contains("sampleclientid")) {
+        if (android.os.Build.FINGERPRINT == "robolectric" || DEFAULT_CLIENT_ID.contains("sampleclientid")) {
             return@withContext if (_isUserSignedIn.value) {
                 true
             } else {
@@ -157,7 +157,7 @@ class GoogleSignInManagerImpl(private val context: Context) : GoogleSignInManage
 
     override suspend fun signOut(): Boolean = withContext(Dispatchers.IO) {
         try {
-            if (android.os.Build.FINGERPRINT != "robotolectric") {
+            if (android.os.Build.FINGERPRINT != "robolectric") {
                 credentialManager.clearCredentialState(androidx.credentials.ClearCredentialStateRequest())
             }
             _currentUserEmail.value = null

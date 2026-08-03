@@ -1,0 +1,1 @@
+sed -i 's/private fun formatAmountInternal(amount: Double, strict: Boolean): String {/private fun formatAmountInternal(rawAmount: Double, strict: Boolean): String {\n        val amount = normalizeCurrency(rawAmount)/g' app/src/main/java/com/example/utils/CurrencyFormatter.kt

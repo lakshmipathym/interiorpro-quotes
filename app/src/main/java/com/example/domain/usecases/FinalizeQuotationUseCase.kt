@@ -1,5 +1,6 @@
 package com.example.domain.usecases
 
+import com.example.domain.contracts.BrandingAssetCopier
 import com.example.domain.contracts.QuotationSnapshotFactory
 import com.example.domain.contracts.QuotationSnapshotRepository
 import com.example.domain.models.CalculatedQuotation
@@ -10,7 +11,8 @@ import com.example.domain.models.RawQuotationInput
 
 class FinalizeQuotationUseCase(
     private val snapshotFactory: QuotationSnapshotFactory,
-    private val snapshotRepository: QuotationSnapshotRepository
+    private val snapshotRepository: QuotationSnapshotRepository,
+    private val assetCopier: BrandingAssetCopier? = null
 ) {
     suspend fun execute(
         id: String,
@@ -20,19 +22,29 @@ class FinalizeQuotationUseCase(
         company: CompanySnapshot,
         termsAndConditions: String,
         warranty: String,
+        deliveryTime: String,
+        installationTime: String,
+        paymentTerms: String,
+        additionalConditions: String,
         validityDays: Int,
         notes: String,
         rawInput: RawQuotationInput,
         calculatedQuotation: CalculatedQuotation
     ): FinalizedQuotationSnapshot {
+        val updatedCompany = assetCopier?.copyAssetsForQuotation(quotationNumber, company) ?: company
+
         val snapshot = snapshotFactory.createSnapshot(
             id = id,
             quotationNumber = quotationNumber,
             date = date,
             customer = customer,
-            company = company,
+            company = updatedCompany,
             termsAndConditions = termsAndConditions,
             warranty = warranty,
+            deliveryTime = deliveryTime,
+            installationTime = installationTime,
+            paymentTerms = paymentTerms,
+            additionalConditions = additionalConditions,
             validityDays = validityDays,
             notes = notes,
             rawInput = rawInput,

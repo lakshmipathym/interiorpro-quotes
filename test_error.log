@@ -1,0 +1,52 @@
+Starting a Gradle Daemon, 1 busy Daemon could not be reused, use --status for details
+Reusing configuration cache.
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:processDebugGoogleServices UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugUnitTestManifest UP-TO-DATE
+> Task :app:kspDebugKotlin FAILED
+> Task :app:processDebugResources UP-TO-DATE
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:kspDebugKotlin'.
+> java.io.IOException: Unable to delete directory '/app/applet/app/build/generated/ksp/debug/kotlin'
+    Failed to delete some children. This might happen because a process has files open or has its working directory set in the target directory.
+    - /app/applet/app/build/generated/ksp/debug/kotlin/com/example/data
+    - /app/applet/app/build/generated/ksp/debug/kotlin/com/example
+    - /app/applet/app/build/generated/ksp/debug/kotlin/com
+    New files were found. This might happen because a process is still writing to the target directory.
+    - /app/applet/app/build/generated/ksp/debug/kotlin/com/example/data/AppDatabase_Impl.kt
+    - /app/applet/app/build/generated/ksp/debug/kotlin/com/example/data/QuotationItemDao_Impl.kt
+    - /app/applet/app/build/generated/ksp/debug/kotlin/com/example/data/QuotationDao_Impl.kt
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 29s
+22 actionable tasks: 1 executed, 21 up-to-date
+Configuration cache entry reused.

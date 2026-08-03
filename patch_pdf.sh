@@ -1,0 +1,1 @@
+sed -i 's/val normalizedFinalGrandTotal = Math.round(quotation.grandTotal \* 100.0) \/ 100.0/val normalizedFinalGrandTotal = com.example.utils.CurrencyFormatter.normalizeCurrency(quotation.grandTotal)/g' app/src/main/java/com/example/pdf/PdfGenerator.kt

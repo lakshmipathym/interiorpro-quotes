@@ -1,0 +1,1 @@
+sed -i 's/fun formatIndianCurrency(amount: Double): String {/fun normalizeCurrency(amount: Double): Double {\n        if (amount.isNaN() || amount.isInfinite()) return 0.0\n        return Math.round(amount * 100.0) \/ 100.0\n    }\n\n    fun formatIndianCurrency(amount: Double): String {/g' app/src/main/java/com/example/utils/CurrencyFormatter.kt

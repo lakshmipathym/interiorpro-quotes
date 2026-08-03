@@ -12,7 +12,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class HistoryViewModel(application: Application, val repository: QuotesRepository) : AndroidViewModel(application) {
+class HistoryViewModel(
+    application: Application,
+    val repository: QuotesRepository,
+    private val calculateQuotationUseCase: com.example.domain.usecases.CalculateQuotationUseCase,
+    private val finalizeQuotationUseCase: com.example.domain.usecases.FinalizeQuotationUseCase
+) : AndroidViewModel(application) {
     val allQuotations: StateFlow<List<Quotation>> = repository.allQuotations
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -38,8 +43,115 @@ class HistoryViewModel(application: Application, val repository: QuotesRepositor
     }
 
     fun updateQuotationStatus(id: Int, status: String) {
-        viewModelScope.launch {
-            repository.getQuotationByIdDirect(id)?.let { current ->
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val current = repository.getQuotationByIdDirect(id) ?: return@launch
+            if (status.equals("Final", ignoreCase = true) || status.equals("FINALIZED", ignoreCase = true)) {
+                if (current.status.equals("Final", ignoreCase = true) || current.status.equals("FINALIZED", ignoreCase = true)) return@launch
+                try {
+                    val items = repository.getQuotationItemsDirect(id)
+                    val customerEntity = repository.getCustomerById(current.customerId) ?: return@launch
+                    val companyProfile = repository.getCompanyProfileDirect() ?: com.example.data.CompanyProfile()
+                    
+                    val customerSnapshot = com.example.domain.models.CustomerSnapshot(
+                        customerId = customerEntity.customerId.toString(),
+                        customerName = customerEntity.customerName,
+                        customerPhone = customerEntity.mobileNumber,
+                        customerAddress = customerEntity.address,
+                        siteName = current.siteName,
+                        siteAddress = current.siteAddress,
+                        customerEmail = customerEntity.email,
+                        customerWhatsapp = customerEntity.whatsappNumber,
+                        contactPerson = customerEntity.contactPerson,
+                        companyName = customerEntity.companyName,
+                        gstin = customerEntity.gstin,
+                        projectName = current.projectName
+                    )
+                    
+                    val companySnapshot = com.example.domain.models.CompanySnapshot(
+                        companyName = companyProfile.companyName,
+                        ownerName = companyProfile.ownerName,
+                        phone = companyProfile.phone,
+                        email = companyProfile.email,
+                        address = companyProfile.address,
+                        gstin = companyProfile.gstin,
+                        bankName = companyProfile.bankName,
+                        accountHolderName = companyProfile.accountHolderName,
+                        accountNumber = companyProfile.accountNumber,
+                        ifsc = companyProfile.ifsc,
+                        branch = companyProfile.branch,
+                        upiId = companyProfile.upiId,
+                        website = companyProfile.website,
+                        whatsappNumber = companyProfile.whatsappNumber,
+                        logoPath = companyProfile.logoPath,
+                        signaturePath = companyProfile.signaturePath,
+                        companySealPath = companyProfile.companySealPath
+                    )
+                    
+                    val rawInput = com.example.domain.models.RawQuotationInput(
+                        discount = current.discount,
+                        gstRate = current.gstRate,
+                        transport = current.transport,
+                        installation = current.installation,
+                        extraCharges = current.extraCharges,
+                        roundOff = current.roundOff,
+                        advance = current.advance
+                    )
+                    
+                    val rawItems = items.map {
+                        val parts = it.description.split("|||")
+                        val specsJson = if (parts.size > 1) parts[1].trim() else "{}"
+                        var w = "0"; var h = "0"; var d = "0"
+                        try {
+                            if (specsJson.startsWith("{") && specsJson.endsWith("}")) {
+                                val json = org.json.JSONObject(specsJson)
+                                w = json.optString("width", "0")
+                                h = json.optString("height", "0")
+                                d = json.optString("depth", "0")
+                            }
+                        } catch (e: Exception) {}
+                        
+                        com.example.domain.models.RawItemInput(
+                            itemName = it.itemName,
+                            description = it.description,
+                            material = it.material,
+                            finish = it.finish,
+                            width = w,
+                            height = h,
+                            depth = d,
+                            unit = it.unit,
+                            quantity = it.quantity,
+                            rate = it.rate
+                        )
+                    }
+                    
+                    val calculatedQuotation = calculateQuotationUseCase.execute(rawInput, rawItems)
+                    
+                    finalizeQuotationUseCase.execute(
+                        id = current.id.toString(),
+                        quotationNumber = current.quotationNumber,
+                        date = current.date,
+                        customer = customerSnapshot,
+                        company = companySnapshot,
+                        termsAndConditions = current.termsAndConditions,
+                        warranty = current.warranty,
+                        deliveryTime = current.deliveryTime,
+                        installationTime = current.installationTime,
+                        paymentTerms = current.paymentTerms,
+                        additionalConditions = current.additionalConditions,
+                        validityDays = current.validityDays,
+                        notes = current.customerNotes,
+                        rawInput = rawInput,
+                        calculatedQuotation = calculatedQuotation
+                    )
+                    
+                    repository.saveQuotationWithItems(
+                        current.copy(status = "Final"),
+                        items
+                    )
+                } catch (e: Exception) {
+                    // Do not update status on failure
+                }
+            } else {
                 repository.saveQuotationWithItems(
                     current.copy(status = status),
                     repository.getQuotationItemsDirect(id)
@@ -140,11 +252,16 @@ class HistoryViewModel(application: Application, val repository: QuotesRepositor
     }
 }
 
-class HistoryViewModelFactory(private val application: Application, private val repository: QuotesRepository) : ViewModelProvider.Factory {
+class HistoryViewModelFactory(
+    private val application: Application,
+    private val repository: QuotesRepository,
+    private val calculateQuotationUseCase: com.example.domain.usecases.CalculateQuotationUseCase,
+    private val finalizeQuotationUseCase: com.example.domain.usecases.FinalizeQuotationUseCase
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HistoryViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return HistoryViewModel(application, repository) as T
+            return HistoryViewModel(application, repository, calculateQuotationUseCase, finalizeQuotationUseCase) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

@@ -1,0 +1,30 @@
+--- app/src/test/java/com/example/GoogleDriveSyncTest.kt
++++ app/src/test/java/com/example/GoogleDriveSyncTest.kt
+@@ -1,7 +1,11 @@
+ package com.example
+ 
+ import android.content.Context
++import android.net.ConnectivityManager
++import android.net.NetworkCapabilities
++import androidx.room.Room
+ import androidx.test.core.app.ApplicationProvider
++import org.robolectric.Shadows.shadowOf
++import org.robolectric.shadows.ShadowNetworkCapabilities
+ import com.example.data.AppDatabase
+ import com.example.data.QuotesRepository
+@@ -37,5 +41,13 @@
+     fun setUp() {
+         context = ApplicationProvider.getApplicationContext()
+         androidx.work.testing.WorkManagerTestInitHelper.initializeTestWorkManager(context)
+-        db = AppDatabase.getDatabase(context)
++        
++        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
++        val shadowCm = shadowOf(cm)
++        shadowCm.setDefaultNetworkActive(true)
++        val activeNetwork = cm.activeNetwork
++        val networkCapabilities = ShadowNetworkCapabilities.newInstance()
++        shadowOf(networkCapabilities).addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
++        shadowCm.setNetworkCapabilities(activeNetwork, networkCapabilities)
++
++        db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+         repository = QuotesRepository(db)

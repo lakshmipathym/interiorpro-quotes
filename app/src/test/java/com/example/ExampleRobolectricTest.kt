@@ -25,8 +25,11 @@ class ExampleRobolectricTest {
   @Test
   fun `test master database operations and duplicate checking`() = runBlocking {
     val context = ApplicationProvider.getApplicationContext<Context>()
-    val database = AppDatabase.getDatabase(context)
+    val database = androidx.room.Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
     val masterRepo = MasterRepository(database)
+
+    val initialMaster = MasterEntity(masterType = "PROJECT_TYPE", name = "Modular Kitchen")
+    database.masterDao().insertMaster(initialMaster)
 
     // Verify seeded project types exist
     val projects = masterRepo.getMastersByTypeDirect("PROJECT_TYPE")

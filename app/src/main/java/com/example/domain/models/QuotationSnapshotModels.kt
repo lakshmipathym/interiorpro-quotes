@@ -10,6 +10,10 @@ data class FinalizedQuotationSnapshot(
     val financial: FinancialSnapshot,
     val termsAndConditions: String,
     val warranty: String,
+    val deliveryTime: String = "",
+    val installationTime: String = "",
+    val paymentTerms: String = "",
+    val additionalConditions: String = "",
     val validityDays: Int,
     val notes: String
 )
@@ -20,22 +24,33 @@ data class CustomerSnapshot(
     val customerPhone: String,
     val customerAddress: String,
     val siteName: String,
-    val siteAddress: String
+    val siteAddress: String,
+    val customerEmail: String = "",
+    val customerWhatsapp: String = "",
+    val contactPerson: String = "",
+    val companyName: String = "",
+    val gstin: String = "",
+    val projectName: String = ""
 )
 
 data class CompanySnapshot(
-    val companyName: String,
+    val companyName: String = "",
     val ownerName: String,
     val phone: String,
     val email: String,
     val address: String,
-    val gstin: String,
+    val gstin: String = "",
     val bankName: String,
     val accountHolderName: String,
     val accountNumber: String,
     val ifsc: String,
     val branch: String,
-    val upiId: String
+    val upiId: String,
+    val website: String = "",
+    val whatsappNumber: String = "",
+    val logoPath: String = "",
+    val signaturePath: String = "",
+    val companySealPath: String = ""
 )
 
 data class FinalizedItemSnapshot(

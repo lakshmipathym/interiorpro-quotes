@@ -750,31 +750,32 @@ fun CustomersScreen(
 
     // --- FORM DIALOG (ADD / EDIT) ---
     isFormOpen?.let { customer ->
-        var name by remember { mutableStateOf(customer.customerName) }
-        var mobile by remember { mutableStateOf(customer.mobileNumber) }
-        var whatsapp by remember { mutableStateOf(customer.whatsappNumber) }
-        var email by remember { mutableStateOf(customer.email) }
-        var address by remember { mutableStateOf(customer.address) }
-        var siteLoc by remember { mutableStateOf(customer.siteLocation) }
-        var city by remember { mutableStateOf(customer.city) }
-        var district by remember { mutableStateOf(customer.district) }
-        var state by remember { mutableStateOf(customer.state) }
-        var pincode by remember { mutableStateOf(customer.pincode) }
-        var notes by remember { mutableStateOf(customer.notes) }
-        var isActive by remember { mutableStateOf(customer.isActive) }
+        var name by remember(customer.customerId) { mutableStateOf(customer.customerName) }
+        var mobile by remember(customer.customerId) { mutableStateOf(customer.mobileNumber) }
+        var whatsapp by remember(customer.customerId) { mutableStateOf(customer.whatsappNumber) }
+        var email by remember(customer.customerId) { mutableStateOf(customer.email) }
+        var address by remember(customer.customerId) { mutableStateOf(customer.address) }
+        var siteLoc by remember(customer.customerId) { mutableStateOf(customer.siteLocation) }
+        var city by remember(customer.customerId) { mutableStateOf(customer.city) }
+        var district by remember(customer.customerId) { mutableStateOf(customer.district) }
+        var state by remember(customer.customerId) { mutableStateOf(customer.state) }
+        var pincode by remember(customer.customerId) { mutableStateOf(customer.pincode) }
+        var notes by remember(customer.customerId) { mutableStateOf(customer.notes) }
+        var isActive by remember(customer.customerId) { mutableStateOf(customer.isActive) }
 
-        var companyName by remember { mutableStateOf(customer.companyName) }
-        var contactPerson by remember { mutableStateOf(customer.contactPerson) }
-        var gstin by remember { mutableStateOf(customer.gstin) }
-        var siteAddress by remember { mutableStateOf(customer.siteAddress) }
-        var country by remember { mutableStateOf(customer.country) }
+        var companyName by remember(customer.customerId) { mutableStateOf(customer.companyName) }
+        var contactPerson by remember(customer.customerId) { mutableStateOf(customer.contactPerson) }
+        var gstin by remember(customer.customerId) { mutableStateOf(customer.gstin) }
+        var siteAddress by remember(customer.customerId) { mutableStateOf(customer.siteAddress) }
+        var country by remember(customer.customerId) { mutableStateOf(customer.country) }
 
         // Validation Error States
-        var nameError by remember { mutableStateOf<String?>(null) }
-        var mobileError by remember { mutableStateOf<String?>(null) }
-        var emailError by remember { mutableStateOf<String?>(null) }
+        var nameError by remember(customer.customerId) { mutableStateOf<String?>(null) }
+        var mobileError by remember(customer.customerId) { mutableStateOf<String?>(null) }
+        var emailError by remember(customer.customerId) { mutableStateOf<String?>(null) }
+        var gstinError by remember(customer.customerId) { mutableStateOf<String?>(null) }
 
-        val focusRequester = remember { FocusRequester() }
+        val focusRequester = remember(customer.customerId) { FocusRequester() }
 
         LaunchedEffect(customer) {
             kotlinx.coroutines.delay(150)
@@ -803,6 +804,8 @@ fun CustomersScreen(
                         val hasNameError = trimmedName.isEmpty()
                         val hasMobileError = trimmedMobile.isEmpty() || !com.example.utils.ValidationManager.isValidPhone(trimmedMobile)
                         val hasEmailError = trimmedEmail.isNotEmpty() && !com.example.utils.ValidationManager.isValidEmail(trimmedEmail)
+                        val trimmedGstin = gstin.trim().uppercase()
+                        val hasGstinError = trimmedGstin.isNotEmpty() && !com.example.utils.ValidationManager.isValidGstin(trimmedGstin)
 
                         nameError = if (trimmedName.isEmpty()) "Customer Name is required." else null
                         mobileError = if (trimmedMobile.isEmpty()) {
@@ -813,8 +816,9 @@ fun CustomersScreen(
                         emailError = if (trimmedEmail.isNotEmpty() && !com.example.utils.ValidationManager.isValidEmail(trimmedEmail)) {
                             "Please enter a valid Email Address."
                         } else null
+                        gstinError = if (hasGstinError) "Please enter a valid 15-character GSTIN." else null
 
-                        if (!hasNameError && !hasMobileError && !hasEmailError) {
+                        if (!hasNameError && !hasMobileError && !hasEmailError && !hasGstinError) {
                             scope.launch {
                                 val existing = customerViewModel.getCustomerByMobile(trimmedMobile)
                                 val savedCustomer = CustomerEntity(
@@ -862,7 +866,12 @@ fun CustomersScreen(
                 ) { Text("Save") }
             }
         ) {
-
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                     com.example.ui.components.PremiumOutlinedTextField(
     value = name,
     onValueChange = {name = it 
@@ -870,23 +879,25 @@ fun CustomersScreen(
                                 nameError = null
                             }},
     label = "Customer Name *",
+    placeholder = "Eg: Ramesh Kumar",
     leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
     isError = nameError != null,
     errorMessage = nameError,
     singleLine = true,
     modifier = Modifier.fillMaxWidth()
 )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    
 
                     com.example.ui.components.PremiumOutlinedTextField(
     value = contactPerson,
     onValueChange = {contactPerson = it},
     label = "Contact Person (Optional)",
+    placeholder = "Eg: Mr. Ramesh",
     leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null) },
     singleLine = true,
     modifier = Modifier.fillMaxWidth()
 )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    
 
                     com.example.ui.components.PremiumOutlinedTextField(
     value = mobile,
@@ -895,6 +906,7 @@ fun CustomersScreen(
                                 mobileError = null
                             }},
     label = "Mobile Number *",
+    placeholder = "Eg: 9876543210",
     leadingIcon = { Icon(Icons.Filled.Phone, contentDescription = null) },
     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
     isError = mobileError != null,
@@ -902,24 +914,26 @@ fun CustomersScreen(
     singleLine = true,
     modifier = Modifier.fillMaxWidth()
 )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    
 
                     com.example.ui.components.PremiumOutlinedTextField(
     value = whatsapp,
     onValueChange = {whatsapp = it},
     label = "WhatsApp Number",
+    placeholder = "Eg: 9876543210",
     leadingIcon = { Icon(Icons.Filled.Share, contentDescription = null) },
     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
     singleLine = true,
     modifier = Modifier.fillMaxWidth()
 )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    
 
                     com.example.ui.components.PremiumOutlinedTextField(
     value = email,
     onValueChange = {email = it 
                             emailError = null},
     label = "Email Address",
+    placeholder = "Eg: ramesh@gmail.com",
     leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null) },
     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
     isError = emailError != null,
@@ -927,117 +941,117 @@ fun CustomersScreen(
     singleLine = true,
     modifier = Modifier.fillMaxWidth()
 )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    
 
                     com.example.ui.components.PremiumOutlinedTextField(
     value = companyName,
     onValueChange = {companyName = it},
     label = "Company Name (Optional)",
+    placeholder = "Eg: ABC Builders",
     leadingIcon = { Icon(Icons.Default.Business, contentDescription = null) },
     singleLine = true,
     modifier = Modifier.fillMaxWidth()
 )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    
 
                     com.example.ui.components.PremiumOutlinedTextField(
     value = gstin,
-    onValueChange = {gstin = it},
+    isError = gstinError != null,
+    errorMessage = gstinError,
+    onValueChange = {gstin = it
+        if (it.trim().isNotEmpty()) {
+            gstinError = null
+        }
+    },
     label = "Client GSTIN (Optional)",
+    placeholder = "Eg: 33ABCDE1234F1Z5",
     leadingIcon = { Icon(Icons.Default.Receipt, contentDescription = null) },
     singleLine = true,
     modifier = Modifier.fillMaxWidth()
 )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    
 
                     com.example.ui.components.PremiumOutlinedTextField(
     value = siteLoc,
     onValueChange = {siteLoc = it},
     label = "Project Site Location",
+    placeholder = "Eg: Green Villa",
     leadingIcon = { Icon(Icons.Filled.LocationOn, contentDescription = null) },
     singleLine = true,
     modifier = Modifier.fillMaxWidth()
 )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    
 
                     com.example.ui.components.PremiumOutlinedTextField(
     value = address,
     onValueChange = {address = it},
     label = "Billing Address",
+    placeholder = "Eg: 123, ABC Street, Near Landmark, City",
     leadingIcon = { Icon(Icons.Filled.Home, contentDescription = null) },
     singleLine = true,
     modifier = Modifier.fillMaxWidth()
 )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    
 
                     com.example.ui.components.PremiumOutlinedTextField(
-    value = siteAddress,
-    onValueChange = {siteAddress = it},
-    label = "Site Address (Optional)",
-    leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
-    singleLine = true,
-    modifier = Modifier.fillMaxWidth()
-)
-                    Spacer(modifier = Modifier.height(10.dp))
-
+                        value = siteAddress,
+                        onValueChange = {siteAddress = it},
+                        label = "Site Address (Optional)",
+                        placeholder = "Eg: 123, ABC Street, Near Landmark, City",
+                        leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     com.example.ui.components.PremiumOutlinedTextField(
-    value = country,
-    onValueChange = {country = it},
-    label = "Country",
-    leadingIcon = { Icon(Icons.Default.Public, contentDescription = null) },
-    singleLine = true,
-    modifier = Modifier.fillMaxWidth()
-)
-                    Spacer(modifier = Modifier.height(10.dp))
+                        value = country,
+                        onValueChange = {country = it},
+                        label = "Country",
+                        leadingIcon = { Icon(Icons.Default.Public, contentDescription = null) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
 
                     // City / District Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        com.example.ui.components.PremiumOutlinedTextField(
-    value = city,
-    onValueChange = {city = it},
-    label = "City",
-    singleLine = true,
-    modifier = Modifier.fillMaxWidth()
-)
-                        com.example.ui.components.PremiumOutlinedTextField(
-    value = district,
-    onValueChange = {district = it},
-    label = "District",
-    singleLine = true,
-    modifier = Modifier.fillMaxWidth()
-)
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
+                    com.example.ui.components.PremiumOutlinedTextField(
+                        value = city,
+                        onValueChange = {city = it},
+                        label = "City",
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    com.example.ui.components.PremiumOutlinedTextField(
+                        value = district,
+                        onValueChange = {district = it},
+                        label = "District",
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
 
                     // State / PIN Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        com.example.ui.components.PremiumOutlinedTextField(
-    value = state,
-    onValueChange = {state = it},
-    label = "State",
-    singleLine = true,
-    modifier = Modifier.fillMaxWidth()
-)
-                        com.example.ui.components.PremiumOutlinedTextField(
-    value = pincode,
-    onValueChange = {pincode = it},
-    label = "Pincode",
-    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-    singleLine = true,
-    modifier = Modifier.fillMaxWidth()
-)
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
+                    com.example.ui.components.PremiumOutlinedTextField(
+                        value = state,
+                        onValueChange = {state = it},
+                        label = "State",
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    com.example.ui.components.PremiumOutlinedTextField(
+                        value = pincode,
+                        onValueChange = {pincode = it},
+                        label = "Pincode",
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
 
                     com.example.ui.components.PremiumOutlinedTextField(
     value = notes,
     onValueChange = {notes = it},
     label = "Notes / Requirements",
+    placeholder = "Eg: Needs completion by next month",
     modifier = Modifier.fillMaxWidth()
 )
                     
@@ -1073,7 +1087,7 @@ fun CustomersScreen(
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
-
+            }
     }
     }
 
@@ -1239,29 +1253,32 @@ fun QuickAddCustomerDialog(
     value = name,
     onValueChange = {name = it},
     label = "Client Name *",
+    placeholder = "Eg: Ramesh Kumar",
     singleLine = true,
     modifier = Modifier.fillMaxWidth()
 )
-                Spacer(modifier = Modifier.height(10.dp))
+                
 
                 com.example.ui.components.PremiumOutlinedTextField(
     value = phone,
     onValueChange = {phone = it},
     label = "Phone Number *",
+    placeholder = "Eg: 9876543210",
     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
     singleLine = true,
     modifier = Modifier.fillMaxWidth()
 )
-                Spacer(modifier = Modifier.height(10.dp))
+                
 
                 com.example.ui.components.PremiumOutlinedTextField(
     value = siteName,
     onValueChange = {siteName = it},
     label = "Site Name (e.g., Block B, Apt 402)",
+    placeholder = "Eg: Green Villa",
     singleLine = true,
     modifier = Modifier.fillMaxWidth()
 )
-                Spacer(modifier = Modifier.height(10.dp))
+                
 
                 com.example.ui.components.PremiumOutlinedTextField(
     value = address,

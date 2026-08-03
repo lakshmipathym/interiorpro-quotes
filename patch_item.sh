@@ -1,0 +1,1 @@
+sed -i 's/val itemAmount = billableQuantity \* rate/val itemAmount = com.example.utils.CurrencyFormatter.normalizeCurrency(billableQuantity \* rate)/g' app/src/main/java/com/example/domain/engine/ItemCalculationEngineImpl.kt

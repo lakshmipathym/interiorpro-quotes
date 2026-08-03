@@ -16,7 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         Quotation::class,
         QuotationItem::class
     ],
-    version = 16,
+    version = 18,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -96,6 +96,21 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
 
+        val MIGRATION_16_17 = object : androidx.room.migration.Migration(16, 17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE quotation ADD COLUMN customerEmail TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE quotation ADD COLUMN customerWhatsapp TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE quotation ADD COLUMN customerContactPerson TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE quotation ADD COLUMN customerCompanyName TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE quotation ADD COLUMN customerGstin TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE quotation ADD COLUMN companyWebsiteSnapshot TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE quotation ADD COLUMN companyWhatsappSnapshot TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE quotation ADD COLUMN companyLogoPathSnapshot TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE quotation ADD COLUMN companySignaturePathSnapshot TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE quotation ADD COLUMN companySealPathSnapshot TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         val MIGRATION_15_16 = object : androidx.room.migration.Migration(15, 16) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE quotation_template ADD COLUMN rawWidth TEXT NOT NULL DEFAULT ''")
@@ -119,7 +134,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "interior_pro_quotes_db"
                 )
-                .addMigrations(MIGRATION_10_11, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
+                .addMigrations(MIGRATION_10_11, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
                 .fallbackToDestructiveMigration(true)
                 .addCallback(DatabaseCallback())
                 .build()

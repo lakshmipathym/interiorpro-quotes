@@ -1,1 +1,1 @@
-sed -i '/firstItemWithDesign/,/                            }/d' app/src/main/java/com/example/ui/quotation/NewQuotationScreen.kt
+sed -i 's/                         input.roundOff/                         input.roundOff\n        val grandTotal = com.example.utils.CurrencyFormatter.normalizeCurrency(grandTotalRaw)/g' app/src/main/java/com/example/domain/engine/QuotationCalculationEngineImpl.kt

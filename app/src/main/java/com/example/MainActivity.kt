@@ -122,7 +122,14 @@ class MainActivity : ComponentActivity() {
         ViewModelProvider(this, CustomerViewModelFactory(application, repository))[CustomerViewModel::class.java]
     }
     private val historyViewModel: HistoryViewModel by lazy {
-        ViewModelProvider(this, HistoryViewModelFactory(application, repository))[HistoryViewModel::class.java]
+        val itemEngine = ItemCalculationEngineImpl(DimensionParserImpl())
+        val calcEngine = QuotationCalculationEngineImpl(AmountInWordsConverterImpl())
+        val calcUseCase = com.example.domain.usecases.CalculateQuotationUseCase(itemEngine, calcEngine)
+        val snapFactory = QuotationSnapshotFactoryImpl()
+        val snapRepo = com.example.data.snapshot.QuotationSnapshotRepositoryImpl(com.example.data.AppDatabase.getDatabase(applicationContext), repository)
+        val assetCopier = com.example.data.BrandingAssetCopierImpl(applicationContext)
+        val finalizeUseCase = com.example.domain.usecases.FinalizeQuotationUseCase(snapFactory, snapRepo, assetCopier)
+        ViewModelProvider(this, HistoryViewModelFactory(application, repository, calcUseCase, finalizeUseCase))[HistoryViewModel::class.java]
     }
     private val settingsViewModel: SettingsViewModel by lazy {
         ViewModelProvider(this, SettingsViewModelFactory(application, repository, syncManager, workspaceManager, deviceManager, signInManager))[SettingsViewModel::class.java]
@@ -133,7 +140,8 @@ class MainActivity : ComponentActivity() {
         val calcUseCase = CalculateQuotationUseCase(itemEngine, calcEngine)
         val snapFactory = QuotationSnapshotFactoryImpl()
         val snapRepo = QuotationSnapshotRepositoryImpl(com.example.data.AppDatabase.getDatabase(applicationContext), repository)
-        val finalizeUseCase = FinalizeQuotationUseCase(snapFactory, snapRepo)
+        val assetCopier = com.example.data.BrandingAssetCopierImpl(applicationContext)
+        val finalizeUseCase = FinalizeQuotationUseCase(snapFactory, snapRepo, assetCopier)
         ViewModelProvider(this, QuotationViewModelFactory(application, repository, masterRepository, syncManager, calcUseCase, finalizeUseCase, snapRepo))[QuotationViewModel::class.java]
     }
     private val masterViewModel: MasterViewModel by lazy {

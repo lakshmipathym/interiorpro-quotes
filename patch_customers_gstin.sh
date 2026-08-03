@@ -1,0 +1,7 @@
+sed -i 's/var emailError by remember(customer.customerId) { mutableStateOf<String?>(null) }/var emailError by remember(customer.customerId) { mutableStateOf<String?>(null) }\n        var gstinError by remember(customer.customerId) { mutableStateOf<String?>(null) }/g' app/src/main/java/com/example/ui/customer/CustomersScreen.kt
+
+sed -i 's/val hasEmailError = trimmedEmail.isNotEmpty() && !com.example.utils.ValidationManager.isValidEmail(trimmedEmail)/val hasEmailError = trimmedEmail.isNotEmpty() \&\& !com.example.utils.ValidationManager.isValidEmail(trimmedEmail)\n                        val trimmedGstin = gstin.trim().uppercase()\n                        val hasGstinError = trimmedGstin.isNotEmpty() \&\& !com.example.utils.ValidationManager.isValidGstin(trimmedGstin)/g' app/src/main/java/com/example/ui/customer/CustomersScreen.kt
+
+sed -i 's/                            "Please enter a valid Email Address."\n                        } else null/                            "Please enter a valid Email Address."\n                        } else null\n                        gstinError = if (hasGstinError) "Please enter a valid 15-character GSTIN." else null/g' app/src/main/java/com/example/ui/customer/CustomersScreen.kt
+
+sed -i 's/if (!hasNameError && !hasMobileError && !hasEmailError)/if (!hasNameError \&\& !hasMobileError \&\& !hasEmailError \&\& !hasGstinError)/g' app/src/main/java/com/example/ui/customer/CustomersScreen.kt

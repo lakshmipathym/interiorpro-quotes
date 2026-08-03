@@ -1,0 +1,1 @@
+sed -i 's/val finalizeUseCase = FinalizeQuotationUseCase(snapFactory, snapRepo)/val assetCopier = com.example.data.BrandingAssetCopierImpl(applicationContext)\n        val finalizeUseCase = FinalizeQuotationUseCase(snapFactory, snapRepo, assetCopier)/' app/src/main/java/com/example/MainActivity.kt

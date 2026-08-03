@@ -24,7 +24,7 @@ class ItemCalculationEngineImpl(
 
         // The BUSINESS_RULES_V1.5.md marks "Item Amount" vs UI as CONFLICTED.
         // We implement the abstraction and use the formula: Billable Qty × Rate
-        val itemAmount = billableQuantity * rate
+        val itemAmount = com.example.utils.CurrencyFormatter.normalizeCurrency(billableQuantity * rate)
 
         return CalculatedItem(
             rawInput = input,

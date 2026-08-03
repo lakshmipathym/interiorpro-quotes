@@ -6,31 +6,58 @@ import java.util.Locale
 
 object CurrencyFormatter {
 
+    fun normalizeCurrency(amount: Double): Double {
+        if (amount.isNaN() || amount.isInfinite()) return 0.0
+        return Math.round(amount * 100.0) / 100.0
+    }
+
     fun formatIndianCurrency(amount: Double): String {
-        return try {
-            val formatter = DecimalFormat("##,##,##,##0.00")
-            formatter.decimalFormatSymbols = DecimalFormatSymbols(Locale.US)
-            var res = formatter.format(amount)
-            if (res.endsWith(".00")) {
-                res = res.substring(0, res.length - 3)
-            }
-            res
-        } catch (e: Exception) {
-            String.format(Locale.US, "%.2f", amount)
-        }
+        return formatAmountInternal(amount, false)
     }
     
     fun formatIndianCurrencyStrict(amount: Double): String {
+        return formatAmountInternal(amount, true)
+    }
+    
+    private fun formatAmountInternal(rawAmount: Double, strict: Boolean): String {
+        val amount = normalizeCurrency(rawAmount)
         return try {
-            val formatter = DecimalFormat("##,##,##,##0.00")
+            val isNegative = amount < 0
+            val absAmount = Math.abs(amount)
+            val formatter = DecimalFormat("0.00")
             formatter.decimalFormatSymbols = DecimalFormatSymbols(Locale.US)
-            formatter.format(amount)
+            val res = formatter.format(absAmount)
+            
+            val split = res.split(".")
+            var intPart = split[0]
+            val decimalPart = split[1]
+            
+            var formattedInt = ""
+            if (intPart.length > 3) {
+                formattedInt = "," + intPart.substring(intPart.length - 3)
+                intPart = intPart.substring(0, intPart.length - 3)
+                while (intPart.length > 2) {
+                    formattedInt = "," + intPart.substring(intPart.length - 2) + formattedInt
+                    intPart = intPart.substring(0, intPart.length - 2)
+                }
+                formattedInt = intPart + formattedInt
+            } else {
+                formattedInt = intPart
+            }
+            
+            val finalSign = if (isNegative) "-" else ""
+            if (!strict && decimalPart == "00") {
+                finalSign + formattedInt
+            } else {
+                finalSign + formattedInt + "." + decimalPart
+            }
         } catch (e: Exception) {
             String.format(Locale.US, "%.2f", amount)
         }
     }
     
-    fun convertNumberToWords(amount: Double): String {
+    fun convertNumberToWords(rawAmount: Double): String {
+        val amount = normalizeCurrency(rawAmount)
         val num = amount.toLong()
         val paise = Math.round((amount - num) * 100.0).toLong()
         
