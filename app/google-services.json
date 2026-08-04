@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "485179806050-uubec79h8u6ti343bra4s5in9s8ki2no.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aistudio.interiorproquotes.qyhtsn",
+            "certificate_hash": "4bb93e3706e53ee416c906eb483b7b13b4c31026"
+          }
+        },
+        {
           "client_id": "485179806050-8pt0kacg2k65asrinsvrv1p76lfi1q17.apps.googleusercontent.com",
           "client_type": 3
         }
