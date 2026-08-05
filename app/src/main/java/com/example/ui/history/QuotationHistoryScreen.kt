@@ -3,6 +3,7 @@ package com.example.ui.history
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -10,10 +11,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,24 +23,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.*
 import com.example.pdf.PdfGenerator
+import com.example.ui.components.*
+import com.example.ui.customer.CustomerViewModel
+import com.example.ui.theme.*
+import com.example.utils.ShareManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import com.example.utils.ShareManager
-import com.example.ui.customer.CustomerViewModel
-import androidx.compose.ui.platform.testTag
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun QuotationHistoryScreen(
     historyViewModel: HistoryViewModel,
@@ -121,6 +126,11 @@ fun QuotationHistoryScreen(
     var showDeleteConfirm by remember { mutableStateOf<Quotation?>(null) }
     var isSortMenuExpanded by remember { mutableStateOf(false) }
 
+    var isVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        isVisible = true
+    }
+
     Scaffold(
         floatingActionButton = {
             ExtendedFloatingActionButton(
@@ -142,311 +152,110 @@ fun QuotationHistoryScreen(
                 .padding(innerPadding),
             contentAlignment = Alignment.TopCenter
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp)
-                    .widthIn(max = 600.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
+            AnimatedVisibility(
+                visible = isVisible,
+                enter = fadeIn(tween(400)) + slideInVertically(initialOffsetY = { 40 }, animationSpec = tween(400))
             ) {
-                // 1. App Bar Header & Greeting
-                item {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = "InteriorPro Quotes",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "$greeting,",
-                                    fontSize = 24.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                                Text(
-                                    text = companyName,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                                )
-                            }
-                            
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Home,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        }
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = Spacing.L)
+                        .widthIn(max = 600.dp),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.L),
+                    contentPadding = PaddingValues(top = Spacing.L, bottom = Spacing.Section)
+                ) {
+                    // 1. App Bar Header & Greeting
+                    item {
+                        GreetingHeader(
+                            greeting = greeting,
+                            companyName = companyName
+                        )
                     }
-                }
 
-                // 2. Search and Filtering Section
-                item {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        com.example.ui.components.PremiumOutlinedTextField(
-    value = searchQuery,
-    onValueChange = {searchQuery = it},
-    label = "Search Quotations",
-    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-    trailingIcon = {if (searchQuery.isNotEmpty()) {
-                                    IconButton(onClick = { searchQuery = "" }) {
-                                        Icon(Icons.Filled.Clear, contentDescription = "Clear")
-                                    }
-                                }},
-    singleLine = true,
-    modifier = Modifier.fillMaxWidth()
-)
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            val filters = listOf("All", "Draft", "Final", "Cancelled")
-                            filters.forEach { filter ->
-                                val selected = selectedStatusFilter == filter
-                                FilterChip(
-                                    selected = selected,
-                                    onClick = { selectedStatusFilter = filter },
-                                    label = { Text(filter) },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                    ),
-                                    modifier = Modifier.testTag("filter_chip_${filter.lowercase()}")
-                                )
-                            }
-                        }
-
-                        if (isSearchingOrFiltering) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.Sort,
-                                        contentDescription = "Sort Options",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "Sort by:",
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                
-                                Box {
-                                    AssistChip(
-                                        onClick = { isSortMenuExpanded = true },
-                                        label = { Text(selectedSortOption, fontSize = 11.sp) },
-                                        trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null, modifier = Modifier.size(14.dp)) },
-                                        modifier = Modifier.testTag("sort_chip")
-                                    )
-                                    DropdownMenu(
-                                        expanded = isSortMenuExpanded,
-                                        onDismissRequest = { isSortMenuExpanded = false }
-                                    ) {
-                                        listOf("Newest First", "Oldest First", "Customer Name").forEach { option ->
-                                            DropdownMenuItem(
-                                                text = { Text(option) },
-                                                onClick = {
-                                                    selectedSortOption = option
-                                                    isSortMenuExpanded = false
-                                                }
-                                            )
+                    // 2. Search and Filtering Section
+                    item {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            PremiumOutlinedTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                label = "Search Quotations",
+                                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                                trailingIcon = {
+                                    if (searchQuery.isNotEmpty()) {
+                                        IconButton(onClick = { searchQuery = "" }) {
+                                            Icon(Icons.Filled.Clear, contentDescription = "Clear")
                                         }
                                     }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 3. Work Hub Content (If not active search/filter)
-                if (!isSearchingOrFiltering) {
-                    if (quotations.isEmpty()) {
-                        item {
-                            com.example.ui.components.EmptyState(
-                                title = "No Quotations Yet",
-                                message = "You haven't created any quotations. Tap the 'New Quotation' button below to get started.",
-                                icon = Icons.Filled.History,
-                                actionLabel = "Create Quotation",
-                                onActionClick = { 
-                                    quotationViewModel.startNewQuotation()
-                                    onNavigateToCreate()
-                                }
+                                },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
                             )
-                        }
-                    } else {
-                        // --- HERO SECTION ---
-                        item {
-                            ElevatedCard(
+
+                            Spacer(modifier = Modifier.height(Spacing.S))
+
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
-                                    .testTag("hero_section_card"),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.elevatedCardColors(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                                ),
-                                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.S),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                            Column(
-                                modifier = Modifier.padding(20.dp)
-                            ) {
-                                Text(
-                                    text = "Ready to start a project?",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Create a customized quotation, calculate GST dynamically, and generate instant PDF summaries offline.",
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Button(
-                                    onClick = {
-                                        quotationViewModel.startNewQuotation()
-                                        onNavigateToCreate()
-                                    },
-                                    modifier = Modifier.fillMaxWidth().height(50.dp).testTag("hero_new_quote_button"),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary
-                                    ),
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(20.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("New Quotation", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                val filters = listOf("All", "Draft", "Final", "Cancelled")
+                                filters.forEach { filter ->
+                                    val selected = selectedStatusFilter == filter
+                                    FilterChip(
+                                        selected = selected,
+                                        onClick = { selectedStatusFilter = filter },
+                                        label = { Text(filter, style = MaterialTheme.typography.labelMedium) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                        ),
+                                        modifier = Modifier.testTag("filter_chip_${filter.lowercase()}")
+                                    )
                                 }
                             }
-                        }
-                    }
 
-                    // --- CONTINUE DRAFT SECTION ---
-                    recentDraft?.let { draft ->
-                        item {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = "Continue Draft",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
-                                    modifier = Modifier.padding(bottom = 8.dp)
-                                )
-                                
-                                ElevatedCard(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            quotationViewModel.loadQuotationToEdit(draft)
-                                            onNavigateToEdit()
-                                        }
-                                        .testTag("continue_draft_card"),
-                                    colors = CardDefaults.elevatedCardColors(
-                                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
-                                    ),
-                                    shape = RoundedCornerShape(12.dp)
+                            if (isSearchingOrFiltering) {
+                                Spacer(modifier = Modifier.height(Spacing.XS))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(14.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .clip(RoundedCornerShape(6.dp))
-                                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
-                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                                ) {
-                                                    Text(
-                                                        text = "DRAFT",
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = MaterialTheme.colorScheme.primary
-                                                    )
-                                                }
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                Text(
-                                                    text = draft.quotationNumber,
-                                                    fontSize = 12.sp,
-                                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f)
-                                                )
-                                            }
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            Text(
-                                                text = draft.customerName,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 16.sp,
-                                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                                            )
-                                            if (draft.projectType.isNotEmpty()) {
-                                                Text(
-                                                    text = "${draft.projectType} (${draft.category})",
-                                                    fontSize = 12.sp,
-                                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                                                )
-                                            }
-                                        }
-                                        
-                                        Column(
-                                            horizontalAlignment = Alignment.End,
-                                            verticalArrangement = Arrangement.Center
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Sort,
+                                            contentDescription = "Sort Options",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(IconSize.Small)
+                                        )
+                                        Spacer(modifier = Modifier.width(Spacing.XS))
+                                        Text(
+                                            text = "Sort by:",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    
+                                    Box {
+                                        AssistChip(
+                                            onClick = { isSortMenuExpanded = true },
+                                            label = { Text(selectedSortOption, style = MaterialTheme.typography.labelSmall) },
+                                            trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null, modifier = Modifier.size(IconSize.Small)) },
+                                            modifier = Modifier.testTag("sort_chip")
+                                        )
+                                        DropdownMenu(
+                                            expanded = isSortMenuExpanded,
+                                            onDismissRequest = { isSortMenuExpanded = false }
                                         ) {
-                                            Text(
-                                                text = "Rs. ${com.example.utils.CurrencyFormatter.formatIndianCurrency(draft.grandTotal)}",
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 15.sp,
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                            Spacer(modifier = Modifier.height(6.dp))
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(36.dp)
-                                                    .clip(RoundedCornerShape(8.dp))
-                                                    .background(MaterialTheme.colorScheme.primary),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Filled.PlayArrow,
-                                                    contentDescription = "Resume Draft",
-                                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                                    modifier = Modifier.size(20.dp)
+                                            listOf("Newest First", "Oldest First", "Customer Name").forEach { option ->
+                                                DropdownMenuItem(
+                                                    text = { Text(option) },
+                                                    onClick = {
+                                                        selectedSortOption = option
+                                                        isSortMenuExpanded = false
+                                                    }
                                                 )
                                             }
                                         }
@@ -456,301 +265,394 @@ fun QuotationHistoryScreen(
                         }
                     }
 
-                    // --- RECENT CUSTOMERS SECTION ---
-                    if (recentCustomers.isNotEmpty()) {
-                        item {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = "Recent Customers",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
-                                    modifier = Modifier.padding(bottom = 8.dp)
+                    // 3. Work Hub Content (If not active search/filter)
+                    if (!isSearchingOrFiltering) {
+                        if (quotations.isEmpty()) {
+                            item {
+                                EmptyHistoryState(
+                                    onCreateQuote = {
+                                        quotationViewModel.startNewQuotation()
+                                        onNavigateToCreate()
+                                    }
                                 )
-                                
-                                Column(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                            }
+                        } else {
+                            // --- TODAY'S SUMMARY SECTION ---
+                            item {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    SectionHeader(title = "Today's Summary")
+                                    Spacer(modifier = Modifier.height(Spacing.XS))
+                                    
+                                    FlowRow(
+                                        modifier = Modifier.fillMaxWidth().testTag("summary_row"),
+                                        horizontalArrangement = Arrangement.spacedBy(Spacing.M),
+                                        verticalArrangement = Arrangement.spacedBy(Spacing.M),
+                                        maxItemsInEachRow = 3
+                                    ) {
+                                        val stats = listOf(
+                                            Triple("Total Quotes", quotations.size.toString(), Icons.AutoMirrored.Filled.List),
+                                            Triple("Draft Quotes", quotations.count { it.status.lowercase() == "draft" }.toString(), Icons.Filled.EditNote),
+                                            Triple("Total Clients", customersList.size.toString(), Icons.Filled.People)
+                                        )
+                                        
+                                        stats.forEachIndexed { index, (label, count, icon) ->
+                                            MetricCard(
+                                                title = label,
+                                                value = count,
+                                                icon = icon,
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .testTag("summary_card_$index")
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // --- QUICK ACTIONS SECTION ---
+                            item {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    SectionHeader(title = "Quick Actions")
+                                    Spacer(modifier = Modifier.height(Spacing.XS))
+
+                                    FlowRow(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(Spacing.M),
+                                        verticalArrangement = Arrangement.spacedBy(Spacing.M),
+                                        maxItemsInEachRow = 2
+                                    ) {
+                                        QuickActionCard(
+                                            title = "New Quote",
+                                            subtitle = "Create proposal",
+                                            icon = Icons.Filled.Add,
+                                            onClick = {
+                                                quotationViewModel.startNewQuotation()
+                                                onNavigateToCreate()
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        QuickActionCard(
+                                            title = "Filter Drafts",
+                                            subtitle = "Show in-progress",
+                                            icon = Icons.Filled.FilterList,
+                                            onClick = { selectedStatusFilter = "Draft" },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                }
+                            }
+
+                            // --- HERO SECTION ---
+                            item {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("hero_section_card"),
+                                    shape = RoundedCornerShape(CornerRadius.Large),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                                    ),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
                                 ) {
-                                    recentCustomers.forEach { customer ->
-                                        val initials = customer.customerName.split(" ")
-                                            .filter { it.isNotEmpty() }
-                                            .take(2)
-                                            .joinToString("") { it.take(1).uppercase() }
-                                            .ifEmpty { "C" }
-                                            
-                                        ElevatedCard(
+                                    Column(
+                                        modifier = Modifier.padding(Spacing.L)
+                                    ) {
+                                        Text(
+                                            text = "Ready to start a project?",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                        Spacer(modifier = Modifier.height(Spacing.XXS))
+                                        Text(
+                                            text = "Create a customized quotation, calculate GST dynamically, and generate instant PDF summaries offline.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+                                        )
+                                        Spacer(modifier = Modifier.height(Spacing.M))
+                                        PremiumPrimaryButton(
+                                            onClick = {
+                                                quotationViewModel.startNewQuotation()
+                                                onNavigateToCreate()
+                                            },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .testTag("hero_new_quote_button")
+                                        ) {
+                                            Icon(Icons.Filled.Add, contentDescription = null)
+                                            Spacer(modifier = Modifier.width(Spacing.S))
+                                            Text("New Quotation", fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+
+                            // --- CONTINUE DRAFT SECTION ---
+                            recentDraft?.let { draft ->
+                                item {
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        SectionHeader(title = "Continue Draft")
+                                        Spacer(modifier = Modifier.height(Spacing.XS))
+                                        
+                                        Card(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .clickable {
-                                                    quotationViewModel.startNewQuotation()
-                                                    quotationViewModel.selectCustomer(customer)
-                                                    onNavigateToCreate()
+                                                    quotationViewModel.loadQuotationToEdit(draft)
+                                                    onNavigateToEdit()
                                                 }
-                                                .testTag("customer_chip_${customer.customerId}"),
-                                            colors = CardDefaults.elevatedCardColors(
-                                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                                .testTag("continue_draft_card"),
+                                            shape = RoundedCornerShape(CornerRadius.Large),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
                                             ),
-                                            shape = RoundedCornerShape(12.dp)
-
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
                                         ) {
                                             Row(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(12.dp),
+                                                    .padding(Spacing.L),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(40.dp)
-                                                        .clip(RoundedCornerShape(20.dp))
-                                                        .background(MaterialTheme.colorScheme.secondaryContainer),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        PremiumBadge(
+                                                            text = "DRAFT",
+                                                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                                        )
+                                                        Text(
+                                                            text = draft.quotationNumber,
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                                                        )
+                                                    }
+                                                    Spacer(modifier = Modifier.height(Spacing.XXS))
                                                     Text(
-                                                        text = initials,
+                                                        text = draft.customerName,
+                                                        style = MaterialTheme.typography.titleMedium,
                                                         fontWeight = FontWeight.Bold,
-                                                        fontSize = 14.sp,
                                                         color = MaterialTheme.colorScheme.onSecondaryContainer
                                                     )
+                                                    if (draft.projectType.isNotEmpty()) {
+                                                        Text(
+                                                            text = "${draft.projectType} (${draft.category})",
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                                                        )
+                                                    }
                                                 }
-                                                Spacer(modifier = Modifier.width(12.dp))
-                                                Column(modifier = Modifier.weight(1f)) {
+                                                
+                                                Column(
+                                                    horizontalAlignment = Alignment.End,
+                                                    verticalArrangement = Arrangement.Center
+                                                ) {
                                                     Text(
-                                                        text = customer.customerName,
-                                                        fontWeight = FontWeight.Bold,
-                                                        fontSize = 14.sp,
-                                                        color = MaterialTheme.colorScheme.onSurface
+                                                        text = "Rs. ${com.example.utils.CurrencyFormatter.formatIndianCurrency(draft.grandTotal)}",
+                                                        style = MaterialTheme.typography.titleMedium,
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        color = MaterialTheme.colorScheme.primary
                                                     )
-                                                    Text(
-                                                        text = if (customer.city.isNotBlank()) customer.city else "Contract",
-                                                        fontSize = 11.sp,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                                                    )
+                                                    Spacer(modifier = Modifier.height(Spacing.S))
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(36.dp)
+                                                            .clip(CircleShape)
+                                                            .background(MaterialTheme.colorScheme.primary),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Filled.PlayArrow,
+                                                            contentDescription = "Resume Draft",
+                                                            tint = MaterialTheme.colorScheme.onPrimary,
+                                                            modifier = Modifier.size(IconSize.Small)
+                                                        )
+                                                    }
                                                 }
-                                                Icon(
-                                                    imageVector = Icons.Filled.Add,
-                                                    contentDescription = "New Quotation",
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(20.dp)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // --- RECENT CUSTOMERS SECTION ---
+                            if (recentCustomers.isNotEmpty()) {
+                                item {
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        SectionHeader(title = "Recent Customers")
+                                        Spacer(modifier = Modifier.height(Spacing.XS))
+                                        
+                                        Column(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalArrangement = Arrangement.spacedBy(Spacing.S)
+                                        ) {
+                                            recentCustomers.forEach { customer ->
+                                                ActivityTile(
+                                                    title = customer.customerName,
+                                                    subtitle = if (customer.city.isNotBlank()) customer.city else "Client Record",
+                                                    time = "Tap to Quote",
+                                                    icon = Icons.Filled.Person,
+                                                    onClick = {
+                                                        quotationViewModel.startNewQuotation()
+                                                        quotationViewModel.selectCustomer(customer)
+                                                        onNavigateToCreate()
+                                                    },
+                                                    modifier = Modifier.testTag("customer_chip_${customer.customerId}")
                                                 )
                                             }
                                         }
                                     }
                                 }
                             }
-                        }
-                    }
 
-                    // --- TODAY'S SUMMARY SECTION ---
-                    item {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                text = "Today's Summary",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-                            
-                            Row(
-                                modifier = Modifier.fillMaxWidth().testTag("summary_row"),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                val stats = listOf(
-                                    Triple("Total Quotes", quotations.size.toString(), MaterialTheme.colorScheme.primaryContainer),
-                                    Triple("Draft Quotes", quotations.count { it.status.lowercase() == "draft" }.toString(), MaterialTheme.colorScheme.secondaryContainer),
-                                    Triple("Total Clients", customersList.size.toString(), MaterialTheme.colorScheme.tertiaryContainer)
-                                )
-                                
-                                stats.forEachIndexed { index, (label, count, color) ->
-                                    ElevatedCard(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(80.dp)
-                                            .testTag("summary_card_$index"),
-                                        colors = CardDefaults.elevatedCardColors(containerColor = color.copy(alpha = 0.4f)),
-                                        shape = RoundedCornerShape(12.dp)
+                            // --- RECENT QUOTATIONS TITLE ---
+                            item {
+                                SectionHeader(title = "Recent Quotations")
+                            }
+
+                            val countToShow = minOf(recentQuotes.size, 5)
+                            if (countToShow == 0) {
+                                item {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth().testTag("empty_quotations_card"),
+                                        shape = RoundedCornerShape(CornerRadius.Medium),
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
                                     ) {
-                                        Column(
+                                        Box(
                                             modifier = Modifier
-                                                .fillMaxSize()
-                                                .padding(10.dp),
-                                            verticalArrangement = Arrangement.Center,
-                                            horizontalAlignment = Alignment.CenterHorizontally
+                                                .fillMaxWidth()
+                                                .padding(Spacing.XL),
+                                            contentAlignment = Alignment.Center
                                         ) {
                                             Text(
-                                                text = count,
-                                                fontWeight = FontWeight.ExtraBold,
-                                                fontSize = 20.sp,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            Text(
-                                                text = label,
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Medium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                textAlign = TextAlign.Center
+                                                text = "No quotations created yet.",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
                                 }
-                            }
-                        }
-                    }
-
-                    // --- RECENT QUOTATIONS TITLE ---
-                    item {
-                        Text(
-                            text = "Recent Quotations",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
-                    }
-
-                    val countToShow = minOf(recentQuotes.size, 5)
-                    if (countToShow == 0) {
-                        item {
-                            ElevatedCard(
-                                modifier = Modifier.fillMaxWidth().testTag("empty_quotations_card"),
-                                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
-) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(24.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "No quotations created yet.",
-                                        fontSize = 13.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                items(recentQuotes) { quote ->
+                                    QuotationRowItem(
+                                        quote = quote,
+                                        modifier = Modifier.animateItem(),
+                                        onSelect = { selectedQuoteForOptions = quote },
+                                        onViewPdf = {
+                                            scope.launch {
+                                                try {
+                                                    isGeneratingPdf = true
+                                                    val file = ShareManager.generateQuotationPdf(context, historyViewModel.repository, quote.id)
+                                                    ShareManager.openOrViewPdf(context, file)
+                                                } catch (e: Exception) {
+                                                    Toast.makeText(context, "Failed to view PDF: ${e.message}", Toast.LENGTH_SHORT).show()
+                                                } finally {
+                                                    isGeneratingPdf = false
+                                                }
+                                            }
+                                        },
+                                        onSharePdf = {
+                                            scope.launch {
+                                                try {
+                                                    isGeneratingPdf = true
+                                                    val file = ShareManager.generateQuotationPdf(context, historyViewModel.repository, quote.id)
+                                                    ShareManager.shareQuotation(context, file, quote.quotationNumber)
+                                                } catch (e: Exception) {
+                                                    Toast.makeText(context, "Failed to share PDF: ${e.message}", Toast.LENGTH_SHORT).show()
+                                                } finally {
+                                                    isGeneratingPdf = false
+                                                }
+                                            }
+                                        },
+                                        onEdit = {
+                                            quotationViewModel.loadQuotationToEdit(quote)
+                                            onNavigateToEdit()
+                                        },
+                                        onDuplicate = {
+                                            historyViewModel.duplicateQuotation(quote.id) { newNum ->
+                                                scope.launch {
+                                                    Toast.makeText(context, "Duplicated as $newNum", Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        },
+                                        onDelete = {
+                                            showDeleteConfirm = quote
+                                        },
+                                        onStatusClick = {
+                                            selectedQuoteForOptions = quote
+                                        }
                                     )
                                 }
                             }
-                        }
-                    } else {
-                        items(recentQuotes) { quote ->
-                            QuotationRowItem(
-                                quote = quote,
-                                modifier = Modifier.animateItem(),
-                                onSelect = { selectedQuoteForOptions = quote },
-                                onViewPdf = {
-                                    scope.launch {
-                                        try {
-                                            isGeneratingPdf = true
-                                            val file = ShareManager.generateQuotationPdf(context, historyViewModel.repository, quote.id)
-                                            ShareManager.openOrViewPdf(context, file)
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Failed to view PDF: ${e.message}", Toast.LENGTH_SHORT).show()
-                                        } finally {
-                                            isGeneratingPdf = false
-                                        }
-                                    }
-                                },
-                                onSharePdf = {
-                                    scope.launch {
-                                        try {
-                                            isGeneratingPdf = true
-                                            val file = ShareManager.generateQuotationPdf(context, historyViewModel.repository, quote.id)
-                                            ShareManager.shareQuotation(context, file, quote.quotationNumber)
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Failed to share PDF: ${e.message}", Toast.LENGTH_SHORT).show()
-                                        } finally {
-                                            isGeneratingPdf = false
-                                        }
-                                    }
-                                },
-                                onEdit = {
-                                    quotationViewModel.loadQuotationToEdit(quote)
-                                    onNavigateToEdit()
-                                },
-                                onDuplicate = {
-                                    historyViewModel.duplicateQuotation(quote.id) { newNum ->
-                                        scope.launch {
-                                            Toast.makeText(context, "Duplicated as $newNum", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                },
-                                onDelete = {
-                                    showDeleteConfirm = quote
-                                },
-                                onStatusClick = {
-                                    selectedQuoteForOptions = quote
-                                }
-                            )
-                        }
-                    }
-                    } // End of else block for quotations.isEmpty() check
+                        } // End of else block for quotations.isEmpty() check
 
-                } else {
-                    // 4. Searching/Filtering results List
-                    if (filteredAndSortedQuotes.isEmpty()) {
-                        item {
-                            com.example.ui.components.EmptyState(
-                                title = "No matching quotations found",
-                                message = "Try a different search query or filter by a different status.",
-                                icon = Icons.Filled.SearchOff,
-                                actionLabel = "Reset Search",
-                                onActionClick = {
-                                    searchQuery = ""
-                                    selectedStatusFilter = "All"
-                                }
-                            )
-                        }
                     } else {
-                        items(filteredAndSortedQuotes) { quote ->
-                            QuotationRowItem(
-                                quote = quote,
-                                modifier = Modifier.animateItem(),
-                                onSelect = { selectedQuoteForOptions = quote },
-                                onViewPdf = {
-                                    scope.launch {
-                                        try {
-                                            isGeneratingPdf = true
-                                            val file = ShareManager.generateQuotationPdf(context, historyViewModel.repository, quote.id)
-                                            ShareManager.openOrViewPdf(context, file)
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Failed to view PDF: ${e.message}", Toast.LENGTH_SHORT).show()
-                                        } finally {
-                                            isGeneratingPdf = false
-                                        }
+                        // 4. Searching/Filtering results List
+                        if (filteredAndSortedQuotes.isEmpty()) {
+                            item {
+                                EmptyState(
+                                    title = "No matching quotations found",
+                                    message = "Try a different search query or filter by a different status.",
+                                    icon = Icons.Filled.SearchOff,
+                                    actionLabel = "Reset Search",
+                                    onActionClick = {
+                                        searchQuery = ""
+                                        selectedStatusFilter = "All"
                                     }
-                                },
-                                onSharePdf = {
-                                    scope.launch {
-                                        try {
-                                            isGeneratingPdf = true
-                                            val file = ShareManager.generateQuotationPdf(context, historyViewModel.repository, quote.id)
-                                            ShareManager.shareQuotation(context, file, quote.quotationNumber)
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Failed to share PDF: ${e.message}", Toast.LENGTH_SHORT).show()
-                                        } finally {
-                                            isGeneratingPdf = false
-                                        }
-                                    }
-                                },
-                                onEdit = {
-                                    quotationViewModel.loadQuotationToEdit(quote)
-                                    onNavigateToEdit()
-                                },
-                                onDuplicate = {
-                                    historyViewModel.duplicateQuotation(quote.id) { newNum ->
+                                )
+                            }
+                        } else {
+                            items(filteredAndSortedQuotes) { quote ->
+                                QuotationRowItem(
+                                    quote = quote,
+                                    modifier = Modifier.animateItem(),
+                                    onSelect = { selectedQuoteForOptions = quote },
+                                    onViewPdf = {
                                         scope.launch {
-                                            Toast.makeText(context, "Duplicated as $newNum", Toast.LENGTH_SHORT).show()
+                                            try {
+                                                isGeneratingPdf = true
+                                                val file = ShareManager.generateQuotationPdf(context, historyViewModel.repository, quote.id)
+                                                ShareManager.openOrViewPdf(context, file)
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "Failed to view PDF: ${e.message}", Toast.LENGTH_SHORT).show()
+                                            } finally {
+                                                isGeneratingPdf = false
+                                            }
                                         }
+                                    },
+                                    onSharePdf = {
+                                        scope.launch {
+                                            try {
+                                                isGeneratingPdf = true
+                                                val file = ShareManager.generateQuotationPdf(context, historyViewModel.repository, quote.id)
+                                                ShareManager.shareQuotation(context, file, quote.quotationNumber)
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "Failed to share PDF: ${e.message}", Toast.LENGTH_SHORT).show()
+                                            } finally {
+                                                isGeneratingPdf = false
+                                            }
+                                        }
+                                    },
+                                    onEdit = {
+                                        quotationViewModel.loadQuotationToEdit(quote)
+                                        onNavigateToEdit()
+                                    },
+                                    onDuplicate = {
+                                        historyViewModel.duplicateQuotation(quote.id) { newNum ->
+                                            scope.launch {
+                                                Toast.makeText(context, "Duplicated as $newNum", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    },
+                                    onDelete = {
+                                        showDeleteConfirm = quote
+                                    },
+                                    onStatusClick = {
+                                        selectedQuoteForOptions = quote
                                     }
-                                },
-                                onDelete = {
-                                    showDeleteConfirm = quote
-                                },
-                                onStatusClick = {
-                                    selectedQuoteForOptions = quote
-                                }
-                            )
+                                )
+                            }
                         }
                     }
                 }
@@ -761,27 +663,28 @@ fun QuotationHistoryScreen(
     // --- DIALOG FOR OPTIONS ---
     selectedQuoteForOptions?.let { quote ->
         Dialog(onDismissRequest = { selectedQuoteForOptions = null }) {
-            ElevatedCard(
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+                shape = RoundedCornerShape(CornerRadius.ExtraLarge),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = Elevation.Medium)
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+                Column(modifier = Modifier.padding(Spacing.XXL)) {
                     Text(
                         text = "Quotation: ${quote.quotationNumber}",
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
                         text = quote.customerName, 
-                        fontSize = 14.sp, 
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                        modifier = Modifier.padding(bottom = 12.dp)
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = Spacing.L)
                     )
                     
                     ListItem(
-                        headlineContent = { Text("Generate PDF & Share") },
+                        headlineContent = { Text("Generate PDF & Share", style = MaterialTheme.typography.bodyLarge) },
                         leadingContent = { Icon(Icons.Filled.Share, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
                         modifier = Modifier.clickable {
                             scope.launch {
@@ -799,7 +702,7 @@ fun QuotationHistoryScreen(
                         }
                     )
                     ListItem(
-                        headlineContent = { Text("View / Print PDF") },
+                        headlineContent = { Text("View / Print PDF", style = MaterialTheme.typography.bodyLarge) },
                         leadingContent = { Icon(Icons.Filled.FileDownload, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                         modifier = Modifier.clickable {
                             scope.launch {
@@ -817,7 +720,7 @@ fun QuotationHistoryScreen(
                         }
                     )
                     ListItem(
-                        headlineContent = { Text("Edit Quotation") },
+                        headlineContent = { Text("Edit Quotation", style = MaterialTheme.typography.bodyLarge) },
                         leadingContent = { Icon(Icons.Filled.Edit, contentDescription = null) },
                         modifier = Modifier.clickable {
                             quotationViewModel.loadQuotationToEdit(quote)
@@ -826,7 +729,7 @@ fun QuotationHistoryScreen(
                         }
                     )
                     ListItem(
-                        headlineContent = { Text("Duplicate Quotation") },
+                        headlineContent = { Text("Duplicate Quotation", style = MaterialTheme.typography.bodyLarge) },
                         leadingContent = { Icon(Icons.Filled.ContentCopy, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary) },
                         modifier = Modifier.clickable {
                             historyViewModel.duplicateQuotation(quote.id) { newNum ->
@@ -840,7 +743,7 @@ fun QuotationHistoryScreen(
                     
                     // Update Status Item with Dropdown inside Dialog
                     ListItem(
-                        headlineContent = { Text("Change Status") },
+                        headlineContent = { Text("Change Status", style = MaterialTheme.typography.bodyLarge) },
                         leadingContent = { Icon(Icons.Filled.Info, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary) },
                         trailingContent = {
                             var isStatusMenuExpanded by remember { mutableStateOf(false) }
@@ -869,7 +772,7 @@ fun QuotationHistoryScreen(
                     )
                     
                     ListItem(
-                        headlineContent = { Text("Delete Quotation", color = MaterialTheme.colorScheme.error) },
+                        headlineContent = { Text("Delete Quotation", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error) },
                         leadingContent = { Icon(Icons.Filled.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
                         modifier = Modifier.clickable {
                             showDeleteConfirm = quote
@@ -883,15 +786,15 @@ fun QuotationHistoryScreen(
 
     // --- DELETE CONFIRM ---
     showDeleteConfirm?.let { quote ->
-        com.example.ui.components.PremiumDialog(
+        PremiumDialog(
             onDismissRequest = { showDeleteConfirm = null },
             title = "Delete Quotation",
             actions = {
-                com.example.ui.components.PremiumTextButton(onClick = { showDeleteConfirm = null }) {
+                PremiumTextButton(onClick = { showDeleteConfirm = null }) {
                     Text("Cancel")
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                com.example.ui.components.PremiumPrimaryButton(
+                Spacer(modifier = Modifier.width(Spacing.S))
+                PremiumPrimaryButton(
                     onClick = {
                         historyViewModel.deleteQuotation(quote.id)
                         showDeleteConfirm = null
@@ -902,23 +805,27 @@ fun QuotationHistoryScreen(
                 }
             }
         ) {
-            Text("Are you sure you want to permanently delete quotation ${quote.quotationNumber}? This action cannot be undone.")
+            Text(
+                text = "Are you sure you want to permanently delete quotation ${quote.quotationNumber}? This action cannot be undone.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 
     // --- PDF GENERATION PROGRESS DIALOG ---
     if (isGeneratingPdf) {
-        androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
-            ElevatedCard(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.elevatedCardColors(
+        Dialog(onDismissRequest = {}) {
+            Card(
+                shape = RoundedCornerShape(CornerRadius.ExtraLarge),
+                colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = Elevation.Large),
                 modifier = Modifier.width(280.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(24.dp),
+                    modifier = Modifier.padding(Spacing.XXL),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
@@ -927,14 +834,14 @@ fun QuotationHistoryScreen(
                         strokeWidth = 4.dp,
                         modifier = Modifier.size(48.dp)
                     )
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(Spacing.XL))
                     Text(
                         text = "Generating PDF",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Spacing.S))
                     Text(
                         text = "Rendering vector elements and styling document page...",
                         style = MaterialTheme.typography.bodySmall,
@@ -948,23 +855,82 @@ fun QuotationHistoryScreen(
 }
 
 @Composable
+fun GreetingHeader(
+    greeting: String,
+    companyName: String
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(CornerRadius.Large),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Spacing.L),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "InteriorPro ERP",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(Spacing.XXS))
+                Text(
+                    text = "$greeting,",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = companyName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Dashboard,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(IconSize.Medium)
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun EmptyHistoryState(
     onCreateQuote: () -> Unit
 ) {
-    ElevatedCard(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 16.dp)
+            .padding(vertical = Spacing.M)
             .testTag("empty_history_card"),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.elevatedCardColors(
+        shape = RoundedCornerShape(CornerRadius.ExtraLarge),
+        colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
-        )
-) {
+        ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 40.dp),
+                .padding(horizontal = Spacing.XXL, vertical = Spacing.Section),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -973,7 +939,7 @@ fun EmptyHistoryState(
                     .size(80.dp)
                     .background(
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(24.dp)
+                        shape = RoundedCornerShape(CornerRadius.ExtraLarge)
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -985,7 +951,7 @@ fun EmptyHistoryState(
                 )
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Spacing.XL))
             
             Text(
                 text = "Create Your First Quotation",
@@ -995,7 +961,7 @@ fun EmptyHistoryState(
                 textAlign = TextAlign.Center
             )
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.S))
             
             Text(
                 text = "Manage your interior design proposals professionally. Create, view, duplicate, or export high-quality PDF quotations offline.",
@@ -1005,29 +971,22 @@ fun EmptyHistoryState(
                 lineHeight = 20.sp
             )
             
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(Spacing.XXL))
             
-            Button(
+            PremiumPrimaryButton(
                 onClick = onCreateQuote,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
-                    .testTag("empty_state_create_button"),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
+                    .testTag("empty_state_create_button")
             ) {
                 Icon(
                     imageVector = Icons.Filled.Add,
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(IconSize.Medium)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(Spacing.S))
                 Text(
                     text = "New Quotation",
-                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -1050,18 +1009,18 @@ fun QuotationRowItem(
     val sdf = remember { SimpleDateFormat("dd-MMM-yyyy", Locale.getDefault()) }
     val formattedDate = remember(quote.date) { sdf.format(Date(quote.date)) }
 
-    ElevatedCard(
+    Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable { onSelect() }
             .testTag("quotation_card_${quote.id}"),
-        colors = CardDefaults.elevatedCardColors(
+        colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
+        shape = RoundedCornerShape(CornerRadius.Large),
+        elevation = CardDefaults.cardElevation(defaultElevation = Elevation.Small)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.L)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1080,7 +1039,7 @@ fun QuotationRowItem(
                 )
             }
             
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(Spacing.S))
             
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1108,18 +1067,18 @@ fun QuotationRowItem(
                 
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(CornerRadius.Small))
                         .background(statusColor)
                         .clickable { onStatusClick() }
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .padding(horizontal = Spacing.S, vertical = Spacing.XXS)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.XXS)
                     ) {
                         Text(
                             text = quote.status.uppercase(Locale.getDefault()),
-                            fontSize = 10.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = statusTextColor
                         )
@@ -1127,14 +1086,14 @@ fun QuotationRowItem(
                             imageVector = Icons.Filled.ArrowDropDown,
                             contentDescription = "Change Status",
                             tint = statusTextColor,
-                            modifier = Modifier.size(12.dp)
+                            modifier = Modifier.size(IconSize.Small)
                         )
                     }
                 }
             }
             
             if (quote.projectType.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(Spacing.XXS))
                 Text(
                     text = "${quote.projectType} (${quote.category})",
                     style = MaterialTheme.typography.bodyMedium,
@@ -1142,9 +1101,9 @@ fun QuotationRowItem(
                 )
             }
             
-            Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Spacing.M))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(modifier = Modifier.height(Spacing.M))
             
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1166,7 +1125,7 @@ fun QuotationRowItem(
                 }
                 
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.XXS),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
@@ -1177,7 +1136,7 @@ fun QuotationRowItem(
                             imageVector = Icons.Filled.Visibility,
                             contentDescription = "View PDF",
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(IconSize.Small)
                         )
                     }
                     
@@ -1189,7 +1148,7 @@ fun QuotationRowItem(
                             imageVector = Icons.Filled.Share,
                             contentDescription = "Share PDF",
                             tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(IconSize.Small)
                         )
                     }
                     
@@ -1201,7 +1160,7 @@ fun QuotationRowItem(
                             imageVector = Icons.Filled.ContentCopy,
                             contentDescription = "Duplicate",
                             tint = MaterialTheme.colorScheme.tertiary,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(IconSize.Small)
                         )
                     }
                     
@@ -1213,7 +1172,7 @@ fun QuotationRowItem(
                             imageVector = Icons.Filled.Edit,
                             contentDescription = "Edit",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(IconSize.Small)
                         )
                     }
                     
@@ -1225,7 +1184,7 @@ fun QuotationRowItem(
                             imageVector = Icons.Filled.Delete,
                             contentDescription = "Delete",
                             tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(IconSize.Small)
                         )
                     }
                 }
@@ -1233,4 +1192,3 @@ fun QuotationRowItem(
         }
     }
 }
-

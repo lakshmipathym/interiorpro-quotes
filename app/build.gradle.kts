@@ -20,6 +20,9 @@ android {
     versionCode = 5
     versionName = "1.5.0"
 
+    buildConfigField("String", "APPS_SCRIPT_URL", "\"https://script.google.com/macros/s/AKfycbx_interiorpro_erp/exec\"")
+    buildConfigField("String", "APPS_SCRIPT_SECRET", "\"INTERIORPRO_ERP_SECRET_KEY_2026\"")
+
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 

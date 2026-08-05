@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">InteriorPro ERP</string>
+    <string name="app_short_name">InteriorPro</string>
     
     <!-- Smart Sync Dashboard -->
     <string name="title_sync_dashboard">Smart Sync Dashboard</string>

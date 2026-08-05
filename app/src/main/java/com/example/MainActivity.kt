@@ -1,5 +1,6 @@
 package com.example
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -113,6 +114,7 @@ class MainActivity : ComponentActivity() {
     private val syncManager by lazy { com.example.core.sync.SyncManagerImpl(applicationContext, driveService, backupManager, restoreManager, deviceManager, syncCoordinator) }
     private val workspaceManager by lazy { com.example.core.backup.WorkspaceManagerImpl(applicationContext, database, repository, encryptionManager, checksumManager) }
     private val themeManager by lazy { com.example.ui.theme.ThemeManager(applicationContext) }
+    private val appStartupManager by lazy { com.example.core.startup.AppStartupManager(applicationContext) }
 
     // ViewModels (Lazy initialized when required by the Compose graph/screen)
     private val companyViewModel: CompanyViewModel by lazy {
@@ -196,11 +198,22 @@ class MainActivity : ComponentActivity() {
                     quotationViewModelProvider = { quotationViewModel },
                     masterViewModelProvider = { masterViewModel },
                     themeManagerProvider = { themeManager },
-                    syncDashboardViewModelProvider = { syncDashboardViewModel }
+                    syncDashboardViewModelProvider = { syncDashboardViewModel },
+                    appStartupManagerProvider = { appStartupManager },
+                    signInManagerProvider = { signInManager }
                 )
             }
         }
     }
+}
+
+enum class StartupStage {
+    SPLASH,
+    WELCOME,
+    GOOGLE_DRIVE,
+    TRIAL_INFO,
+    MAIN_DASHBOARD,
+    LICENSE_BLOCKED
 }
 
 @Composable
@@ -212,25 +225,80 @@ fun MainDashboard(
     quotationViewModelProvider: () -> QuotationViewModel,
     masterViewModelProvider: () -> MasterViewModel,
     themeManagerProvider: () -> com.example.ui.theme.ThemeManager,
-    syncDashboardViewModelProvider: () -> com.example.core.sync.dashboard.SyncDashboardViewModel
+    syncDashboardViewModelProvider: () -> com.example.core.sync.dashboard.SyncDashboardViewModel,
+    appStartupManagerProvider: () -> com.example.core.startup.AppStartupManager,
+    signInManagerProvider: () -> com.example.core.drive.GoogleSignInManager
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: "history"
     val context = LocalContext.current
 
+    var startupStage by remember { mutableStateOf(StartupStage.SPLASH) }
+
     var newerBackupMetadata by remember { mutableStateOf<BackupMetadata?>(null) }
     var isRestoringCloudBackup by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        // Defer cloud backup checks slightly to allow completely smooth startup transition
-        kotlinx.coroutines.delay(2000)
-        settingsViewModelProvider().checkForNewerBackup { metadata ->
-            if (metadata != null) {
-                newerBackupMetadata = metadata
-            }
+    when (startupStage) {
+        StartupStage.SPLASH -> {
+            com.example.ui.startup.SplashScreen(
+                appStartupManager = appStartupManagerProvider(),
+                onNavigateToOnboarding = {
+                    startupStage = StartupStage.WELCOME
+                },
+                onNavigateToDashboard = {
+                    startupStage = StartupStage.MAIN_DASHBOARD
+                },
+                onNavigateToPlaceholder = {
+                    startupStage = StartupStage.LICENSE_BLOCKED
+                }
+            )
         }
-    }
+        StartupStage.WELCOME -> {
+            com.example.ui.startup.WelcomeScreen(
+                onGetStarted = {
+                    startupStage = StartupStage.GOOGLE_DRIVE
+                }
+            )
+        }
+        StartupStage.GOOGLE_DRIVE -> {
+            com.example.ui.startup.GoogleDriveOnboardingScreen(
+                signInManager = signInManagerProvider(),
+                onContinue = {
+                    startupStage = StartupStage.TRIAL_INFO
+                }
+            )
+        }
+        StartupStage.TRIAL_INFO -> {
+            com.example.ui.startup.TrialInfoOnboardingScreen(
+                context = context,
+                onCompleteOnboarding = {
+                    val prefs = context.getSharedPreferences("app_onboarding_prefs", Context.MODE_PRIVATE)
+                    prefs.edit().putBoolean("has_completed_onboarding", true).apply()
+
+                    val licenseManager = com.example.core.license.LicenseManager(context)
+                    if (licenseManager.getLicenseState() == com.example.core.license.LicenseState.EXPIRED_TRIAL) {
+                        startupStage = StartupStage.LICENSE_BLOCKED
+                    } else {
+                        startupStage = StartupStage.MAIN_DASHBOARD
+                    }
+                }
+            )
+        }
+        StartupStage.LICENSE_BLOCKED -> {
+            com.example.ui.startup.LicensePlaceholderScreen()
+        }
+        StartupStage.MAIN_DASHBOARD -> {
+            LaunchedEffect(Unit) {
+                // Defer cloud backup checks slightly to allow completely smooth startup transition
+                kotlinx.coroutines.delay(2000)
+                settingsViewModelProvider().checkForNewerBackup { metadata ->
+                    if (metadata != null) {
+                        newerBackupMetadata = metadata
+                    }
+                }
+            }
+
 
     if (newerBackupMetadata != null) {
         val metadata = newerBackupMetadata!!
@@ -295,83 +363,87 @@ fun MainDashboard(
         )
     }
 
+    val showBottomBar = currentRoute in listOf("history", "new_quote", "customers", "settings", "masters", "sync_dashboard", "about")
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            NavigationBar(
-                modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurface,
-                tonalElevation = 8.dp
-            ) {
-                val isHistory = currentRoute == "history"
-                NavigationBarItem(
-                    selected = isHistory,
-                    onClick = {
-                        if (!isHistory) {
-                            navController.navigate("history") {
-                                popUpTo("history") { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
+            if (showBottomBar) {
+                NavigationBar(
+                    modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    tonalElevation = 8.dp
+                ) {
+                    val isHistory = currentRoute == "history"
+                    NavigationBarItem(
+                        selected = isHistory,
+                        onClick = {
+                            if (!isHistory) {
+                                navController.navigate("history") {
+                                    popUpTo("history") { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
                             }
-                        }
-                    },
-                    icon = { Icon(if(isHistory) Icons.AutoMirrored.Filled.List else Icons.AutoMirrored.Filled.List, contentDescription = "History") },
-                    label = { Text("History", fontWeight = if(isHistory) FontWeight.Bold else FontWeight.Normal) },
-                    alwaysShowLabel = true
-                )
-                
-                val isNewQuote = currentRoute == "new_quote"
-                NavigationBarItem(
-                    selected = isNewQuote,
-                    onClick = {
-                        quotationViewModelProvider().startNewQuotation()
-                        if (!isNewQuote) {
-                            navController.navigate("new_quote") {
-                                popUpTo("history") { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
+                        },
+                        icon = { Icon(if(isHistory) Icons.AutoMirrored.Filled.List else Icons.AutoMirrored.Filled.List, contentDescription = "History") },
+                        label = { Text("History", fontWeight = if(isHistory) FontWeight.Bold else FontWeight.Normal) },
+                        alwaysShowLabel = true
+                    )
+                    
+                    val isNewQuote = currentRoute == "new_quote"
+                    NavigationBarItem(
+                        selected = isNewQuote,
+                        onClick = {
+                            quotationViewModelProvider().startNewQuotation()
+                            if (!isNewQuote) {
+                                navController.navigate("new_quote") {
+                                    popUpTo("history") { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
                             }
-                        }
-                    },
-                    icon = { Icon(if(isNewQuote) Icons.Filled.AddCircle else Icons.Filled.Add, contentDescription = "Create") },
-                    label = { Text("New Quote", fontWeight = if(isNewQuote) FontWeight.Bold else FontWeight.Normal) },
-                    alwaysShowLabel = true
-                )
-                
-                val isCustomers = currentRoute == "customers"
-                NavigationBarItem(
-                    selected = isCustomers,
-                    onClick = {
-                        if (!isCustomers) {
-                            navController.navigate("customers") {
-                                popUpTo("history") { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
+                        },
+                        icon = { Icon(if(isNewQuote) Icons.Filled.AddCircle else Icons.Filled.Add, contentDescription = "Create") },
+                        label = { Text("New Quote", fontWeight = if(isNewQuote) FontWeight.Bold else FontWeight.Normal) },
+                        alwaysShowLabel = true
+                    )
+                    
+                    val isCustomers = currentRoute == "customers"
+                    NavigationBarItem(
+                        selected = isCustomers,
+                        onClick = {
+                            if (!isCustomers) {
+                                navController.navigate("customers") {
+                                    popUpTo("history") { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
                             }
-                        }
-                    },
-                    icon = { Icon(if(isCustomers) Icons.Filled.Person else Icons.Filled.Person, contentDescription = "Clients") },
-                    label = { Text("Customers", fontWeight = if(isCustomers) FontWeight.Bold else FontWeight.Normal) },
-                    alwaysShowLabel = true
-                )
-                
-                val isSettings = currentRoute == "settings"
-                NavigationBarItem(
-                    selected = isSettings,
-                    onClick = {
-                        if (!isSettings) {
-                            navController.navigate("settings") {
-                                popUpTo("history") { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
+                        },
+                        icon = { Icon(if(isCustomers) Icons.Filled.Person else Icons.Filled.Person, contentDescription = "Clients") },
+                        label = { Text("Customers", fontWeight = if(isCustomers) FontWeight.Bold else FontWeight.Normal) },
+                        alwaysShowLabel = true
+                    )
+                    
+                    val isSettings = currentRoute == "settings"
+                    NavigationBarItem(
+                        selected = isSettings,
+                        onClick = {
+                            if (!isSettings) {
+                                navController.navigate("settings") {
+                                    popUpTo("history") { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
                             }
-                        }
-                    },
-                    icon = { Icon(Icons.Filled.Settings, contentDescription = "Settings") },
-                    label = { Text("Settings", fontWeight = if(isSettings) FontWeight.Bold else FontWeight.Normal) },
-                    alwaysShowLabel = true
-                )
+                        },
+                        icon = { Icon(Icons.Filled.Settings, contentDescription = "Settings") },
+                        label = { Text("Settings", fontWeight = if(isSettings) FontWeight.Bold else FontWeight.Normal) },
+                        alwaysShowLabel = true
+                    )
+                }
             }
         }
     ) { innerPadding ->
@@ -404,6 +476,9 @@ fun MainDashboard(
                     ) + fadeOut(animationSpec = tween(250))
                 }
             ) {
+                composable("license_placeholder") {
+                    com.example.ui.startup.LicensePlaceholderScreen()
+                }
                 composable("history") {
                     QuotationHistoryScreen(
                         historyViewModel = historyViewModelProvider(),
@@ -485,3 +560,7 @@ fun MainDashboard(
         }
     }
 }
+}
+}
+
+

@@ -80,15 +80,18 @@ fun AboutScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "Developer Information",
+                        text = "App Details",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     HorizontalDivider()
-                    InfoRow("Developer", "InteriorPro ERP Team")
-                    InfoRow("Copyright", "© 2026 InteriorPro. All rights reserved.")
-                    InfoRow("Website", "https://www.interiorpro.example.com")
-                    InfoRow("Support Email", "support@interiorpro.example.com")
+                    InfoRow("App Name", "InteriorPro ERP")
+                    InfoRow("Version", "1.0.0")
+                    InfoRow("Build Number", "100")
+                    InfoRow("Copyright", "© 2026 InteriorPro ERP. All rights reserved.")
+                    InfoRow("Company", "InteriorPro Technologies Pvt. Ltd.")
+                    InfoRow("Website", "www.interiorpro.com")
+                    InfoRow("Support Email", "support@interiorpro.com")
                 }
             }
             

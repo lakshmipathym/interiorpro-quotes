@@ -23,12 +23,20 @@ val Shapes = Shapes(
 private val DarkColorScheme = darkColorScheme(
     primary = PrimaryBlue,
     onPrimary = Color.White,
+    primaryContainer = Color(0xFF1E3A8A),
+    onPrimaryContainer = Color(0xFFDBEAFE),
     secondary = SecondaryBlue,
     onSecondary = Color.White,
+    secondaryContainer = Color(0xFF1E293B),
+    onSecondaryContainer = Color(0xFFE2E8F0),
     tertiary = SuccessColor,
     onTertiary = Color.White,
+    tertiaryContainer = SuccessContainer,
+    onTertiaryContainer = LightSuccessContainer,
     error = ErrorColor,
     onError = Color.White,
+    errorContainer = ErrorContainer,
+    onErrorContainer = LightErrorContainer,
     background = Background,
     onBackground = PrimaryText,
     surface = Surface,
@@ -36,18 +44,26 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant = SurfaceVariant,
     onSurfaceVariant = MutedText,
     outline = OutlineColor,
-    outlineVariant = OutlineColor
+    outlineVariant = BorderColor
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = PrimaryBlue,
     onPrimary = Color.White,
+    primaryContainer = Color(0xFFEFF6FF),
+    onPrimaryContainer = Color(0xFF1E40AF),
     secondary = SecondaryBlue,
     onSecondary = Color.White,
+    secondaryContainer = Color(0xFFF1F5F9),
+    onSecondaryContainer = Color(0xFF334155),
     tertiary = SuccessColor,
     onTertiary = Color.White,
+    tertiaryContainer = LightSuccessContainer,
+    onTertiaryContainer = SuccessContainer,
     error = ErrorColor,
     onError = Color.White,
+    errorContainer = LightErrorContainer,
+    onErrorContainer = ErrorContainer,
     background = LightBackground,
     onBackground = LightPrimaryText,
     surface = LightSurface,
@@ -55,7 +71,7 @@ private val LightColorScheme = lightColorScheme(
     surfaceVariant = LightSurfaceVariant,
     onSurfaceVariant = LightMutedText,
     outline = LightOutlineColor,
-    outlineVariant = LightOutlineColor
+    outlineVariant = LightBorderColor
 )
 
 @Composable
